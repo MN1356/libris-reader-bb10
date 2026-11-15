@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<qnx xmlns="http://www.qnx.com/schemas/application/1.0">
+    <id>com.nhatlee.berryleaf</id>
+    <name>Berry Leaf</name>
+    <versionNumber>2.0.0</versionNumber>
+    <buildId>175</buildId>
+    <description>Berry Leaf - Native E-Book Reader for BlackBerry 10</description>
+    <author>NhatLee</author>
+
+    <initialWindow>
+        <autoOrients>true</autoOrients>
+        <systemChrome>none</systemChrome>
+    </initialWindow>
+
+    <configuration name="Device-Debug">
+        <platformArchitecture>armle-v7</platformArchitecture>
+        <asset path="BerryLeaf" entry="true" type="Qnx/Elf">BerryLeaf</asset>
+    </configuration>
+    <configuration name="Device-Release">
+        <platformArchitecture>armle-v7</platformArchitecture>
+        <asset path="BerryLeaf" entry="true" type="Qnx/Elf">BerryLeaf</asset>
+    </configuration>
+    <configuration name="Simulator-Debug">
+        <platformArchitecture>x86</platformArchitecture>
+        <asset path="BerryLeaf" entry="true" type="Qnx/Elf">BerryLeaf</asset>
+    </configuration>
+
+    <!-- Assets directory contains QML, images, icons -->
+    <asset path="assets">assets</asset>
+
+    <icon>
+        <image>icon-86x86.png</image>
+        <image>icon-90x90.png</image>
+        <image>icon-96x96.png</image>
+        <image>icon-110x110.png</image>
+        <image>icon-114x114.png</image>
+        <image>icon-144x144.png</image>
+        <image>icon-358x358.png</image>
+    </icon>
+
+    <asset path="icon-86x86.png">icon-86x86.png</asset>
+    <asset path="icon-90x90.png">icon-90x90.png</asset>
+    <asset path="icon-96x96.png">icon-96x96.png</asset>
+    <asset path="icon-110x110.png">icon-110x110.png</asset>
+    <asset path="icon-114x114.png">icon-114x114.png</asset>
+    <asset path="icon-144x144.png">icon-144x144.png</asset>
+    <asset path="icon-358x358.png">icon-358x358.png</asset>
+
+    <asset path="splash-720x720.png">splash-720x720.png</asset>
+    <asset path="splash-1440x1440.png">splash-1440x1440.png</asset>
+    <asset path="splash-720x1280.png">splash-720x1280.png</asset>
+    <asset path="splash-768x1280.png">splash-768x1280.png</asset>
+
+    <splashScreens>
+        <image>splash-720x720.png</image>
+        <image>splash-1440x1440.png</image>
+        <image>splash-720x1280.png</image>
+        <image>splash-768x1280.png</image>
+    </splashScreens>
+
+    <permission>run_native</permission>
+    <permission>access_shared</permission>
+    <permission>access_internet</permission>
+
+    <invoke-target id="com.nhatlee.berryleaf">
+        <invoke-target-name>BerryLeaf</invoke-target-name>
+        <icon>
+            <image>icon-96x96.png</image>
+        </icon>
+        <invoke-target-type>application</invoke-target-type>
+        <filter>
+            <action>bb.action.OPEN</action>
+            <action>bb.action.VIEW</action>
+            <mime-type>application/epub+zip</mime-type>
+            <mime-type>application/x-epub</mime-type>
+            <mime-type>application/x-fictionbook+xml</mime-type>
+            <mime-type>application/x-fictionbook</mime-type>
+            <mime-type>application/x-fb2</mime-type>
+            <mime-type>application/pdf</mime-type>
+            <mime-type>application/x-pdf</mime-type>
+            <mime-type>text/plain</mime-type>
+            <mime-type>image/vnd.djvu</mime-type>
+            <mime-type>image/x-djvu</mime-type>
+            <mime-type>image/djvu</mime-type>
+        </filter>
+        <filter>
+            <action>bb.action.OPEN</action>
+            <action>bb.action.VIEW</action>
+            <mime-type>*</mime-type>
+            <property var="uris" value="file://"/>
+            <property var="exts" value="epub,txt,fb2,pdf,djvu,EPUB,TXT,FB2,PDF,DJVU"/>
+        </filter>
+    </invoke-target>
+
+    <env var="LD_LIBRARY_PATH" value="app/native/assets/lib:app/native/lib:/usr/lib/qt4/lib"/>
+    <env var="CASCADES_THEME" value="dark"/>
+</qnx>
