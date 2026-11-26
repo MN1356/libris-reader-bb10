@@ -1,20 +1,20 @@
-#ifndef __NSRSESSION_H__
-#define __NSRSESSION_H__
+#ifndef __PDFSESSION_H__
+#define __PDFSESSION_H__
 
 /**
- * @file nsrsession.h
- * @author Alexander Saprykin
+ * @file pdfsession.h
+ * @author Libris Team
  * @brief File session
  */
 
-#include "nsrabstractdocument.h"
-#include "nsrreadercore_global.h"
+#include "pdfabstractdocument.h"
+#include "pdfcore_global.h"
 
 #include <QString>
 #include <QPointF>
 
 /**
- * @class NSRSession nsrsession.h
+ * @class NSRSession pdfsession.h
  * @brief Class for file session
  */
 class NSRREADERCORE_SHARED NSRSession
@@ -201,4 +201,4 @@ private:
 	bool						_isFitToWidth;	/**< Fit to width flag		*/
 };
 
-#endif /* __NSRSESSION_H__ */
+#endif /* __PDFSESSION_H__ */

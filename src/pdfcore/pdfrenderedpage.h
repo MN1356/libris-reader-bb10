@@ -1,21 +1,21 @@
-#ifndef __NSRRENDEREDPAGE_H__
-#define __NSRRENDEREDPAGE_H__
+#ifndef __PDFRENDEREDPAGE_H__
+#define __PDFRENDEREDPAGE_H__
 
 /**
- * @file nsrrenderedpage.h
- * @author Alexander Saprykin
+ * @file pdfrenderedpage.h
+ * @author Libris Team
  * @brief Rendered page
  */
 
-#include "nsrrenderrequest.h"
-#include "nsrabstractdocument.h"
-#include "nsrreadercore_global.h"
+#include "pdfrenderrequest.h"
+#include "pdfabstractdocument.h"
+#include "pdfcore_global.h"
 
 #include <QSize>
 #include <QPointF>
 
 /**
- * @class NSRRenderedPage nsrrenderedpage.h
+ * @class NSRRenderedPage pdfrenderedpage.h
  * @brief Class for rendered page
  */
 class NSRREADERCORE_SHARED NSRRenderedPage: public NSRRenderRequest
@@ -204,4 +204,4 @@ private:
 	bool			_cached;	/**< Cache flag			*/
 };
 
-#endif /* __NSRRENDEREDPAGE_H__ */
+#endif /* __PDFRENDEREDPAGE_H__ */

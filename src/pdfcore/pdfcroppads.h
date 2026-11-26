@@ -1,14 +1,14 @@
-#ifndef __NSRCROPPADS_H__
-#define __NSRCROPPADS_H__
+#ifndef __PDFCROPPADS_H__
+#define __PDFCROPPADS_H__
 
 /**
- * @file nsrcroppads.h
- * @author Alexander Saprykin
+ * @file pdfcroppads.h
+ * @author Libris Team
  * @brief Page crop pads
  */
 
 /**
- * @class NSRCropPads nsrcroppads.h
+ * @class NSRCropPads pdfcroppads.h
  * @brief Class for page crop pads
  */
 class NSRCropPads
@@ -142,4 +142,4 @@ private:
 	bool		_isDetected;	/**< Detected flag	*/
 };
 
-#endif /* __NSRCROPPADS_H__ */
+#endif /* __PDFCROPPADS_H__ */

@@ -1,19 +1,19 @@
-#ifndef __NSRCROPPADSCACHE_H__
-#define __NSRCROPPADSCACHE_H__
+#ifndef __PDFCROPPADSCACHE_H__
+#define __PDFCROPPADSCACHE_H__
 
 /**
- * @file nsrcroppadscache.h
- * @author Alexander Saprykin
+ * @file pdfcroppadscache.h
+ * @author Libris Team
  * @brief Page crop pads cache
  */
 
-#include "nsrcroppads.h"
+#include "pdfcroppads.h"
 
 #include <QObject>
 #include <QHash>
 
 /**
- * @class NSRCropPadsCache nsrcroppadscache.h
+ * @class NSRCropPadsCache pdfcroppadscache.h
  * @brief Class for page crop pads cache
  * @since 1.4.2
  */
@@ -75,4 +75,4 @@ private:
 	QHash<int, NSRCropPads>	_hash;	/**< Page crop pads cache	*/
 };
 
-#endif /* __NSRCROPPADSCACHE_H__ */
+#endif /* __PDFCROPPADSCACHE_H__ */

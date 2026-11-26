@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-BerryReader Diagnostic Log Receiver Server
+Libris Diagnostic Log Receiver Server
 Listens on 0.0.0.0:8080 and records diagnostic runtime logs sent from BlackBerry 10 devices.
 Logs are saved in real-time to: logs/device_runtime.log
 """
@@ -26,7 +26,7 @@ class LogRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
-        response = f'{{"status": "ready", "server": "BerryReader Log Server", "time": "{datetime.now().isoformat()}"}}\n'
+        response = f'{{"status": "ready", "server": "Libris Log Server", "time": "{datetime.now().isoformat()}"}}\n'
         self.wfile.write(response.encode("utf-8"))
 
     def do_POST(self):
@@ -43,7 +43,7 @@ class LogRequestHandler(BaseHTTPRequestHandler):
             os.makedirs(LOG_DIR, exist_ok=True)
             with open(LOG_FILE, "a", encoding="utf-8") as f:
                 f.write(f"\n{'=' * 80}\n")
-                f.write(f"=== BERRYREADER RUNTIME LOG RECEIVED AT {now_str} ===\n")
+                f.write(f"=== LIBRIS RUNTIME LOG RECEIVED AT {now_str} ===\n")
                 f.write(f"From Client: {client_ip}:{self.client_address[1]}\n")
                 f.write(f"User-Agent: {self.headers.get('User-Agent', 'Unknown')}\n")
                 f.write(f"Content-Length: {content_length} bytes\n")
@@ -83,7 +83,7 @@ def run():
     os.makedirs(LOG_DIR, exist_ok=True)
     ThreadingHTTPServer.allow_reuse_address = True
     server = ThreadingHTTPServer((HOST, PORT), LogRequestHandler)
-    print(f"[LOG SERVER] BerryReader Log Server started on {HOST}:{PORT}")
+    print(f"[LOG SERVER] Libris Log Server started on {HOST}:{PORT}")
     print(f"[LOG SERVER] Target log file: {LOG_FILE}")
     sys.stdout.flush()
     try:

@@ -1,20 +1,20 @@
-#ifndef __NSRPAGESCACHE_H__
-#define __NSRPAGESCACHE_H__
+#ifndef __PDFPAGESCACHE_H__
+#define __PDFPAGESCACHE_H__
 
 /**
- * @file nsrpagescache.h
- * @author Alexander Saprykin
+ * @file pdfpagescache.h
+ * @author Libris Team
  * @brief Rendered pages cache
  */
 
-#include "nsrrenderedpage.h"
+#include "pdfrenderedpage.h"
 
 #include <QObject>
 #include <QHash>
 #include <QList>
 
 /**
- * @class NSRPagesCache nsrpagescache.h
+ * @class NSRPagesCache pdfpagescache.h
  * @brief Class for rendered pages cache
  *
  * By default cache size is limited to 100 MB.
@@ -119,4 +119,4 @@ private:
 	qint64				_maxMemory;	/**< Max memory allowed, bytes		*/
 };
 
-#endif /* __NSRPAGESCACHE_H__ */
+#endif /* __PDFPAGESCACHE_H__ */

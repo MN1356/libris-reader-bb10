@@ -23,6 +23,7 @@ class DictManager : public QObject {
     Q_PROPERTY(QString lastTranslatedText READ lastTranslatedText NOTIFY translationResultChanged)
     Q_PROPERTY(QString lastOriginalText READ lastOriginalText NOTIFY translationResultChanged)
     Q_PROPERTY(QString targetLanguage READ targetLanguage WRITE setTargetLanguage NOTIFY targetLanguageChanged)
+    Q_PROPERTY(int vocabCount READ vocabCount NOTIFY vocabChanged)
 
 public:
     explicit DictManager(QObject *parent = 0);
@@ -53,7 +54,17 @@ public:
     // Clipboard
     Q_INVOKABLE void copyToClipboard(const QString &text);
 
+    // Vocabulary Builder & Flashcards
+    int vocabCount() const { return m_vocabList.size(); }
+    Q_INVOKABLE bool saveVocabWord(const QString &word, const QString &phonetic, const QString &meaning, const QString &context = QString(), const QString &bookTitle = QString());
+    Q_INVOKABLE QVariantList vocabList() const;
+    Q_INVOKABLE void reloadVocab();
+    Q_INVOKABLE bool removeVocabWord(int index);
+    Q_INVOKABLE bool toggleVocabMastered(int index);
+    Q_INVOKABLE QString exportVocabCsv();
+
 signals:
+    void vocabChanged();
     void lookupStateChanged();
     void translateStateChanged();
     void lookupResultChanged();
@@ -81,8 +92,12 @@ private:
     QString m_lastTranslatedText;
     QString m_lastOriginalText;
     QString m_targetLanguage;
+    QVariantList m_vocabList;
 
     void initDatabase();
+    QString vocabFilePath() const;
+    void loadVocab();
+    void saveVocab() const;
     QString cleanWord(const QString &raw) const;
     QString parseGoogleTranslateResponse(const QByteArray &data, QString &outDetectedLang) const;
 };

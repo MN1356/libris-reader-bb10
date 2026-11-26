@@ -1,7 +1,6 @@
 /*
- * ToggleableListItem — a native BB10 settings row with a title, optional subtitle,
- * and a native ToggleButton on the right, with a standard Divider beneath.
- * Reused across settings pages following BBTelega pattern.
+ * ToggleableListItem — full-bleed BB10 Cascades settings row with pressed feedback,
+ * responsive dp() spacing, multiline labels, optional hairline divider, and native ToggleButton.
  */
 import bb.cascades 1.3
 
@@ -13,22 +12,34 @@ Container {
     property bool checked: false
     property bool showDivider: true
     property bool switchEnabled: true
+    property bool pressed: false
 
     signal toggled(bool checked)
     signal tapped()
 
     horizontalAlignment: HorizontalAlignment.Fill
+    background: item.pressed ? Color.create(bookManager.uiActive) : Color.Transparent
 
     onCheckedChanged: {
-        toggle.checked = checked;
+        if (toggle.checked !== checked) {
+            toggle.checked = checked;
+        }
+    }
+
+    onTouch: {
+        if (event.touchType === TouchType.Down) {
+            item.pressed = true;
+        } else if (event.touchType === TouchType.Up || event.touchType === TouchType.Cancel) {
+            item.pressed = false;
+        }
     }
 
     Container {
         horizontalAlignment: HorizontalAlignment.Fill
-        leftPadding: 16
-        rightPadding: 16
-        topPadding: 12
-        bottomPadding: 12
+        leftPadding: bookManager.dp(16)
+        rightPadding: bookManager.dp(16)
+        topPadding: bookManager.dp(12)
+        bottomPadding: bookManager.dp(12)
 
         layout: StackLayout {
             orientation: LayoutOrientation.LeftToRight
@@ -39,28 +50,32 @@ Container {
             layoutProperties: StackLayoutProperties {
                 spaceQuota: 1.0
             }
-            rightMargin: 12
+            rightMargin: bookManager.dp(12)
 
             Label {
                 id: titleLabel
                 bottomMargin: 0
+                multiline: true
                 textStyle.base: SystemDefaults.TextStyles.PrimaryText
-                textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.Black
+                textStyle.color: Color.create(bookManager.uiInk)
             }
 
             Label {
                 id: subtitleLabel
-                topMargin: 2
+                topMargin: bookManager.dp(2)
                 visible: text !== ""
-                textStyle.base: SystemDefaults.TextStyles.SubtitleText
-                textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#666666")
                 multiline: true
+                textStyle.base: SystemDefaults.TextStyles.SubtitleText
+                textStyle.color: Color.create(bookManager.uiMuted)
             }
 
             gestureHandlers: [
                 TapHandler {
                     onTapped: {
                         item.tapped();
+                        if (item.switchEnabled) {
+                            item.toggled(!item.checked);
+                        }
                     }
                 }
             ]
@@ -79,9 +94,11 @@ Container {
         }
     }
 
-    Divider {
+    Container {
         visible: item.showDivider
-        topMargin: 0
-        bottomMargin: 0
+        horizontalAlignment: HorizontalAlignment.Fill
+        leftMargin: bookManager.dp(16)
+        preferredHeight: 1
+        background: Color.create(bookManager.uiHairline)
     }
 }

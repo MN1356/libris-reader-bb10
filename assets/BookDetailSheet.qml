@@ -13,11 +13,51 @@ Sheet {
     property string bookFileSize: ""
     property string bookDateModified: ""
     property string bookDescription: ""
+    property bool descExpanded: false
+    property bool hideReadButton: false
     property string bookGenre: ""
     property string bookSeries: ""
     property int bookProgress: -1
 
+    property bool isCurrentBook: (bookPath === "" || bookPath === bookManager.currentFilePath)
+    property string displayTitle: bookTitle !== "" ? bookTitle : bookManager.currentBookTitle
+    property string displayAuthor: bookAuthor !== "" ? bookAuthor : (bookManager.currentBookAuthor !== "" ? bookManager.currentBookAuthor : (qsTr("Tác giả chưa rõ") + Retranslate.onLanguageChanged))
+    property string displayCover: bookCover !== "" ? bookCover : (isCurrentBook ? bookManager.currentCoverPath : "")
+    property string displayFmt: (bookFormat !== "" ? bookFormat : bookManager.currentFormat).toLowerCase()
+    property string displayFileSize: bookFileSize !== "" ? bookFileSize : (isCurrentBook ? bookManager.currentBookFileSize : "")
+    property int displayProgress: bookProgress >= 0 ? bookProgress : (isCurrentBook ? bookManager.readingProgress : 0)
+    property string displayGenre: bookGenre !== "" ? bookGenre : (isCurrentBook ? bookManager.currentBookGenre : "")
+    property string displayDateModified: bookDateModified !== "" ? bookDateModified : (isCurrentBook ? bookManager.currentBookDateModified : "")
+    property string displayRawPath: bookPath !== "" ? bookPath : bookManager.currentFilePath
+    property string displayDesc: bookDescription !== "" ? bookDescription : (isCurrentBook ? bookManager.currentBookDescription : "")
+    property variant nextSeriesInfo: ({})
+
+    onOpened: {
+        nextSeriesInfo = bookManager.nextSeriesBook(displayRawPath);
+    }
+
+    function cleanDesc(t) {
+        if (!t) return "";
+        for (var i = 0; i < 2; ++i) {
+            t = t.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&");
+            t = t.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|li)>/gi, "\n").replace(/<[^>]*>/g, "");
+        }
+        return t.replace(/[ \t\r]+/g, " ").replace(/\n[ ]+/g, "\n").replace(/\n{2,}/g, "\n").trim();
+    }
+
+    function friendlyPathOf(rawPath) {
+        if (!rawPath) return "";
+        if (rawPath.indexOf("/accounts/1000/removable/sdcard") >= 0) {
+            return rawPath.replace(new RegExp("^/accounts/1000/removable/sdcard[0-9]*/?"), "SD Card / ");
+        }
+        if (rawPath.indexOf("/accounts/1000/shared") >= 0) {
+            return rawPath.replace(new RegExp("^/accounts/1000/shared/?"), "Internal / ");
+        }
+        return rawPath;
+    }
+
     function openWithBook(item) {
+        descExpanded = false;
         if (item) {
             bookTitle = item.title ? ("" + item.title) : "";
             bookAuthor = item.author ? ("" + item.author) : "";
@@ -28,11 +68,25 @@ Sheet {
             bookDateModified = item.dateModified ? ("" + item.dateModified) : (item.date ? ("" + item.date) : "");
             bookDescription = item.description ? ("" + item.description) : "";
             bookGenre = item.genre ? ("" + item.genre) : "";
-            var s = item.series ? ("" + item.series) : (bookManager.currentBookSeries ? bookManager.currentBookSeries : "");
-            var sIdx = item.seriesIndex !== undefined ? parseInt(item.seriesIndex) : (bookManager.currentBookSeriesIndex > 0 ? bookManager.currentBookSeriesIndex : 0);
+            var isCur = (!item.filePath && !item.path) || (item.filePath === bookManager.currentFilePath) || (item.path === bookManager.currentFilePath);
+            var s = item.series ? ("" + item.series) : (isCur && bookManager.currentBookSeries ? bookManager.currentBookSeries : "");
+            var sIdx = item.seriesIndex !== undefined ? parseInt(item.seriesIndex) : (isCur && bookManager.currentBookSeriesIndex > 0 ? bookManager.currentBookSeriesIndex : 0);
             bookSeries = s !== "" ? (s + (sIdx > 0 ? (" #" + sIdx) : "")) : "";
             bookProgress = (item.progress !== undefined) ? parseInt(item.progress) : -1;
+
+            if (bookPath !== "" && (bookDescription === "" || bookGenre === "")) {
+                var meta = bookManager.getBookMetadata(bookPath);
+                if (meta) {
+                    if (bookDescription === "" && meta.description) bookDescription = "" + meta.description;
+                    if (bookGenre === "" && meta.genre) bookGenre = "" + meta.genre;
+                    if (bookSeries === "" && meta.series) {
+                        var msIdx = meta.seriesIndex ? parseInt(meta.seriesIndex) : 0;
+                        bookSeries = meta.series + (msIdx > 0 ? (" #" + msIdx) : "");
+                    }
+                }
+            }
         }
+        nextSeriesInfo = bookManager.nextSeriesBook(bookPath !== "" ? bookPath : bookManager.currentFilePath);
         bookDetailSheet.open();
     }
 
@@ -45,9 +99,11 @@ Sheet {
         bookFileSize = "";
         bookDateModified = "";
         bookDescription = "";
+        descExpanded = false;
         bookGenre = "";
         bookSeries = "";
         bookProgress = -1;
+        nextSeriesInfo = ({});
     }
 
     Page {
@@ -63,426 +119,373 @@ Sheet {
         }
 
         Container {
-            layout: DockLayout {}
-            background: bookManager.appTheme === "dark" ? Color.create("#000000") : Color.create("#FFFFFF")
+            horizontalAlignment: HorizontalAlignment.Fill
+            verticalAlignment: VerticalAlignment.Fill
+            background: Color.create(bookManager.uiBg)
 
             ScrollView {
+                scrollRole: ScrollRole.Main
                 horizontalAlignment: HorizontalAlignment.Fill
                 verticalAlignment: VerticalAlignment.Fill
                 scrollViewProperties.scrollMode: ScrollMode.Vertical
 
                 Container {
                     horizontalAlignment: HorizontalAlignment.Fill
-                    topPadding: 16
-                    bottomPadding: 32
-                    leftPadding: 16
-                    rightPadding: 16
+                    bottomPadding: bookManager.dp(32)
 
-                    // --- Top Header: Cover & Main Title/Author ---
+                    // =========================================================
+                    // HERO CARD (Cover + Title/Metadata + Progress + Read CTAs)
+                    // =========================================================
                     Container {
                         horizontalAlignment: HorizontalAlignment.Fill
-                        background: bookManager.appTheme === "dark" ? Color.create("#111111") : Color.create("#FFFFFF")
-                        topPadding: 16
-                        bottomPadding: 16
-                        leftPadding: 16
-                        rightPadding: 16
+                        leftPadding: bookManager.dp(16)
+                        rightPadding: bookManager.dp(16)
+                        topPadding: bookManager.dp(16)
+                        bottomPadding: bookManager.dp(16)
 
-                        layout: StackLayout {
-                            orientation: LayoutOrientation.LeftToRight
-                        }
-
-                        // Cover Thumbnail
                         Container {
-                            preferredWidth: 104
-                            preferredHeight: 148
-                            minWidth: 104
-                            maxWidth: 104
-                            verticalAlignment: VerticalAlignment.Center
-                            background: bookManager.appTheme === "dark" ? Color.create("#1A1A1A") : Color.create("#E8E8E8")
-                            layout: DockLayout {}
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            background: Color.create(bookManager.uiCard)
+                            topPadding: bookManager.dp(16)
+                            bottomPadding: bookManager.dp(16)
+                            leftPadding: bookManager.dp(16)
+                            rightPadding: bookManager.dp(16)
+                            layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
-                            ImageView {
-                                property string displayCover: bookDetailSheet.bookCover !== "" ? bookDetailSheet.bookCover : bookManager.currentCoverPath
-                                visible: displayCover !== ""
-                                horizontalAlignment: HorizontalAlignment.Fill
-                                verticalAlignment: VerticalAlignment.Fill
-                                imageSource: displayCover !== "" ? ("file://" + displayCover) : ""
-                                scalingMethod: ScalingMethod.AspectFill
-                            }
-
+                            // Top row: Cover + Primary Book Metadata
                             Container {
-                                property string displayCover: bookDetailSheet.bookCover !== "" ? bookDetailSheet.bookCover : bookManager.currentCoverPath
-                                property string displayFmt: (bookDetailSheet.bookFormat !== "" ? bookDetailSheet.bookFormat : bookManager.currentFormat).toLowerCase()
-                                visible: displayCover === ""
                                 horizontalAlignment: HorizontalAlignment.Fill
-                                verticalAlignment: VerticalAlignment.Fill
-                                layout: DockLayout {}
-
-                                ImageView {
-                                    horizontalAlignment: HorizontalAlignment.Center
-                                    verticalAlignment: VerticalAlignment.Center
-                                    preferredWidth: 44
-                                    preferredHeight: 44
-                                    imageSource: "asset:///icons/ic_book.png"
-                                    opacity: 0.5
-                                }
+                                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
                                 Container {
+                                    preferredWidth: bookManager.dp(112)
+                                    preferredHeight: bookManager.dp(160)
+                                    minWidth: bookManager.dp(112)
+                                    maxWidth: bookManager.dp(112)
+                                    minHeight: bookManager.dp(160)
+                                    maxHeight: bookManager.dp(160)
+                                    verticalAlignment: VerticalAlignment.Top
+                                    background: Color.create(bookManager.uiSurface)
+                                    layout: DockLayout {}
+
+                                    ImageView {
+                                        visible: bookDetailSheet.displayCover !== ""
+                                        horizontalAlignment: HorizontalAlignment.Fill
+                                        verticalAlignment: VerticalAlignment.Fill
+                                        imageSource: bookDetailSheet.displayCover !== "" ? ("file://" + bookDetailSheet.displayCover) : ""
+                                        scalingMethod: ScalingMethod.AspectFill
+                                    }
+
+                                    Container {
+                                        visible: bookDetailSheet.displayCover === ""
+                                        horizontalAlignment: HorizontalAlignment.Fill
+                                        verticalAlignment: VerticalAlignment.Fill
+                                        layout: DockLayout {}
+
+                                        ImageView {
+                                            horizontalAlignment: HorizontalAlignment.Fill
+                                            verticalAlignment: VerticalAlignment.Fill
+                                            imageSource: {
+                                                var fmt = bookDetailSheet.displayFmt ? bookDetailSheet.displayFmt : "epub";
+                                                if (fmt === "azw" || fmt === "azw3" || fmt === "kf8" || fmt === "prc") fmt = "mobi";
+                                                if (fmt !== "pdf" && fmt !== "epub" && fmt !== "mobi" && fmt !== "fb2" && fmt !== "cbz" && fmt !== "djvu" && fmt !== "txt") fmt = "epub";
+                                                return "asset:///icons/default_cover_" + fmt + ".png";
+                                            }
+                                            scalingMethod: ScalingMethod.AspectFill
+                                        }
+
+                                        Container {
+                                            horizontalAlignment: HorizontalAlignment.Center
+                                            verticalAlignment: VerticalAlignment.Center
+                                            leftPadding: bookManager.dp(8)
+                                            rightPadding: bookManager.dp(8)
+                                            bottomPadding: bookManager.dp(14)
+
+                                            Label {
+                                                horizontalAlignment: HorizontalAlignment.Center
+                                                verticalAlignment: VerticalAlignment.Center
+                                                text: bookDetailSheet.displayTitle
+                                                textStyle.base: SystemDefaults.TextStyles.SmallText
+                                                textStyle.fontWeight: FontWeight.W500
+                                                textStyle.color: Color.create("#F5EFE6")
+                                                multiline: true
+                                                autoSize.maxLineCount: 3
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Right Metadata Column
+                                Container {
+                                    leftMargin: bookManager.dp(16)
+                                    verticalAlignment: VerticalAlignment.Top
+                                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                                    Label {
+                                        text: bookDetailSheet.displayTitle
+                                        textStyle.base: SystemDefaults.TextStyles.TitleText
+                                        textStyle.fontWeight: FontWeight.W500
+                                        textStyle.color: Color.create(bookManager.uiInk)
+                                        multiline: true
+                                        autoSize.maxLineCount: 3
+                                    }
+
+                                    Label {
+                                        topMargin: bookManager.dp(4)
+                                        text: bookDetailSheet.displayAuthor
+                                        textStyle.base: SystemDefaults.TextStyles.BodyText
+                                        textStyle.color: Color.create(bookManager.uiMuted)
+                                        multiline: true
+                                        autoSize.maxLineCount: 2
+                                    }
+
+                                    Container {
+                                        topMargin: bookManager.dp(10)
+                                        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                                        Container {
+                                            background: Color.create(bookManager.uiSurface)
+                                            leftPadding: bookManager.dp(10)
+                                            rightPadding: bookManager.dp(10)
+                                            topPadding: bookManager.dp(3)
+                                            bottomPadding: bookManager.dp(3)
+                                            verticalAlignment: VerticalAlignment.Center
+
+                                            Label {
+                                                text: bookDetailSheet.displayFmt.toUpperCase()
+                                                textStyle.base: SystemDefaults.TextStyles.SmallText
+                                                textStyle.fontWeight: FontWeight.W500
+                                                textStyle.color: Color.create(bookManager.uiAccent)
+                                            }
+                                        }
+
+                                        Label {
+                                            leftMargin: bookManager.dp(10)
+                                            verticalAlignment: VerticalAlignment.Center
+                                            text: bookDetailSheet.displayFileSize
+                                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                                            textStyle.color: Color.create(bookManager.uiMuted)
+                                        }
+                                    }
+
+                                    // Reading progress bar inside metadata column
+                                    Container {
+                                        topMargin: bookManager.dp(12)
+                                        horizontalAlignment: HorizontalAlignment.Fill
+                                        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                                        Container {
+                                            verticalAlignment: VerticalAlignment.Center
+                                            layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                            preferredHeight: bookManager.dp(6)
+                                            background: Color.create(bookManager.uiSurface)
+                                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                                            Container {
+                                                preferredHeight: bookManager.dp(6)
+                                                background: Color.create(bookManager.uiAccent)
+                                                layoutProperties: StackLayoutProperties { spaceQuota: Math.max(0.001, bookDetailSheet.displayProgress) }
+                                            }
+                                            Container {
+                                                preferredHeight: bookManager.dp(6)
+                                                background: Color.Transparent
+                                                layoutProperties: StackLayoutProperties { spaceQuota: Math.max(0.001, 100 - bookDetailSheet.displayProgress) }
+                                            }
+                                        }
+
+                                        Label {
+                                            leftMargin: bookManager.dp(8)
+                                            verticalAlignment: VerticalAlignment.Center
+                                            text: bookDetailSheet.displayProgress + "%"
+                                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                                            textStyle.fontWeight: FontWeight.W500
+                                            textStyle.color: Color.create(bookManager.uiAccent)
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Extended Metadata Grid (Series, Genre, Date Modified)
+                            Container {
+                                visible: bookDetailSheet.bookSeries !== "" || bookDetailSheet.displayGenre !== "" || bookDetailSheet.displayDateModified !== ""
+                                topMargin: bookManager.dp(14)
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                                Container {
+                                    bottomMargin: bookManager.dp(12)
                                     horizontalAlignment: HorizontalAlignment.Fill
-                                    verticalAlignment: VerticalAlignment.Bottom
-                                    background: displayFmt === "pdf" ? Color.create("#DC2626") :
-                                                displayFmt === "epub" ? Color.create("#10B981") :
-                                                displayFmt === "fb2" ? Color.create("#9333EA") :
-                                                Color.create("#2563EB")
-                                    topPadding: 3
-                                    bottomPadding: 3
-
-                                    Label {
-                                        horizontalAlignment: HorizontalAlignment.Center
-                                        verticalAlignment: VerticalAlignment.Center
-                                        text: (bookDetailSheet.bookFormat !== "" ? bookDetailSheet.bookFormat : bookManager.currentFormat).toUpperCase()
-                                        textStyle.base: SystemDefaults.TextStyles.SmallText
-                                        textStyle.fontWeight: FontWeight.Bold
-                                        textStyle.color: Color.White
-                                    }
-                                }
-                            }
-                        }
-
-                        // Right: Title, Author & Format Badge
-                        Container {
-                            leftMargin: 16
-                            verticalAlignment: VerticalAlignment.Center
-                            layoutProperties: StackLayoutProperties {
-                                spaceQuota: 1.0
-                            }
-
-                            Label {
-                                text: bookDetailSheet.bookTitle !== "" ? bookDetailSheet.bookTitle : bookManager.currentBookTitle
-                                textStyle.base: SystemDefaults.TextStyles.TitleText
-                                textStyle.fontWeight: FontWeight.Bold
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.Black
-                                multiline: true
-                                autoSize.maxLineCount: 3
-                            }
-
-                            Label {
-                                topMargin: 4
-                                text: bookDetailSheet.bookAuthor !== "" ? bookDetailSheet.bookAuthor : (bookManager.currentBookAuthor !== "" ? bookManager.currentBookAuthor : (qsTr("Tác giả chưa rõ") + Retranslate.onLanguageChanged))
-                                textStyle.base: SystemDefaults.TextStyles.BodyText
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.create("#AAAAAA") : Color.create("#666666")
-                                multiline: true
-                                autoSize.maxLineCount: 2
-                            }
-
-                            Container {
-                                topMargin: 8
-                                layout: StackLayout {
-                                    orientation: LayoutOrientation.LeftToRight
+                                    preferredHeight: 1
+                                    background: Color.create(bookManager.uiHairline)
                                 }
 
+                                // Row: Bộ sách
                                 Container {
-                                    background: Color.create("#2010B981")
-                                    leftPadding: 8
-                                    rightPadding: 8
-                                    topPadding: 3
-                                    bottomPadding: 3
-                                    verticalAlignment: VerticalAlignment.Center
+                                    visible: bookDetailSheet.bookSeries !== ""
+                                    bottomMargin: bookManager.dp(8)
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
                                     Label {
-                                        text: (bookDetailSheet.bookFormat !== "" ? bookDetailSheet.bookFormat : bookManager.currentFormat).toUpperCase()
+                                        text: qsTr("Bộ sách") + Retranslate.onLanguageChanged
                                         textStyle.base: SystemDefaults.TextStyles.SmallText
-                                        textStyle.fontWeight: FontWeight.Bold
-                                        textStyle.color: Color.create("#10B981")
+                                        textStyle.fontWeight: FontWeight.W500
+                                        textStyle.color: Color.create(bookManager.uiMuted)
+                                    }
+                                    Label {
+                                        topMargin: bookManager.dp(2)
+                                        text: bookDetailSheet.bookSeries
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.color: Color.create(bookManager.uiInk)
+                                        multiline: true
                                     }
                                 }
 
-                                Label {
-                                    leftMargin: 10
-                                    verticalAlignment: VerticalAlignment.Center
-                                    text: bookDetailSheet.bookFileSize !== "" ? bookDetailSheet.bookFileSize : bookManager.currentBookFileSize
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                                    textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#666666")
+                                // Row: Thể loại
+                                Container {
+                                    visible: bookDetailSheet.displayGenre !== ""
+                                    bottomMargin: bookManager.dp(8)
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                                    Label {
+                                        text: qsTr("Thể loại") + Retranslate.onLanguageChanged
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.fontWeight: FontWeight.W500
+                                        textStyle.color: Color.create(bookManager.uiMuted)
+                                    }
+                                    Label {
+                                        topMargin: bookManager.dp(2)
+                                        text: bookDetailSheet.displayGenre
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.color: Color.create(bookManager.uiInk)
+                                        multiline: true
+                                        autoSize.maxLineCount: 3
+                                    }
+                                }
+
+                                // Row: Ngày cập nhật
+                                Container {
+                                    visible: bookDetailSheet.displayDateModified !== ""
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                                    Label {
+                                        text: qsTr("Cập nhật") + Retranslate.onLanguageChanged
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.fontWeight: FontWeight.W500
+                                        textStyle.color: Color.create(bookManager.uiMuted)
+                                    }
+                                    Label {
+                                        topMargin: bookManager.dp(2)
+                                        text: bookDetailSheet.displayDateModified
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.color: Color.create(bookManager.uiInk)
+                                    }
                                 }
                             }
-                        }
-                    }
 
-                    // Prominent Read Primary Button
-                    Container {
-                        topMargin: 14
-                        horizontalAlignment: HorizontalAlignment.Fill
-                        preferredHeight: 64
-                        minHeight: 56
-                        background: Color.create("#10B981")
-                        layout: DockLayout {}
-
-                        gestureHandlers: [
-                            TapHandler {
-                                onTapped: {
-                                    var p = bookDetailSheet.bookPath !== "" ? bookDetailSheet.bookPath : bookManager.currentFilePath;
+                            // Primary Read CTA (hidden inside Reader)
+                            Button {
+                                visible: !bookDetailSheet.hideReadButton
+                                topMargin: bookManager.dp(14)
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                appearance: ControlAppearance.Primary
+                                imageSource: "asset:///icons/ic_reading.png"
+                                text: qsTr("Đọc sách") + Retranslate.onLanguageChanged
+                                onClicked: {
+                                    var p = bookDetailSheet.displayRawPath;
                                     bookDetailSheet.close();
                                     bookDetailSheet.requestOpenBook(p);
                                 }
                             }
-                        ]
 
-                        Container {
-                            horizontalAlignment: HorizontalAlignment.Center
-                            verticalAlignment: VerticalAlignment.Center
-                            layout: StackLayout {
-                                orientation: LayoutOrientation.LeftToRight
-                            }
-
-                            ImageView {
-                                verticalAlignment: VerticalAlignment.Center
-                                preferredWidth: 32
-                                preferredHeight: 32
-                                imageSource: "asset:///icons/ic_reading.png"
-                            }
-
-                            Label {
-                                leftMargin: 10
-                                verticalAlignment: VerticalAlignment.Center
-                                text: qsTr("Đọc cuốn sách này") + Retranslate.onLanguageChanged
-                                textStyle.base: SystemDefaults.TextStyles.TitleText
-                                textStyle.fontWeight: FontWeight.Bold
-                                textStyle.color: Color.White
-                            }
-                        }
-                    }
-
-                    // --- Section 1: Thông tin xuất bản & Tập tin ---
-                    Header {
-                        topMargin: 20
-                        title: qsTr("THÔNG TIN XUẤT BẢN & TẬP TIN") + Retranslate.onLanguageChanged
-                    }
-
-                    Container {
-                        topMargin: 8
-                        horizontalAlignment: HorizontalAlignment.Fill
-                        background: bookManager.appTheme === "dark" ? Color.create("#111111") : Color.create("#FFFFFF")
-                        topPadding: 14
-                        bottomPadding: 14
-                        leftPadding: 16
-                        rightPadding: 16
-
-                        // Row: Bộ sách
-                        Container {
-                            visible: bookDetailSheet.bookSeries !== ""
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-
-                            Label {
-                                preferredWidth: 210
-                                minWidth: 180
-                                text: qsTr("Bộ sách") + Retranslate.onLanguageChanged
-                                textStyle.base: SystemDefaults.TextStyles.BodyText
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#666666")
-                            }
-                            Label {
-                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                text: bookDetailSheet.bookSeries
-                                textStyle.base: SystemDefaults.TextStyles.BodyText
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.Black
-                                multiline: true
-                            }
-                        }
-
-                        // Divider
-                        Container {
-                            visible: bookDetailSheet.bookSeries !== ""
-                            topMargin: 10
-                            bottomMargin: 10
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            preferredHeight: 1
-                            background: bookManager.appTheme === "dark" ? Color.create("#222222") : Color.create("#E5E5E5")
-                        }
-
-                        // Row: Thể loại (Ẩn khi rỗng hoặc spam)
-                        Container {
-                            property string displayGenre: bookDetailSheet.bookGenre !== "" ? bookDetailSheet.bookGenre : bookManager.currentBookGenre
-                            visible: displayGenre !== ""
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-
-                            Label {
-                                preferredWidth: 210
-                                minWidth: 180
-                                text: qsTr("Thể loại") + Retranslate.onLanguageChanged
-                                textStyle.base: SystemDefaults.TextStyles.BodyText
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#666666")
-                            }
-                            Label {
-                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                text: parent.displayGenre
-                                textStyle.base: SystemDefaults.TextStyles.BodyText
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.Black
-                                multiline: true
-                            }
-                        }
-
-                        // Divider
-                        Container {
-                            property string displayGenre: bookDetailSheet.bookGenre !== "" ? bookDetailSheet.bookGenre : bookManager.currentBookGenre
-                            visible: displayGenre !== ""
-                            topMargin: 10
-                            bottomMargin: 10
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            preferredHeight: 1
-                            background: bookManager.appTheme === "dark" ? Color.create("#222222") : Color.create("#E5E5E5")
-                        }
-
-                        // Row: Tiến độ đọc
-                        Container {
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-
-                            Label {
-                                preferredWidth: 210
-                                minWidth: 180
-                                text: qsTr("Tiến độ đọc") + Retranslate.onLanguageChanged
-                                textStyle.base: SystemDefaults.TextStyles.BodyText
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#666666")
-                            }
-
-                            Container {
-                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-                                verticalAlignment: VerticalAlignment.Center
-
-                                Label {
-                                    property int p: bookDetailSheet.bookProgress >= 0 ? bookDetailSheet.bookProgress : bookManager.readingProgress
-                                    text: p + "%"
-                                    textStyle.base: SystemDefaults.TextStyles.BodyText
-                                    textStyle.fontWeight: FontWeight.Bold
-                                    textStyle.color: p >= 100 ? Color.create("#10B981") : (bookManager.appTheme === "dark" ? Color.White : Color.Black)
-                                    verticalAlignment: VerticalAlignment.Center
-                                }
-
-                                Container {
-                                    property int p: bookDetailSheet.bookProgress >= 0 ? bookDetailSheet.bookProgress : bookManager.readingProgress
-                                    leftMargin: 12
-                                    verticalAlignment: VerticalAlignment.Center
-                                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                    preferredHeight: 6
-                                    background: bookManager.appTheme === "dark" ? Color.create("#222222") : Color.create("#E5E5E5")
-                                    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-
-                                    Container {
-                                        preferredHeight: 6
-                                        background: Color.create("#10B981")
-                                        layoutProperties: StackLayoutProperties {
-                                            spaceQuota: Math.max(1, parent.p)
-                                        }
-                                    }
-                                    Container {
-                                        preferredHeight: 6
-                                        background: Color.Transparent
-                                        layoutProperties: StackLayoutProperties {
-                                            spaceQuota: Math.max(0.001, 100 - parent.p)
-                                        }
-                                    }
+                            // Next Volume in Series Button (when available)
+                            Button {
+                                visible: bookDetailSheet.nextSeriesInfo && bookDetailSheet.nextSeriesInfo.filePath !== undefined && bookDetailSheet.nextSeriesInfo.filePath !== ""
+                                topMargin: bookManager.dp(8)
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                text: (qsTr("Đọc tiếp tập kế") + (bookDetailSheet.nextSeriesInfo && bookDetailSheet.nextSeriesInfo.seriesIndex > 0 ? (" (#" + bookDetailSheet.nextSeriesInfo.seriesIndex + ")") : "")) + Retranslate.onLanguageChanged
+                                onClicked: {
+                                    var np = bookDetailSheet.nextSeriesInfo.filePath;
+                                    bookDetailSheet.close();
+                                    bookDetailSheet.requestOpenBook(np);
                                 }
                             }
                         }
-
-                        // Divider
-                        Container {
-                            topMargin: 10
-                            bottomMargin: 10
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            preferredHeight: 1
-                            background: bookManager.appTheme === "dark" ? Color.create("#222222") : Color.create("#E5E5E5")
-                        }
-
-                        // Row: Ngày cập nhật
-                        Container {
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-
-                            Label {
-                                preferredWidth: 210
-                                minWidth: 180
-                                text: qsTr("Ngày sửa đổi") + Retranslate.onLanguageChanged
-                                textStyle.base: SystemDefaults.TextStyles.BodyText
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#666666")
-                            }
-                            Label {
-                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                text: bookDetailSheet.bookDateModified !== "" ? bookDetailSheet.bookDateModified : bookManager.currentBookDateModified
-                                textStyle.base: SystemDefaults.TextStyles.BodyText
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.Black
-                            }
-                        }
-
-                        // Divider
-                        Container {
-                            topMargin: 10
-                            bottomMargin: 10
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            preferredHeight: 1
-                            background: bookManager.appTheme === "dark" ? Color.create("#222222") : Color.create("#E5E5E5")
-                        }
-
-                        // Row: Đường dẫn tệp
-                        Container {
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-
-                            Label {
-                                preferredWidth: 210
-                                minWidth: 180
-                                text: qsTr("Đường dẫn tệp") + Retranslate.onLanguageChanged
-                                textStyle.base: SystemDefaults.TextStyles.BodyText
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#666666")
-                            }
-                            Label {
-                                property string rawPath: bookDetailSheet.bookPath !== "" ? bookDetailSheet.bookPath : bookManager.currentFilePath
-                                property string friendlyPath: rawPath.indexOf("/accounts/1000/removable/sdcard") >= 0 ?
-                                                              rawPath.replace(new RegExp("^/accounts/1000/removable/sdcard[0-9]*/?"), "SD Card / ") :
-                                                              (rawPath.indexOf("/accounts/1000/shared") >= 0 ? rawPath.replace(new RegExp("^/accounts/1000/shared/?"), "Internal / ") : rawPath)
-                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                text: friendlyPath
-                                textStyle.base: SystemDefaults.TextStyles.SubtitleText
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.create("#AAAAAA") : Color.create("#555555")
-                                multiline: true
-                            }
-                        }
                     }
 
-                    // --- Section 2: Mô tả sách ---
+                    // =========================================================
+                    // DESCRIPTION SECTION (Edge-to-edge Header + Card)
+                    // =========================================================
                     Header {
-                        topMargin: 20
                         title: qsTr("MÔ TẢ SÁCH") + Retranslate.onLanguageChanged
                     }
 
                     Container {
-                        topMargin: 8
                         horizontalAlignment: HorizontalAlignment.Fill
-                        background: bookManager.appTheme === "dark" ? Color.create("#111111") : Color.create("#FFFFFF")
-                        topPadding: 16
-                        bottomPadding: 16
-                        leftPadding: 16
-                        rightPadding: 16
+                        leftPadding: bookManager.dp(16)
+                        rightPadding: bookManager.dp(16)
+                        topPadding: bookManager.dp(10)
 
-                        Label {
-                            property string displayDesc: bookDetailSheet.bookDescription !== "" ? bookDetailSheet.bookDescription : bookManager.currentBookDescription
-                            visible: displayDesc !== ""
-                            text: displayDesc
-                            textStyle.base: SystemDefaults.TextStyles.BodyText
-                            textStyle.lineHeight: 1.25
-                            textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.Black
-                            multiline: true
+                        Container {
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            background: Color.create(bookManager.uiCard)
+                            topPadding: bookManager.dp(14)
+                            bottomPadding: bookManager.dp(14)
+                            leftPadding: bookManager.dp(16)
+                            rightPadding: bookManager.dp(16)
+
+                            Label {
+                                id: descLabel
+                                visible: bookDetailSheet.displayDesc !== ""
+                                text: bookDetailSheet.cleanDesc(bookDetailSheet.displayDesc)
+                                textStyle.base: SystemDefaults.TextStyles.BodyText
+                                textStyle.lineHeight: 1.15
+                                textStyle.color: Color.create(bookManager.uiInk)
+                                multiline: true
+                                autoSize.maxLineCount: bookDetailSheet.descExpanded ? 200 : 8
+                            }
+
+                            Label {
+                                visible: descLabel.visible && descLabel.text.length > 240
+                                topMargin: bookManager.dp(10)
+                                text: (bookDetailSheet.descExpanded ? qsTr("Thu gọn") : qsTr("Xem thêm")) + Retranslate.onLanguageChanged
+                                textStyle.base: SystemDefaults.TextStyles.BodyText
+                                textStyle.fontWeight: FontWeight.W500
+                                textStyle.color: Color.create(bookManager.uiAccent)
+                                gestureHandlers: [
+                                    TapHandler { onTapped: { bookDetailSheet.descExpanded = !bookDetailSheet.descExpanded; } }
+                                ]
+                            }
+
+                            Label {
+                                visible: bookDetailSheet.displayDesc === ""
+                                text: qsTr("Chưa có mô tả cho cuốn sách này.") + Retranslate.onLanguageChanged
+                                textStyle.base: SystemDefaults.TextStyles.BodyText
+                                textStyle.fontStyle: FontStyle.Italic
+                                textStyle.color: Color.create(bookManager.uiMuted)
+                            }
                         }
 
-                        Label {
-                            property string displayDesc: bookDetailSheet.bookDescription !== "" ? bookDetailSheet.bookDescription : bookManager.currentBookDescription
-                            visible: displayDesc === ""
-                            text: qsTr("Chưa có mô tả cho cuốn sách này.") + Retranslate.onLanguageChanged
-                            textStyle.base: SystemDefaults.TextStyles.BodyText
-                            textStyle.fontStyle: FontStyle.Italic
-                            textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#666666")
+                        // Compact technical file path footer
+                        Container {
+                            visible: bookDetailSheet.displayRawPath !== ""
+                            topMargin: bookManager.dp(12)
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            background: Color.create(bookManager.uiCard)
+                            topPadding: bookManager.dp(10)
+                            bottomPadding: bookManager.dp(10)
+                            leftPadding: bookManager.dp(16)
+                            rightPadding: bookManager.dp(16)
+
+                            Label {
+                                text: bookDetailSheet.friendlyPathOf(bookDetailSheet.displayRawPath)
+                                textStyle.base: SystemDefaults.TextStyles.SmallText
+                                textStyle.color: Color.create(bookManager.uiMuted)
+                                multiline: true
+                            }
                         }
                     }
                 }

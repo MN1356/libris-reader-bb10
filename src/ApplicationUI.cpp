@@ -1,6 +1,7 @@
 #include "ApplicationUI.hpp"
 #include "QmlTimer.hpp"
 #include "OpdsManager.hpp"
+#include <unistd.h>
 #include <bb/cascades/Application>
 #include <bb/cascades/QmlDocument>
 #include <bb/cascades/AbstractPane>
@@ -36,15 +37,23 @@
 #include <QUrl>
 #include <QFileInfo>
 #include <QFile>
+#include <QDir>
 #include <QList>
 #include <QDebug>
 #include <cstdlib>
+#ifdef QT_DECLARATIVE_DEBUG
+#include <bb/cascades/Window>
+#include <bb/system/Screenshot>
+#endif
 
 using namespace bb::cascades;
 
 ApplicationUI::ApplicationUI(QObject *parent)
     : QObject(parent)
     , m_rootPane(NULL)
+    , m_debugCaptureTimer(NULL)
+    , m_isForeground(true)
+    , m_exitSaved(false)
 {
     qDebug() << "ApplicationUI constructor: Initializing InvokeManager...";
 
@@ -107,6 +116,7 @@ ApplicationUI::ApplicationUI(QObject *parent)
         engine->rootContext()->setContextProperty("ttsManager", m_bookManager.ttsManager());
         engine->rootContext()->setContextProperty("dictManager", m_bookManager.dictManager());
         engine->rootContext()->setContextProperty("opdsManager", m_bookManager.opdsManager());
+        engine->rootContext()->setContextProperty("wifiDropServer", m_bookManager.wifiDropServer());
     }
 
     QmlDocument *qml = QmlDocument::create("asset:///main.qml").parent(this);
@@ -120,6 +130,7 @@ ApplicationUI::ApplicationUI(QObject *parent)
     qml->setContextProperty("ttsManager", m_bookManager.ttsManager());
     qml->setContextProperty("dictManager", m_bookManager.dictManager());
     qml->setContextProperty("opdsManager", m_bookManager.opdsManager());
+    qml->setContextProperty("wifiDropServer", m_bookManager.wifiDropServer());
 
     if (qml->hasErrors()) {
         QList<QDeclarativeError> errs = qml->errors();
@@ -148,7 +159,7 @@ ApplicationUI::ApplicationUI(QObject *parent)
         fallbackContainer->setRightPadding(30.0f);
 
         Label *titleLabel = new Label(fallbackContainer);
-        titleLabel->setText(QString::fromUtf8("BerryLeaf - Khởi Động Thất Bại"));
+        titleLabel->setText(QString::fromUtf8("Libris - Khởi Động Thất Bại"));
         titleLabel->textStyle()->setBase(SystemDefaults::TextStyles::titleText());
         titleLabel->textStyle()->setColor(Color::fromARGB(0xFFEF4444));
 
@@ -207,6 +218,15 @@ ApplicationUI::ApplicationUI(QObject *parent)
 
     // Initialize Active Frame (Cover)
     initCover();
+
+#ifdef QT_DECLARATIVE_DEBUG
+    m_debugCaptureTimer = new QTimer(this);
+    m_debugCaptureTimer->setInterval(600);
+    connect(m_debugCaptureTimer, SIGNAL(timeout()), this, SLOT(onDebugCaptureTimeout()));
+    if (m_isForeground) {
+        m_debugCaptureTimer->start();
+    }
+#endif
 }
 
 ApplicationUI::~ApplicationUI()
@@ -264,11 +284,13 @@ void ApplicationUI::processInvokeRequest(const bb::system::InvokeRequest &reques
         filePath = uri.toLocalFile();
         if (filePath.isEmpty()) {
             filePath = uri.path();
-        }
-        if (filePath.startsWith("file://", Qt::CaseInsensitive)) {
+            if (filePath.startsWith("file://", Qt::CaseInsensitive)) {
+                filePath = filePath.mid(7);
+            }
+            filePath = QUrl::fromPercentEncoding(filePath.toUtf8());
+        } else if (filePath.startsWith("file://", Qt::CaseInsensitive)) {
             filePath = filePath.mid(7);
         }
-        filePath = QUrl::fromPercentEncoding(filePath.toUtf8());
     } else if (!request.data().isEmpty()) {
         filePath = QString::fromUtf8(request.data()).trimmed();
         if (filePath.startsWith("file://", Qt::CaseInsensitive)) {
@@ -315,36 +337,36 @@ void ApplicationUI::showAbout()
 {
     qDebug() << "ApplicationUI::showAbout called";
     emit showAboutRequested();
-    if (m_rootPane) {
-        QMetaObject::invokeMethod(m_rootPane, "showAbout", Qt::QueuedConnection);
-    }
 }
 
 void ApplicationUI::openSettings()
 {
     qDebug() << "ApplicationUI::openSettings called";
     emit openSettingsRequested();
-    if (m_rootPane) {
-        QMetaObject::invokeMethod(m_rootPane, "openSettings", Qt::QueuedConnection);
-    }
 }
 
 void ApplicationUI::openReadingStats()
 {
     qDebug() << "ApplicationUI::openReadingStats called";
     emit openReadingStatsRequested();
-    if (m_rootPane) {
-        QMetaObject::invokeMethod(m_rootPane, "openReadingStats", Qt::QueuedConnection);
-    }
 }
 
 void ApplicationUI::openFilePicker()
 {
     qDebug() << "ApplicationUI::openFilePicker called";
     emit openFilePickerRequested();
-    if (m_rootPane) {
-        QMetaObject::invokeMethod(m_rootPane, "openFilePicker", Qt::QueuedConnection);
-    }
+}
+
+void ApplicationUI::openWifiDrop()
+{
+    qDebug() << "ApplicationUI::openWifiDrop called";
+    emit openWifiDropRequested();
+}
+
+void ApplicationUI::openOpds()
+{
+    qDebug() << "ApplicationUI::openOpds called";
+    emit openOpdsRequested();
 }
 
 void ApplicationUI::sendLog()
@@ -355,49 +377,59 @@ void ApplicationUI::switchToTab(const QString &tabName)
 {
     qDebug() << "ApplicationUI::switchToTab called for:" << tabName;
     emit switchToTabRequested(tabName);
-    if (m_rootPane) {
-        QMetaObject::invokeMethod(m_rootPane, "switchToTab",
-                                  Qt::QueuedConnection,
-                                  Q_ARG(QVariant, QVariant(tabName)));
-    }
 }
 
 void ApplicationUI::promptExit()
 {
     qDebug() << "ApplicationUI::promptExit called";
     emit promptExitRequested();
-    if (m_rootPane) {
-        QMetaObject::invokeMethod(m_rootPane, "promptExit", Qt::QueuedConnection);
-    }
 }
 
 void ApplicationUI::exitApp()
 {
-    qDebug() << "ApplicationUI::exitApp: Performing clean exit and state preservation...";
-    m_bookManager.saveCurrentProgress();
-    m_bookManager.saveSettings();
-    m_bookManager.pauseTimersForSleep();
+    qDebug() << "[ApplicationUI] exitApp: Performing clean exit and state preservation...";
+    if (!m_exitSaved) {
+        m_exitSaved = true;
+        m_bookManager.saveForShutdown();
+    }
+    m_bookManager.pauseTimersForSleep(false);
     if (m_bookManager.ttsManager() && m_bookManager.ttsManager()->isActive()) {
         m_bookManager.ttsManager()->stop();
     }
-    qDebug() << "ApplicationUI::exitApp: Requesting application exit...";
+    m_bookManager.cancelWorkers();
+
+    // Start a 600ms watchdog timer: if the Cascades/Navigator handshake takes too long
+    // or any native thread fails to join, force clean process termination so the icon
+    // on the BlackBerry 10 home screen never gets dimmed/frozen.
+    QTimer::singleShot(600, this, SLOT(onHardExitTimeout()));
+
+    qDebug() << "[ApplicationUI] exitApp: Requesting application exit via Navigator...";
     if (Application::instance()) {
         Application::instance()->requestExit();
     }
-    QCoreApplication::quit();
+}
+
+void ApplicationUI::onHardExitTimeout()
+{
+    qDebug() << "[ApplicationUI] onHardExitTimeout: Watchdog triggered -> terminating process now";
+    _exit(0);
 }
 
 void ApplicationUI::onThumbnail()
 {
     qDebug() << "[ApplicationUI] onThumbnail: app minimized to Active Frame";
+    m_isForeground = false;
+    if (m_debugCaptureTimer) m_debugCaptureTimer->stop();
     m_bookManager.pauseTimersForSleep();
 }
 
 void ApplicationUI::onFullscreen()
 {
     qDebug() << "[ApplicationUI] onFullscreen: app returned to foreground";
+    m_isForeground = true;
+    if (m_debugCaptureTimer) m_debugCaptureTimer->start();
     m_bookManager.resumeTimersFromSleep();
-    if (m_bookManager.bookCount() == 0 && !m_bookManager.isScanning()) {
+    if (m_bookManager.totalScannedBooks() == 0 && !m_bookManager.isScanning()) {
         qDebug() << "[ApplicationUI] onFullscreen: 0 books detected on foreground resume (e.g. permission newly granted), triggering library scan...";
         m_bookManager.scanLibrary();
     }
@@ -406,23 +438,85 @@ void ApplicationUI::onFullscreen()
 void ApplicationUI::onAsleep()
 {
     qDebug() << "[ApplicationUI] onAsleep: device screen turned off / standby";
+    if (m_debugCaptureTimer) m_debugCaptureTimer->stop();
     m_bookManager.pauseTimersForSleep();
 }
 
 void ApplicationUI::onAwake()
 {
     qDebug() << "[ApplicationUI] onAwake: device screen turned on";
-    m_bookManager.resumeTimersFromSleep();
+    if (m_isForeground) {
+        if (m_debugCaptureTimer) m_debugCaptureTimer->start();
+        m_bookManager.resumeTimersFromSleep();
+    }
 }
 
 void ApplicationUI::onInvisible()
 {
     qDebug() << "[ApplicationUI] onInvisible: app window is completely hidden";
+    m_isForeground = false;
+    if (m_debugCaptureTimer) m_debugCaptureTimer->stop();
     m_bookManager.pauseTimersForSleep();
 }
 
 void ApplicationUI::onAboutToQuit()
 {
-    qDebug() << "[ApplicationUI] onAboutToQuit: saving progress before quit";
-    m_bookManager.saveCurrentProgress();
+    if (m_exitSaved) {
+        return;
+    }
+    m_exitSaved = true;
+    qDebug() << "[ApplicationUI] onAboutToQuit: Performing complete shutdown cleanup";
+    if (m_debugCaptureTimer) m_debugCaptureTimer->stop();
+    m_bookManager.saveForShutdown();
+    m_bookManager.pauseTimersForSleep(false);
+    if (m_bookManager.ttsManager() && m_bookManager.ttsManager()->isActive()) {
+        m_bookManager.ttsManager()->stop();
+    }
+    m_bookManager.cancelWorkers();
+}
+
+void ApplicationUI::onDebugCaptureTimeout()
+{
+#ifdef QT_DECLARATIVE_DEBUG
+    QString reqPath = QDir::currentPath() + "/data/ui_capture.req";
+    if (!QFile::exists(reqPath)) {
+        return;
+    }
+    QFile::remove(reqPath);
+    bb::cascades::Window *win = Application::instance() ? Application::instance()->mainWindow() : 0;
+    if (!win) {
+        qWarning() << "[DebugCapture] mainWindow() is null";
+        return;
+    }
+    QString outPath = QDir::currentPath() + "/data/ui_capture.png";
+    QFile::remove(outPath);
+    bb::system::Screenshot ss;
+    QString saved = ss.captureWindow(QUrl::fromLocalFile(outPath), win->handle());
+    qDebug() << "[DebugCapture] captureWindow saved:" << saved << "err:" << ss.error() << "outPath:" << outPath;
+#endif
+}
+
+void ApplicationUI::shareFile(const QString &filePath, const QString &mimeType)
+{
+    QString cleanPath = filePath.trimmed();
+    if (cleanPath.isEmpty()) return;
+    if (cleanPath.startsWith("file://")) {
+        cleanPath = QUrl(cleanPath).toLocalFile();
+    }
+    bb::system::InvokeRequest req;
+    req.setAction("bb.action.SHARE");
+    req.setMimeType(mimeType.isEmpty() ? "image/png" : mimeType);
+    req.setUri(QUrl::fromLocalFile(cleanPath));
+    m_invokeManager.invoke(req);
+}
+
+void ApplicationUI::shareText(const QString &text)
+{
+    QString clean = text.trimmed();
+    if (clean.isEmpty()) return;
+    bb::system::InvokeRequest req;
+    req.setAction("bb.action.SHARE");
+    req.setMimeType("text/plain");
+    req.setData(clean.toUtf8());
+    m_invokeManager.invoke(req);
 }

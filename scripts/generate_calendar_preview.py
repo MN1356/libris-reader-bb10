@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate high-fidelity preview of BerryLeaf Calendar & Reading Statistics UI.
+Generate high-fidelity preview of Libris Calendar & Reading Statistics UI.
 """
 import math
 import os

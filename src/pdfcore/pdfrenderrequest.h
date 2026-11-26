@@ -1,22 +1,22 @@
-#ifndef __NSRRENDERREQUEST_H__
-#define __NSRRENDERREQUEST_H__
+#ifndef __PDFRENDERREQUEST_H__
+#define __PDFRENDERREQUEST_H__
 
 /**
- * @file nsrrenderrequest.h
- * @author Alexander Saprykin
+ * @file pdfrenderrequest.h
+ * @author Libris Team
  * @brief Rendering request
  */
 
-#include "nsrabstractdocument.h"
-#include "nsrcroppads.h"
-#include "nsrreadercore_global.h"
+#include "pdfabstractdocument.h"
+#include "pdfcroppads.h"
+#include "pdfcore_global.h"
 
 #include <QString>
 
 #include <qmath.h>
 
 /**
- * @class NSRRenderRequest nsrrenderrequest.h
+ * @class NSRRenderRequest pdfrenderrequest.h
  * @brief Rendering request class
  *
  * Rendering request is an input data for NSR rendering engine. It
@@ -329,4 +329,4 @@ private:
 	bool						_zoomToWidth;	/**< Zoom to width flag		*/
 };
 
-#endif /* __NSRRENDERREQUEST_H__ */
+#endif /* __PDFRENDERREQUEST_H__ */

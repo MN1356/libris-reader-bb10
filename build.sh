@@ -22,27 +22,36 @@ if [[ "$TARGET" == "simulator" ]]; then
     CONFIG="simulator"
     VARIANT="o-g"
     BAR_CONFIG="Simulator-Debug"
-    BAR_NAME="BerryLeaf-simulator-unsigned.bar"
+    BAR_NAME="Libris-simulator-unsigned.bar"
 else
     ARCH="armle-v7"
     SPEC="blackberry-armv7le-qcc"
     CONFIG="device"
     VARIANT="o.le-v7-g"
     BAR_CONFIG="Device-Debug"
-    BAR_NAME="BerryLeaf-unsigned.bar"
+    BAR_NAME="Libris-unsigned.bar"
 fi
 
 BUILD_DIR="$SCRIPT_DIR/build/$TARGET"
 mkdir -p "$BUILD_DIR"
 
 if [[ "$ACTION" == "package" || "$ACTION" == "all" ]]; then
-    CURRENT_BUILD=$(grep -oE "<buildId>[0-9]+</buildId>" "$SCRIPT_DIR/bar-descriptor.xml" | grep -oE "[0-9]+" || echo "1")
-    NEXT_BUILD=$((CURRENT_BUILD + 1))
-    sed -i -E "s|<buildId>[0-9]+</buildId>|<buildId>$NEXT_BUILD</buildId>|" "$SCRIPT_DIR/bar-descriptor.xml"
-    echo "--> Auto-incremented buildId: $CURRENT_BUILD -> $NEXT_BUILD"
+    if [[ "${AUTO_BUMP:-1}" != "0" && "${NO_BUMP:-0}" != "1" ]]; then
+        CURRENT_BUILD=$(grep -oE "<buildId>[0-9]+</buildId>" "$SCRIPT_DIR/bar-descriptor.xml" | grep -oE "[0-9]+" || echo "1")
+        NEXT_BUILD=$((CURRENT_BUILD + 1))
+        sed -i -E "s|<buildId>[0-9]+</buildId>|<buildId>$NEXT_BUILD</buildId>|" "$SCRIPT_DIR/bar-descriptor.xml"
+        echo "--> Auto-incremented buildId: $CURRENT_BUILD -> $NEXT_BUILD"
+        python3 "$SCRIPT_DIR/scripts/update_build_metadata.py" --project-dir "$SCRIPT_DIR" --bumped
+    else
+        CURRENT_BUILD=$(grep -oE "<buildId>[0-9]+</buildId>" "$SCRIPT_DIR/bar-descriptor.xml" | grep -oE "[0-9]+" || echo "1")
+        echo "--> Preserved buildId: $CURRENT_BUILD (auto-bump disabled)"
+        python3 "$SCRIPT_DIR/scripts/update_build_metadata.py" --project-dir "$SCRIPT_DIR"
+    fi
+else
+    python3 "$SCRIPT_DIR/scripts/update_build_metadata.py" --project-dir "$SCRIPT_DIR"
 fi
 
-echo "=== Building BerryLeaf for $TARGET ($ARCH) using $CONTAINER_CLI ==="
+echo "=== Building Libris for $TARGET ($ARCH) using $CONTAINER_CLI ==="
 
 USERNS_FLAGS=()
 if [[ "$CONTAINER_CLI" == "podman" ]]; then
@@ -66,23 +75,23 @@ $CONTAINER_CLI run --rm --platform=linux/amd64 \
         mkdir -p /tmp/workspace
         cp -R /project/src /tmp/workspace/
         cp -R /project/assets /tmp/workspace/
-        cp /project/BerryLeaf.pro /tmp/workspace/
+        cp /project/Libris.pro /tmp/workspace/
         cp /project/bar-descriptor.xml /tmp/workspace/
         cp /project/icon-*.png /project/splash-*.png /tmp/workspace/ 2>/dev/null || true
         cd /tmp/workspace
 
         if [[ \"$ACTION\" == \"build\" || \"$ACTION\" == \"all\" ]]; then
             echo '--> Running qmake...'
-            qmake -spec \"$SPEC\" BerryLeaf.pro \"CONFIG+=$CONFIG\" CONFIG+=debug CONFIG-=release
+            qmake -spec \"$SPEC\" Libris.pro \"CONFIG+=$CONFIG\" CONFIG+=debug CONFIG-=release
             echo '--> Compiling C++ and Cascades code...'
             make -j\$(nproc || echo 4)
-            cp \"$VARIANT/BerryLeaf\" /output/BerryLeaf
-            echo '--> Binary created: /output/BerryLeaf'
+            cp \"$VARIANT/Libris\" /output/Libris
+            echo '--> Binary created: /output/Libris'
         fi
 
         if [[ \"$ACTION\" == \"package\" || \"$ACTION\" == \"all\" ]]; then
             echo '--> Packaging BAR application...'
-            cp /output/BerryLeaf /tmp/workspace/
+            cp /output/Libris /tmp/workspace/
             blackberry-nativepackager -package \"$BAR_NAME\" \
                 -devMode -platformVersion 10.2.0.0 \
                 -configuration \"$BAR_CONFIG\" bar-descriptor.xml

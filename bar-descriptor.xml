@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <qnx xmlns="http://www.qnx.com/schemas/application/1.0">
-    <id>com.nhatlee.berryleaf</id>
-    <name>Berry Leaf</name>
+    <id>com.nhatlee.libris</id>
+    <name>Libris</name>
     <versionNumber>2.0.0</versionNumber>
-    <buildId>175</buildId>
-    <description>Berry Leaf - Native E-Book Reader for BlackBerry 10</description>
+    <buildId>210</buildId>
+    <description>Libris - Native E-Book Reader for BlackBerry 10</description>
     <author>NhatLee</author>
 
     <initialWindow>
@@ -14,15 +14,15 @@
 
     <configuration name="Device-Debug">
         <platformArchitecture>armle-v7</platformArchitecture>
-        <asset path="BerryLeaf" entry="true" type="Qnx/Elf">BerryLeaf</asset>
+        <asset path="Libris" entry="true" type="Qnx/Elf">Libris</asset>
     </configuration>
     <configuration name="Device-Release">
         <platformArchitecture>armle-v7</platformArchitecture>
-        <asset path="BerryLeaf" entry="true" type="Qnx/Elf">BerryLeaf</asset>
+        <asset path="Libris" entry="true" type="Qnx/Elf">Libris</asset>
     </configuration>
     <configuration name="Simulator-Debug">
         <platformArchitecture>x86</platformArchitecture>
-        <asset path="BerryLeaf" entry="true" type="Qnx/Elf">BerryLeaf</asset>
+        <asset path="Libris" entry="true" type="Qnx/Elf">Libris</asset>
     </configuration>
 
     <!-- Assets directory contains QML, images, icons -->
@@ -62,8 +62,8 @@
     <permission>access_shared</permission>
     <permission>access_internet</permission>
 
-    <invoke-target id="com.nhatlee.berryleaf">
-        <invoke-target-name>BerryLeaf</invoke-target-name>
+    <invoke-target id="com.nhatlee.libris">
+        <invoke-target-name>Libris</invoke-target-name>
         <icon>
             <image>icon-96x96.png</image>
         </icon>
@@ -82,16 +82,24 @@
             <mime-type>image/vnd.djvu</mime-type>
             <mime-type>image/x-djvu</mime-type>
             <mime-type>image/djvu</mime-type>
+            <mime-type>application/vnd.comicbook+zip</mime-type>
+            <mime-type>application/x-cbz</mime-type>
+            <mime-type>application/x-mobipocket-ebook</mime-type>
+            <mime-type>application/x-mobi</mime-type>
+            <mime-type>application/vnd.amazon.ebook</mime-type>
+            <mime-type>application/x-azw</mime-type>
+            <mime-type>application/x-azw3</mime-type>
+            <mime-type>application/x-prc</mime-type>
         </filter>
         <filter>
             <action>bb.action.OPEN</action>
             <action>bb.action.VIEW</action>
             <mime-type>*</mime-type>
             <property var="uris" value="file://"/>
-            <property var="exts" value="epub,txt,fb2,pdf,djvu,EPUB,TXT,FB2,PDF,DJVU"/>
+            <property var="exts" value="epub,txt,fb2,pdf,djvu,djv,cbz,mobi,azw,azw3,kf8,prc,EPUB,TXT,FB2,PDF,DJVU,DJV,CBZ,MOBI,AZW,AZW3,KF8,PRC"/>
         </filter>
     </invoke-target>
 
     <env var="LD_LIBRARY_PATH" value="app/native/assets/lib:app/native/lib:/usr/lib/qt4/lib"/>
-    <env var="CASCADES_THEME" value="dark"/>
+    <env var="CASCADES_THEME" value="dark?primaryColor=0xD4A359&amp;primaryBase=0xA87932"/>
 </qnx>

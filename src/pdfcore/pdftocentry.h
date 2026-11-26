@@ -1,19 +1,19 @@
-#ifndef __NSRTOCENTRY_H__
-#define __NSRTOCENTRY_H__
+#ifndef __PDFTOCENTRY_H__
+#define __PDFTOCENTRY_H__
 
 /**
- * @file nsrtocentry.h
- * @author Alexander Saprykin
+ * @file pdftocentry.h
+ * @author Libris Team
  * @brief Table of contents (TOC)
  */
 
-#include "nsrreadercore_global.h"
+#include "pdfcore_global.h"
 
 #include <QString>
 #include <QList>
 
 /**
- * @class NSRTocEntry nsrtocentry.h
+ * @class NSRTocEntry pdftocentry.h
  * @brief TOC representation
  * @since 1.5.2
  */
@@ -154,4 +154,4 @@ private:
 	bool			_isExternal;	/**< Whether reference is external			*/
 };
 
-#endif /* __NSRTOCENTRY_H__ */
+#endif /* __PDFTOCENTRY_H__ */

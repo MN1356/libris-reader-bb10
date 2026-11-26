@@ -24,7 +24,6 @@ Page {
 
         dismissAction: ActionItem {
             title: qsTr("Hủy") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_clear.png"
             onTriggered: {
                 addCatalogPage.cancelRequested();
             }
@@ -64,38 +63,24 @@ Page {
                     addCatalogPage.isEditing
                 );
             }
-        },
-        ActionItem {
-            title: qsTr("Hủy bỏ") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_clear.png"
-            ActionBar.placement: ActionBarPlacement.InOverflow
-            onTriggered: {
-                addCatalogPage.cancelRequested();
-            }
         }
     ]
 
     Container {
         horizontalAlignment: HorizontalAlignment.Fill
         verticalAlignment: VerticalAlignment.Fill
-        background: bookManager.appTheme === "dark" ? Color.create("#000000") : Color.create("#FFFFFF")
-        layout: DockLayout {}
+        background: Color.create(bookManager.uiBg)
 
         ScrollView {
+            scrollRole: ScrollRole.Main
             horizontalAlignment: HorizontalAlignment.Fill
             verticalAlignment: VerticalAlignment.Fill
             scrollViewProperties.scrollMode: ScrollMode.Vertical
 
             Container {
                 horizontalAlignment: HorizontalAlignment.Fill
-                topPadding: 14
-                bottomPadding: 32
-                leftPadding: 16
-                rightPadding: 16
-
-                layout: StackLayout {
-                    orientation: LayoutOrientation.TopToBottom
-                }
+                bottomPadding: bookManager.dp(32)
+                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
                 // =============================================================
                 // 1. THÔNG TIN KHO SÁCH (CHÍNH)
@@ -106,272 +91,303 @@ Page {
 
                 Container {
                     horizontalAlignment: HorizontalAlignment.Fill
-                    background: bookManager.appTheme === "dark" ? Color.create("#111111") : Color.create("#FFFFFF")
-                    topPadding: 14
-                    bottomPadding: 16
-                    leftPadding: 16
-                    rightPadding: 16
-                    bottomMargin: 18
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    topPadding: bookManager.dp(10)
+                    bottomPadding: bookManager.dp(16)
 
-                    layout: StackLayout {
-                        orientation: LayoutOrientation.TopToBottom
-                    }
+                    Container {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        background: Color.create(bookManager.uiCard)
+                        topPadding: bookManager.dp(14)
+                        bottomPadding: bookManager.dp(16)
+                        leftPadding: bookManager.dp(16)
+                        rightPadding: bookManager.dp(16)
+                        layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
-                    // Tên kho sách
-                    Label {
-                        text: qsTr("Tên hiển thị:") + Retranslate.onLanguageChanged
-                        textStyle.base: SystemDefaults.TextStyles.SmallText
-                        textStyle.fontWeight: FontWeight.Bold
-                        textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.create("#000000")
-                    }
+                        Label {
+                            text: qsTr("Tên hiển thị:") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiInk)
+                        }
 
-                    TextField {
-                        id: catNameField
-                        topMargin: 2
-                        text: addCatalogPage.catalogName
-                        hintText: qsTr("Ví dụ: Calibre Của Tôi, Kavita Server...") + Retranslate.onLanguageChanged
-                        clearButtonVisible: true
-                    }
+                        TextField {
+                            id: catNameField
+                            topMargin: bookManager.dp(4)
+                            text: addCatalogPage.catalogName
+                            hintText: qsTr("Ví dụ: Calibre Của Tôi, Kavita Server...") + Retranslate.onLanguageChanged
+                            clearButtonVisible: true
+                        }
 
-                    // Địa chỉ URL
-                    Label {
-                        topMargin: 12
-                        text: qsTr("Địa chỉ OPDS URL (*):") + Retranslate.onLanguageChanged
-                        textStyle.base: SystemDefaults.TextStyles.SmallText
-                        textStyle.fontWeight: FontWeight.Bold
-                        textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.create("#000000")
-                    }
+                        Label {
+                            topMargin: bookManager.dp(12)
+                            text: qsTr("Địa chỉ OPDS URL (*):") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiInk)
+                        }
 
-                    TextField {
-                        id: catUrlField
-                        topMargin: 2
-                        text: addCatalogPage.catalogUrl
-                        hintText: "http://192.168.1.100:8080/opds"
-                        inputMode: TextFieldInputMode.Url
-                        clearButtonVisible: true
-                    }
+                        TextField {
+                            id: catUrlField
+                            topMargin: bookManager.dp(4)
+                            text: addCatalogPage.catalogUrl
+                            hintText: "http://192.168.1.100:8080/opds"
+                            inputMode: TextFieldInputMode.Url
+                            clearButtonVisible: true
+                        }
 
-                    // Ghi chú mô tả
-                    Label {
-                        topMargin: 12
-                        text: qsTr("Mô tả / Ghi chú (tùy chọn):") + Retranslate.onLanguageChanged
-                        textStyle.base: SystemDefaults.TextStyles.SmallText
-                        textStyle.color: bookManager.appTheme === "dark" ? Color.create("#A1A1AA") : Color.create("#777777")
-                    }
+                        Label {
+                            topMargin: bookManager.dp(12)
+                            text: qsTr("Mô tả / Ghi chú (tùy chọn):") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.color: Color.create(bookManager.uiMuted)
+                        }
 
-                    TextField {
-                        id: catDescField
-                        topMargin: 2
-                        text: addCatalogPage.catalogDesc
-                        hintText: qsTr("Thư viện sách cá nhân trong gia đình") + Retranslate.onLanguageChanged
-                        clearButtonVisible: true
+                        TextField {
+                            id: catDescField
+                            topMargin: bookManager.dp(4)
+                            text: addCatalogPage.catalogDesc
+                            hintText: qsTr("Thư viện sách cá nhân trong gia đình") + Retranslate.onLanguageChanged
+                            clearButtonVisible: true
+                        }
                     }
                 }
 
                 // =============================================================
-                // 2. GỢI Ý MẪU KHO SÁCH PHỔ BIẾN (CLICK ĐIỀN NHANH)
+                // 2. GỢI Ý MẪU KHO SÁCH PHỔ BIẾN (Full-bleed pressed rows)
                 // =============================================================
                 Header {
                     title: qsTr("GỢI Ý MẪU KHO SÁCH (CHẠM ĐỂ ĐIỀN NHANH)") + Retranslate.onLanguageChanged
                 }
 
+                // Mẫu 1: Calibre Content Server
+                Container {
+                    id: presetCalibre
+                    property bool pressed: false
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    background: pressed ? Color.create(bookManager.uiActive) : Color.Transparent
+                    topPadding: bookManager.dp(12)
+                    bottomPadding: bookManager.dp(12)
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                    onTouch: {
+                        if (event.touchType === TouchType.Down) pressed = true;
+                        else if (event.touchType === TouchType.Up || event.touchType === TouchType.Cancel) pressed = false;
+                    }
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: {
+                                catNameField.text = qsTr("Calibre Máy Chủ");
+                                catUrlField.text = "http://192.168.1.100:8080/opds";
+                                catDescField.text = qsTr("Máy chủ Calibre trong mạng Wi-Fi");
+                            }
+                        }
+                    ]
+
+                    Container {
+                        preferredWidth: bookManager.dp(40)
+                        preferredHeight: bookManager.dp(40)
+                        background: Color.create(bookManager.uiSurface)
+                        verticalAlignment: VerticalAlignment.Center
+                        layout: DockLayout {}
+                        ImageView {
+                            horizontalAlignment: HorizontalAlignment.Center
+                            verticalAlignment: VerticalAlignment.Center
+                            preferredWidth: bookManager.dp(24)
+                            preferredHeight: bookManager.dp(24)
+                            scalingMethod: ScalingMethod.AspectFit
+                            imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_library.png" : "asset:///icons/ic_library_dark.png"
+                        }
+                    }
+
+                    Container {
+                        leftMargin: bookManager.dp(12)
+                        rightMargin: bookManager.dp(8)
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        verticalAlignment: VerticalAlignment.Center
+
+                        Label {
+                            text: "Calibre Content Server (Wi-Fi)"
+                            textStyle.base: SystemDefaults.TextStyles.BodyText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiInk)
+                        }
+
+                        Label {
+                            topMargin: bookManager.dp(2)
+                            text: qsTr("http://<IP-máy-tính>:8080/opds") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.color: Color.create(bookManager.uiAccent)
+                        }
+                    }
+
+                    Label {
+                        verticalAlignment: VerticalAlignment.Center
+                        text: qsTr("Áp dụng ›") + Retranslate.onLanguageChanged
+                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                        textStyle.fontWeight: FontWeight.W500
+                        textStyle.color: Color.create(bookManager.uiAccent)
+                    }
+                }
+
                 Container {
                     horizontalAlignment: HorizontalAlignment.Fill
-                    bottomMargin: 18
+                    leftMargin: bookManager.dp(16)
+                    preferredHeight: 1
+                    background: Color.create(bookManager.uiHairline)
+                }
 
-                    layout: StackLayout {
-                        orientation: LayoutOrientation.TopToBottom
+                // Mẫu 2: Kavita Server
+                Container {
+                    id: presetKavita
+                    property bool pressed: false
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    background: pressed ? Color.create(bookManager.uiActive) : Color.Transparent
+                    topPadding: bookManager.dp(12)
+                    bottomPadding: bookManager.dp(12)
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                    onTouch: {
+                        if (event.touchType === TouchType.Down) pressed = true;
+                        else if (event.touchType === TouchType.Up || event.touchType === TouchType.Cancel) pressed = false;
                     }
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: {
+                                catNameField.text = "Kavita E-Reader";
+                                catUrlField.text = "http://192.168.1.100:5000/api/opds/";
+                                catDescField.text = qsTr("Máy chủ đọc sách Kavita");
+                            }
+                        }
+                    ]
 
-                    // Mẫu 1: Calibre Content Server
                     Container {
-                        horizontalAlignment: HorizontalAlignment.Fill
-                        background: bookManager.appTheme === "dark" ? Color.create("#111111") : Color.create("#FFFFFF")
-                        topPadding: 12
-                        bottomPadding: 12
-                        leftPadding: 14
-                        rightPadding: 14
-                        bottomMargin: 8
-                        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-
-                        gestureHandlers: [
-                            TapHandler {
-                                onTapped: {
-                                    catNameField.text = bookManager.language === "en" ? "Calibre Server" : "Calibre Máy Chủ";
-                                    catUrlField.text = "http://192.168.1.100:8080/opds";
-                                    catDescField.text = bookManager.language === "en" ? "Calibre server on local Wi-Fi" : "Máy chủ Calibre trong mạng Wi-Fi";
-                                }
-                            }
-                        ]
-
-                        Container {
-                            preferredWidth: 42
-                            preferredHeight: 42
-                            background: bookManager.appTheme === "dark" ? Color.create("#181818") : Color.create("#E0F2FE")
+                        preferredWidth: bookManager.dp(40)
+                        preferredHeight: bookManager.dp(40)
+                        background: Color.create(bookManager.uiSurface)
+                        verticalAlignment: VerticalAlignment.Center
+                        layout: DockLayout {}
+                        ImageView {
+                            horizontalAlignment: HorizontalAlignment.Center
                             verticalAlignment: VerticalAlignment.Center
-                            layout: DockLayout {}
-                            ImageView {
-                                horizontalAlignment: HorizontalAlignment.Center
-                                verticalAlignment: VerticalAlignment.Center
-                                preferredWidth: 26
-                                preferredHeight: 26
-                                imageSource: "asset:///icons/ic_library.png"
-                            }
-                        }
-
-                        Container {
-                            leftMargin: 12
-                            layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                            verticalAlignment: VerticalAlignment.Center
-
-                            Label {
-                                text: "Calibre Content Server (Wi-Fi)"
-                                textStyle.base: SystemDefaults.TextStyles.BodyText
-                                textStyle.fontWeight: FontWeight.Bold
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.create("#000000")
-                            }
-
-                            Label {
-                                topMargin: 1
-                                text: (bookManager.language === "en" ? "http://<PC-IP-Address>:8080/opds" : "http://<IP-máy-tính>:8080/opds") + Retranslate.onLanguageChanged
-                                textStyle.base: SystemDefaults.TextStyles.XSmallText
-                                textStyle.color: Color.create("#10B981")
-                            }
-                        }
-
-                        Label {
-                            verticalAlignment: VerticalAlignment.Center
-                            text: qsTr("Áp dụng ›") + Retranslate.onLanguageChanged
-                            textStyle.base: SystemDefaults.TextStyles.SmallText
-                            textStyle.color: Color.create("#10B981")
+                            preferredWidth: bookManager.dp(24)
+                            preferredHeight: bookManager.dp(24)
+                            scalingMethod: ScalingMethod.AspectFit
+                            imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_book.png" : "asset:///icons/ic_book_dark.png"
                         }
                     }
 
-                    // Mẫu 2: Kavita Server
                     Container {
-                        horizontalAlignment: HorizontalAlignment.Fill
-                        background: bookManager.appTheme === "dark" ? Color.create("#111111") : Color.create("#FFFFFF")
-                        topPadding: 12
-                        bottomPadding: 12
-                        leftPadding: 14
-                        rightPadding: 14
-                        bottomMargin: 8
-                        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                        leftMargin: bookManager.dp(12)
+                        rightMargin: bookManager.dp(8)
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        verticalAlignment: VerticalAlignment.Center
 
-                        gestureHandlers: [
-                            TapHandler {
-                                onTapped: {
-                                    catNameField.text = "Kavita E-Reader";
-                                    catUrlField.text = "http://192.168.1.100:5000/api/opds/";
-                                    catDescField.text = bookManager.language === "en" ? "Kavita reading server" : "Máy chủ đọc sách Kavita";
-                                }
-                            }
-                        ]
-
-                        Container {
-                            preferredWidth: 42
-                            preferredHeight: 42
-                            background: bookManager.appTheme === "dark" ? Color.create("#2A1B3D") : Color.create("#F3E8FF")
-                            verticalAlignment: VerticalAlignment.Center
-                            layout: DockLayout {}
-                            ImageView {
-                                horizontalAlignment: HorizontalAlignment.Center
-                                verticalAlignment: VerticalAlignment.Center
-                                preferredWidth: 26
-                                preferredHeight: 26
-                                imageSource: "asset:///icons/ic_book.png"
-                            }
-                        }
-
-                        Container {
-                            leftMargin: 12
-                            layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                            verticalAlignment: VerticalAlignment.Center
-
-                            Label {
-                                text: "Kavita E-Reader Server"
-                                textStyle.base: SystemDefaults.TextStyles.BodyText
-                                textStyle.fontWeight: FontWeight.Bold
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.create("#000000")
-                            }
-
-                            Label {
-                                topMargin: 1
-                                text: "http://<IP>:5000/api/opds/<api-key>"
-                                textStyle.base: SystemDefaults.TextStyles.XSmallText
-                                textStyle.color: Color.create("#10B981")
-                            }
+                        Label {
+                            text: "Kavita E-Reader Server"
+                            textStyle.base: SystemDefaults.TextStyles.BodyText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiInk)
                         }
 
                         Label {
-                            verticalAlignment: VerticalAlignment.Center
-                            text: qsTr("Áp dụng ›") + Retranslate.onLanguageChanged
+                            topMargin: bookManager.dp(2)
+                            text: "http://<IP>:5000/api/opds/<api-key>"
                             textStyle.base: SystemDefaults.TextStyles.SmallText
-                            textStyle.color: Color.create("#10B981")
+                            textStyle.color: Color.create(bookManager.uiAccent)
                         }
                     }
 
-                    // Mẫu 3: Komga Server
-                    Container {
-                        horizontalAlignment: HorizontalAlignment.Fill
-                        background: bookManager.appTheme === "dark" ? Color.create("#111111") : Color.create("#FFFFFF")
-                        topPadding: 12
-                        bottomPadding: 12
-                        leftPadding: 14
-                        rightPadding: 14
-                        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                    Label {
+                        verticalAlignment: VerticalAlignment.Center
+                        text: qsTr("Áp dụng ›") + Retranslate.onLanguageChanged
+                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                        textStyle.fontWeight: FontWeight.W500
+                        textStyle.color: Color.create(bookManager.uiAccent)
+                    }
+                }
 
-                        gestureHandlers: [
-                            TapHandler {
-                                onTapped: {
-                                    catNameField.text = "Komga Server";
-                                    catUrlField.text = "http://192.168.1.100:25600/opds/v1.0/catalog";
-                                    catDescField.text = bookManager.language === "en" ? "Komga comics and book library" : "Thư viện truyện và sách Komga";
-                                }
-                            }
-                        ]
+                Container {
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    leftMargin: bookManager.dp(16)
+                    preferredHeight: 1
+                    background: Color.create(bookManager.uiHairline)
+                }
 
-                        Container {
-                            preferredWidth: 42
-                            preferredHeight: 42
-                            background: bookManager.appTheme === "dark" ? Color.create("#1E2D28") : Color.create("#DCFCE7")
-                            verticalAlignment: VerticalAlignment.Center
-                            layout: DockLayout {}
-                            ImageView {
-                                horizontalAlignment: HorizontalAlignment.Center
-                                verticalAlignment: VerticalAlignment.Center
-                                preferredWidth: 26
-                                preferredHeight: 26
-                                imageSource: "asset:///icons/ic_folder.png"
+                // Mẫu 3: Komga Server
+                Container {
+                    id: presetKomga
+                    property bool pressed: false
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    background: pressed ? Color.create(bookManager.uiActive) : Color.Transparent
+                    topPadding: bookManager.dp(12)
+                    bottomPadding: bookManager.dp(12)
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                    onTouch: {
+                        if (event.touchType === TouchType.Down) pressed = true;
+                        else if (event.touchType === TouchType.Up || event.touchType === TouchType.Cancel) pressed = false;
+                    }
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: {
+                                catNameField.text = "Komga Server";
+                                catUrlField.text = "http://192.168.1.100:25600/opds/v1.2/catalog";
+                                catDescField.text = qsTr("Thư viện truyện và sách Komga");
                             }
                         }
+                    ]
 
-                        Container {
-                            leftMargin: 12
-                            layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                    Container {
+                        preferredWidth: bookManager.dp(40)
+                        preferredHeight: bookManager.dp(40)
+                        background: Color.create(bookManager.uiSurface)
+                        verticalAlignment: VerticalAlignment.Center
+                        layout: DockLayout {}
+                        ImageView {
+                            horizontalAlignment: HorizontalAlignment.Center
                             verticalAlignment: VerticalAlignment.Center
+                            preferredWidth: bookManager.dp(24)
+                            preferredHeight: bookManager.dp(24)
+                            scalingMethod: ScalingMethod.AspectFit
+                            imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_folder.png" : "asset:///icons/ic_folder_dark.png"
+                        }
+                    }
 
-                            Label {
-                                text: "Komga Comics / Books Server"
-                                textStyle.base: SystemDefaults.TextStyles.BodyText
-                                textStyle.fontWeight: FontWeight.Bold
-                                textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.create("#000000")
-                            }
+                    Container {
+                        leftMargin: bookManager.dp(12)
+                        rightMargin: bookManager.dp(8)
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        verticalAlignment: VerticalAlignment.Center
 
-                            Label {
-                                topMargin: 1
-                                text: "http://<IP>:25600/opds/v1.0/catalog"
-                                textStyle.base: SystemDefaults.TextStyles.XSmallText
-                                textStyle.color: Color.create("#10B981")
-                            }
+                        Label {
+                            text: "Komga Comics / Books Server"
+                            textStyle.base: SystemDefaults.TextStyles.BodyText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiInk)
                         }
 
                         Label {
-                            verticalAlignment: VerticalAlignment.Center
-                            text: qsTr("Áp dụng ›") + Retranslate.onLanguageChanged
+                            topMargin: bookManager.dp(2)
+                            text: "http://<IP>:25600/opds/v1.2/catalog"
                             textStyle.base: SystemDefaults.TextStyles.SmallText
-                            textStyle.color: Color.create("#10B981")
+                            textStyle.color: Color.create(bookManager.uiAccent)
                         }
+                    }
+
+                    Label {
+                        verticalAlignment: VerticalAlignment.Center
+                        text: qsTr("Áp dụng ›") + Retranslate.onLanguageChanged
+                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                        textStyle.fontWeight: FontWeight.W500
+                        textStyle.color: Color.create(bookManager.uiAccent)
                     }
                 }
 
@@ -379,62 +395,65 @@ Page {
                 // 3. TÀI KHOẢN XÁC THỰC (NẾU CÓ)
                 // =============================================================
                 Header {
+                    topMargin: bookManager.dp(8)
                     title: qsTr("XÁC THỰC TÀI KHOẢN (NẾU CÓ)") + Retranslate.onLanguageChanged
                 }
 
                 Container {
                     horizontalAlignment: HorizontalAlignment.Fill
-                    background: bookManager.appTheme === "dark" ? Color.create("#111111") : Color.create("#FFFFFF")
-                    topPadding: 14
-                    bottomPadding: 16
-                    leftPadding: 16
-                    rightPadding: 16
-                    bottomMargin: 18
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    topPadding: bookManager.dp(10)
+                    bottomPadding: bookManager.dp(16)
 
-                    layout: StackLayout {
-                        orientation: LayoutOrientation.TopToBottom
-                    }
+                    Container {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        background: Color.create(bookManager.uiCard)
+                        topPadding: bookManager.dp(14)
+                        bottomPadding: bookManager.dp(16)
+                        leftPadding: bookManager.dp(16)
+                        rightPadding: bookManager.dp(16)
+                        layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
-                    Label {
-                        text: qsTr("Nếu máy chủ yêu cầu đăng nhập (HTTP Basic Auth), hãy nhập thông tin bên dưới:") + Retranslate.onLanguageChanged
-                        textStyle.base: SystemDefaults.TextStyles.SmallText
-                        textStyle.color: bookManager.appTheme === "dark" ? Color.create("#A1A1AA") : Color.create("#777777")
-                        multiline: true
-                        bottomMargin: 8
-                    }
+                        Label {
+                            text: qsTr("Nếu máy chủ yêu cầu đăng nhập (HTTP Basic Auth), hãy nhập thông tin bên dưới:") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.color: Color.create(bookManager.uiMuted)
+                            multiline: true
+                            bottomMargin: bookManager.dp(10)
+                        }
 
-                    // Username
-                    Label {
-                        text: qsTr("Tên đăng nhập (Username):") + Retranslate.onLanguageChanged
-                        textStyle.base: SystemDefaults.TextStyles.SmallText
-                        textStyle.fontWeight: FontWeight.Bold
-                        textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.create("#000000")
-                    }
+                        Label {
+                            text: qsTr("Tên đăng nhập (Username):") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiInk)
+                        }
 
-                    TextField {
-                        id: catUserField
-                        topMargin: 2
-                        text: addCatalogPage.catalogUser
-                        hintText: qsTr("Để trống nếu không yêu cầu mật khẩu") + Retranslate.onLanguageChanged
-                        clearButtonVisible: true
-                    }
+                        TextField {
+                            id: catUserField
+                            topMargin: bookManager.dp(4)
+                            text: addCatalogPage.catalogUser
+                            hintText: qsTr("Để trống nếu không yêu cầu mật khẩu") + Retranslate.onLanguageChanged
+                            clearButtonVisible: true
+                        }
 
-                    // Password
-                    Label {
-                        topMargin: 12
-                        text: qsTr("Mật khẩu (Password):") + Retranslate.onLanguageChanged
-                        textStyle.base: SystemDefaults.TextStyles.SmallText
-                        textStyle.fontWeight: FontWeight.Bold
-                        textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.create("#000000")
-                    }
+                        Label {
+                            topMargin: bookManager.dp(12)
+                            text: qsTr("Mật khẩu (Password):") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiInk)
+                        }
 
-                    TextField {
-                        id: catPassField
-                        topMargin: 2
-                        text: addCatalogPage.catalogPass
-                        inputMode: TextFieldInputMode.Password
-                        hintText: qsTr("Mật khẩu truy cập máy chủ") + Retranslate.onLanguageChanged
-                        clearButtonVisible: true
+                        TextField {
+                            id: catPassField
+                            topMargin: bookManager.dp(4)
+                            text: addCatalogPage.catalogPass
+                            inputMode: TextFieldInputMode.Password
+                            hintText: qsTr("Mật khẩu truy cập máy chủ") + Retranslate.onLanguageChanged
+                            clearButtonVisible: true
+                        }
                     }
                 }
 
@@ -447,44 +466,49 @@ Page {
 
                 Container {
                     horizontalAlignment: HorizontalAlignment.Fill
-                    background: bookManager.appTheme === "dark" ? Color.create("#111111") : Color.create("#FFFFFF")
-                    topPadding: 14
-                    bottomPadding: 14
-                    leftPadding: 16
-                    rightPadding: 16
-
-                    layout: StackLayout {
-                        orientation: LayoutOrientation.LeftToRight
-                    }
-
-                    ImageView {
-                        preferredWidth: 32
-                        preferredHeight: 32
-                        verticalAlignment: VerticalAlignment.Top
-                        imageSource: "asset:///icons/ic_info.png"
-                    }
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    topPadding: bookManager.dp(10)
 
                     Container {
-                        leftMargin: 12
-                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                        verticalAlignment: VerticalAlignment.Top
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        background: Color.create(bookManager.uiCard)
+                        topPadding: bookManager.dp(14)
+                        bottomPadding: bookManager.dp(14)
+                        leftPadding: bookManager.dp(16)
+                        rightPadding: bookManager.dp(16)
+                        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
-                        Label {
-                            text: qsTr("Các bước kết nối với máy tính:") + Retranslate.onLanguageChanged
-                            textStyle.base: SystemDefaults.TextStyles.BodyText
-                            textStyle.fontWeight: FontWeight.Bold
-                            textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.create("#000000")
+                        ImageView {
+                            preferredWidth: bookManager.dp(28)
+                            preferredHeight: bookManager.dp(28)
+                            verticalAlignment: VerticalAlignment.Top
+                            scalingMethod: ScalingMethod.AspectFit
+                            imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_info.png" : "asset:///icons/ic_info_dark.png"
                         }
 
-                        Label {
-                            topMargin: 6
-                            text: qsTr("1. Mở Calibre trên máy tính -> Chọn 'Kết nối/chia sẻ' -> 'Khởi động máy chủ nội dung'.\n" +
-                                       "2. Đảm bảo thiết bị BlackBerry và máy tính đang cùng kết nối một mạng Wi-Fi.\n" +
-                                       "3. Xem địa chỉ IP của máy tính (ví dụ: 192.168.1.15) và nhập dạng: http://192.168.1.15:8080/opds vào ô ở trên.\n" +
-                                       "4. Nhấn 'Lưu kho sách' để bắt đầu duyệt toàn bộ thư viện sách!") + Retranslate.onLanguageChanged
-                            textStyle.base: SystemDefaults.TextStyles.SmallText
-                            textStyle.color: bookManager.appTheme === "dark" ? Color.create("#E5E5E5") : Color.create("#777777")
-                            multiline: true
+                        Container {
+                            leftMargin: bookManager.dp(12)
+                            layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                            verticalAlignment: VerticalAlignment.Top
+
+                            Label {
+                                text: qsTr("Các bước kết nối với máy tính:") + Retranslate.onLanguageChanged
+                                textStyle.base: SystemDefaults.TextStyles.BodyText
+                                textStyle.fontWeight: FontWeight.W500
+                                textStyle.color: Color.create(bookManager.uiInk)
+                            }
+
+                            Label {
+                                topMargin: bookManager.dp(6)
+                                text: qsTr("1. Mở Calibre trên máy tính -> Chọn 'Kết nối/chia sẻ' -> 'Khởi động máy chủ nội dung'.") + "\n" +
+                                      qsTr("2. Đảm bảo thiết bị BlackBerry và máy tính đang cùng kết nối một mạng Wi-Fi.") + "\n" +
+                                      qsTr("3. Xem địa chỉ IP của máy tính (ví dụ: 192.168.1.15) và nhập dạng: http://192.168.1.15:8080/opds vào ô ở trên.") + "\n" +
+                                      qsTr("4. Nhấn 'Lưu kho sách' để bắt đầu duyệt toàn bộ thư viện sách!") + Retranslate.onLanguageChanged
+                                textStyle.base: SystemDefaults.TextStyles.SmallText
+                                textStyle.color: Color.create(bookManager.uiMuted)
+                                multiline: true
+                            }
                         }
                     }
                 }

@@ -1,4 +1,5 @@
 #include "TtsManager.hpp"
+#include "EspeakEngine.hpp"
 #include <bb/multimedia/EqualizerPreset>
 #include <QNetworkRequest>
 #include <QNetworkConfigurationManager>
@@ -35,6 +36,15 @@ static void setupReplyBypassReq(QNetworkRequest &req)
     req.setSslConfiguration(sslConfig);
 }
 
+static QString normalizeGeminiTtsModel(const QString &raw)
+{
+    QString m = raw.trimmed();
+    if (m.isEmpty() || m == "gemini-2.0-flash" || m == "gemini-2.5-flash" || m == "gemini-2.5-flash-native-audio") {
+        return "gemini-2.5-flash-preview-tts";
+    }
+    return m;
+}
+
 TtsManager::TtsManager(QObject *parent)
     : QObject(parent)
     , m_player(new bb::multimedia::MediaPlayer(this))
@@ -44,6 +54,18 @@ TtsManager::TtsManager(QObject *parent)
     , m_batchCacheReply(NULL)
     , m_downloadReply(NULL)
     , m_geminiTestReply(NULL)
+    , m_rateLimitTimer(new QTimer(this))
+    , m_prefetchTimer(new QTimer(this))
+    , m_rateLimitRetryCount(0)
+    , m_pendingRetryIndex(0)
+    , m_pendingRetryLang("")
+    , m_pendingRetryMode("")
+    , m_pendingPrefetchIndex(0)
+    , m_currentRawText("")
+    , m_sleepTimer(new QTimer(this))
+    , m_sleepTimerMinutes(0)
+    , m_sleepTimerRemainingSeconds(0)
+    , m_sleepAtChapterEnd(false)
     , m_currentIndex(0)
     , m_active(false)
     , m_playing(false)
@@ -64,7 +86,7 @@ TtsManager::TtsManager(QObject *parent)
     , m_customApiKey("")
     , m_geminiApiKey("")
     , m_geminiVoice("Puck")
-    , m_geminiModel("gemini-2.5-flash")
+    , m_geminiModel("gemini-2.5-flash-preview-tts")
     , m_geminiStyle("auto")
     , m_geminiTestStatus("")
     , m_geminiTestState("idle")
@@ -76,12 +98,22 @@ TtsManager::TtsManager(QObject *parent)
     , m_isCaching(false)
     , m_cachingIndex(0)
     , m_googleEndpointIndex(0)
+    , m_espeakViRegion("vi")
+    , m_espeakVariant("std")
+    , m_espeakSlot(0)
 {
-    QSettings settings("BerryLife", "BerryReader");
+    QSettings settings("Libris", "Libris");
     m_language = settings.value("reader/ttsLanguage", "auto").toString();
     m_ttsProvider = settings.value("reader/ttsProvider", "google").toString();
-    if (m_ttsProvider != "google" && m_ttsProvider != "gemini") {
+    if (m_ttsProvider != "google" && m_ttsProvider != "gemini" && m_ttsProvider != "espeak") {
         m_ttsProvider = "google";
+    }
+    m_espeakViRegion = settings.value("reader/espeakViRegion", "vi").toString();
+    m_espeakVariant = settings.value("reader/espeakVariant", "std").toString();
+    if (!settings.value("reader/espeakVariantV2", false).toBool()) {
+        m_espeakVariant = "std";
+        settings.setValue("reader/espeakVariant", m_espeakVariant);
+        settings.setValue("reader/espeakVariantV2", true);
     }
     m_ttsVoice = settings.value("reader/ttsVoice", "tw-ob").toString();
     m_ttsEngine = settings.value("reader/ttsEngine", "tw-ob").toString();
@@ -98,14 +130,14 @@ TtsManager::TtsManager(QObject *parent)
     m_customApiKey = settings.value("reader/customApiKey", "").toString();
     m_geminiApiKey = settings.value("reader/geminiApiKey", "").toString();
     m_geminiVoice = settings.value("reader/geminiVoice", "Puck").toString();
-    m_geminiModel = settings.value("reader/geminiModel", "gemini-2.5-flash").toString();
-    if (m_geminiModel == "gemini-2.0-flash" || m_geminiModel.isEmpty()) {
-        m_geminiModel = "gemini-2.5-flash";
+    QString rawModel = settings.value("reader/geminiModel", "gemini-2.5-flash-preview-tts").toString();
+    m_geminiModel = normalizeGeminiTtsModel(rawModel);
+    if (m_geminiModel != rawModel) {
         settings.setValue("reader/geminiModel", m_geminiModel);
     }
     m_geminiStyle = settings.value("reader/geminiStyle", "auto").toString();
 
-    m_cacheDir = "/accounts/1000/shared/documents/.berryreader_tts";
+    m_cacheDir = "/accounts/1000/shared/documents/.libris_tts";
     if (!QDir().mkpath(m_cacheDir)) {
         m_cacheDir = "data/tts_cache";
         QDir().mkpath(m_cacheDir);
@@ -116,13 +148,27 @@ TtsManager::TtsManager(QObject *parent)
         settings.setValue("reader/ttsUrlFixV3", true);
     }
 
+    EspeakEngine::instance().ensureInitialized();
+
     connect(m_player, SIGNAL(playbackCompleted()), this, SLOT(onPlaybackCompleted()));
     connect(m_player, SIGNAL(mediaStateChanged(bb::multimedia::MediaState::Type)),
             this, SLOT(onMediaStateChanged(bb::multimedia::MediaState::Type)));
+
+    m_sleepTimer->setInterval(1000);
+    connect(m_sleepTimer, SIGNAL(timeout()), this, SLOT(onSleepTimerTick()));
+
+    m_rateLimitTimer->setSingleShot(true);
+    connect(m_rateLimitTimer, SIGNAL(timeout()), this, SLOT(onRateLimitRetryTimeout()));
+
+    m_prefetchTimer->setSingleShot(true);
+    connect(m_prefetchTimer, SIGNAL(timeout()), this, SLOT(onPrefetchTimerTimeout()));
 }
 
 TtsManager::~TtsManager()
 {
+    if (m_rateLimitTimer) m_rateLimitTimer->stop();
+    if (m_prefetchTimer) m_prefetchTimer->stop();
+    cancelSleepTimer();
     stop();
     cancelGeminiTest();
 }
@@ -169,7 +215,7 @@ void TtsManager::setSpeed(double spd)
 {
     if (spd >= 0.5 && spd <= 2.0 && spd != m_speed) {
         m_speed = spd;
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/ttsSpeed", m_speed);
 
         m_player->setSpeed(m_speed);
@@ -186,7 +232,7 @@ void TtsManager::setPitch(double p)
 {
     if (p >= 0.5 && p <= 2.0 && p != m_pitch) {
         m_pitch = p;
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/ttsPitch", m_pitch);
         applyPitchToPlayer();
         emit pitchChanged(m_pitch);
@@ -239,7 +285,7 @@ void TtsManager::setLanguage(const QString &lang)
 {
     if (!lang.isEmpty() && lang != m_language) {
         m_language = lang;
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/ttsLanguage", m_language);
         emit languageChanged(m_language);
         if (m_playing) {
@@ -320,7 +366,7 @@ void TtsManager::setTtsMode(const QString &mode)
     QString m = (mode == "offline") ? "offline" : "online";
     if (m != m_ttsMode) {
         m_ttsMode = m;
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/ttsMode", m_ttsMode);
         emit ttsModeChanged(m_ttsMode);
     }
@@ -355,14 +401,31 @@ void TtsManager::setTtsProvider(const QString &provider)
     QString prov = "google";
     if (provider == "gemini") {
         prov = "gemini";
+    } else if (provider == "espeak") {
+        prov = "espeak";
     }
     if (prov != m_ttsProvider) {
         m_ttsProvider = prov;
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/ttsProvider", m_ttsProvider);
 
         emit ttsProviderChanged(m_ttsProvider);
         emit ttsVoiceChanged(m_ttsVoice);
+
+        if (!m_currentRawText.isEmpty() && m_active) {
+            int oldIndex = m_currentIndex;
+            int oldTotal = m_sentences.size();
+            double progressRatio = (oldTotal > 0) ? (double)oldIndex / (double)oldTotal : 0.0;
+
+            parseSentences(m_currentRawText);
+            emit sentencesChanged(m_sentences.size());
+
+            if (!m_sentences.isEmpty()) {
+                int newIndex = qBound(0, (int)(progressRatio * m_sentences.size()), m_sentences.size() - 1);
+                m_currentIndex = newIndex;
+                emit currentSentenceChanged(m_currentIndex, m_sentences[m_currentIndex]);
+            }
+        }
 
         if (m_playing) {
             playCurrentSentence();
@@ -388,7 +451,7 @@ void TtsManager::setTtsVoice(const QString &voice)
 {
     if (!voice.isEmpty() && voice != m_ttsVoice) {
         m_ttsVoice = voice;
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/ttsVoice", m_ttsVoice);
         emit ttsVoiceChanged(m_ttsVoice);
 
@@ -405,6 +468,10 @@ void TtsManager::cycleVoice()
 
 QString TtsManager::voiceDisplayName() const
 {
+    if (m_ttsProvider == "espeak") {
+        QString reg = m_espeakViRegion == "vi-vn-x-south" ? "Nam" : (m_espeakViRegion == "vi-vn-x-central" ? "Trung" : "Bắc");
+        return QString::fromUtf8("eSpeak-NG (%1 · %2)").arg(QString::fromUtf8(reg.toUtf8().constData())).arg(m_espeakVariant);
+    }
     if (m_ttsProvider == "gemini") {
         return QString("Gemini AI (%1)").arg(m_geminiVoice.isEmpty() ? "Puck" : m_geminiVoice);
     }
@@ -422,7 +489,7 @@ void TtsManager::setTtsEngine(const QString &engine)
         m_ttsEngine = engine;
         m_ttsVoice = engine;
         m_ttsProvider = "google";
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/ttsEngine", m_ttsEngine);
         settings.setValue("reader/ttsVoice", m_ttsVoice);
         settings.setValue("reader/ttsProvider", m_ttsProvider);
@@ -449,7 +516,7 @@ void TtsManager::setZaloApiKey(const QString &key)
 {
     if (key != m_zaloApiKey) {
         m_zaloApiKey = key.trimmed();
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/zaloApiKey", m_zaloApiKey);
         emit zaloApiKeyChanged(m_zaloApiKey);
     }
@@ -464,7 +531,7 @@ void TtsManager::setFptApiKey(const QString &key)
 {
     if (key != m_fptApiKey) {
         m_fptApiKey = key.trimmed();
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/fptApiKey", m_fptApiKey);
         emit fptApiKeyChanged(m_fptApiKey);
     }
@@ -479,7 +546,7 @@ void TtsManager::setVoiceRssApiKey(const QString &key)
 {
     if (key != m_voiceRssApiKey) {
         m_voiceRssApiKey = key.trimmed();
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/voiceRssApiKey", m_voiceRssApiKey);
         emit voiceRssApiKeyChanged(m_voiceRssApiKey);
     }
@@ -494,7 +561,7 @@ void TtsManager::setCustomTtsUrl(const QString &url)
 {
     if (url != m_customTtsUrl) {
         m_customTtsUrl = url.trimmed();
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/customTtsUrl", m_customTtsUrl);
         emit customTtsUrlChanged(m_customTtsUrl);
     }
@@ -509,7 +576,7 @@ void TtsManager::setCustomTtsVoice(const QString &voice)
 {
     if (voice != m_customTtsVoice) {
         m_customTtsVoice = voice.trimmed();
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/customTtsVoice", m_customTtsVoice);
         emit customTtsVoiceChanged(m_customTtsVoice);
     }
@@ -524,7 +591,7 @@ void TtsManager::setCustomApiKey(const QString &key)
 {
     if (key != m_customApiKey) {
         m_customApiKey = key.trimmed();
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/customApiKey", m_customApiKey);
         emit customApiKeyChanged(m_customApiKey);
     }
@@ -540,7 +607,7 @@ void TtsManager::setGeminiApiKey(const QString &key)
     QString trimmed = key.trimmed();
     if (trimmed != m_geminiApiKey) {
         m_geminiApiKey = trimmed;
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/geminiApiKey", m_geminiApiKey);
         emit geminiApiKeyChanged(m_geminiApiKey);
 
@@ -579,7 +646,7 @@ void TtsManager::setGeminiVoice(const QString &voice)
     if (v.isEmpty()) v = "Puck";
     if (v != m_geminiVoice) {
         m_geminiVoice = v;
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/geminiVoice", m_geminiVoice);
         emit geminiVoiceChanged(m_geminiVoice);
         emit ttsVoiceChanged(m_geminiVoice);
@@ -596,11 +663,10 @@ QString TtsManager::geminiModel() const
 
 void TtsManager::setGeminiModel(const QString &model)
 {
-    QString m = model.trimmed();
-    if (m.isEmpty()) m = "gemini-2.5-flash";
+    QString m = normalizeGeminiTtsModel(model);
     if (m != m_geminiModel) {
         m_geminiModel = m;
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/geminiModel", m_geminiModel);
         emit geminiModelChanged(m_geminiModel);
     }
@@ -617,7 +683,7 @@ void TtsManager::setGeminiStyle(const QString &style)
     if (s.isEmpty()) s = "auto";
     if (s != m_geminiStyle) {
         m_geminiStyle = s;
-        QSettings settings("BerryLife", "BerryReader");
+        QSettings settings("Libris", "Libris");
         settings.setValue("reader/geminiStyle", m_geminiStyle);
         emit geminiStyleChanged(m_geminiStyle);
         if (m_playing && m_ttsProvider == "gemini") {
@@ -647,30 +713,113 @@ void TtsManager::setBookContext(const QString &title, const QString &author)
     }
 }
 
+bool TtsManager::espeakAvailable() const
+{
+    return EspeakEngine::instance().isAvailable();
+}
+
+void TtsManager::setEspeakViRegion(const QString &r)
+{
+    QString v = (r == "vi-vn-x-south" || r == "vi-vn-x-central") ? r : QString("vi");
+    if (v == m_espeakViRegion) return;
+    m_espeakViRegion = v;
+    QSettings s("Libris", "Libris");
+    s.setValue("reader/espeakViRegion", v);
+    emit espeakChanged();
+    emit ttsVoiceChanged(m_ttsVoice);
+}
+
+void TtsManager::setEspeakVariant(const QString &v)
+{
+    if (v.isEmpty() || v == m_espeakVariant) return;
+    m_espeakVariant = v;
+    QSettings s("Libris", "Libris");
+    s.setValue("reader/espeakVariant", v);
+    emit espeakChanged();
+    emit ttsVoiceChanged(m_ttsVoice);
+}
+
+QString TtsManager::resolveEspeakVoiceSpec(const QString &effLang) const
+{
+    QString l = effLang;
+    QString v = m_espeakVariant;
+    if (v == "std") {
+        if (l.startsWith("vi")) return m_espeakViRegion;
+        if (l == "en-GB") return "en-gb-x-rp";
+        if (l.startsWith("en")) return "en-us";
+        if (l.startsWith("fr")) return "fr";
+        if (l == "es-US") return "es-419";
+        if (l.startsWith("es")) return "es";
+        if (l.startsWith("de")) return "de";
+        if (l == "zh-HK") return "yue";
+        if (l.startsWith("zh")) return "cmn";
+        if (l.startsWith("ja")) return "ja";
+        if (l.startsWith("ko")) return "ko";
+        return "en-us";
+    }
+    if (l.startsWith("vi")) return m_espeakViRegion + "+" + v;
+    if (l == "en-GB") return "en-gb-x-rp+" + v;
+    if (l.startsWith("en")) return "en-us+" + v;
+    if (l.startsWith("fr")) return "fr+" + v;
+    if (l == "es-US") return "es-419+" + v;
+    if (l.startsWith("es")) return "es+" + v;
+    if (l.startsWith("de")) return "de+" + v;
+    if (l == "zh-HK") return "yue+" + v;
+    if (l.startsWith("zh")) return "cmn+" + v;
+    if (l.startsWith("ja")) return "ja+" + v;
+    if (l.startsWith("ko")) return "ko+" + v;
+    return "en-us+" + v;
+}
+
+bool TtsManager::playSentenceWithEspeak(int index, const QString &effLang)
+{
+    if (index < 0 || index >= m_sentences.size()) return false;
+    int rate = qBound(90, qRound(190.0 * m_speed), 340);
+    int pitch = qBound(25, qRound(50.0 * m_pitch), 82);
+    QString wav = m_cacheDir + QString("/espeak_slot_%1.wav").arg(m_espeakSlot++ % 2);
+    QString err;
+    QTime synthT; synthT.start();
+    if (!EspeakEngine::instance().synthesizeToWav(m_sentences[index], resolveEspeakVoiceSpec(effLang), rate, pitch, wav, &err)) {
+        qDebug() << "[TtsManager] eSpeak failed:" << err;
+        return false;
+    }
+    qDebug() << "[TtsManager] eSpeak synth ms=" << synthT.elapsed() << "chars=" << m_sentences[index].length();
+    m_loading = false;
+    emit loadingChanged(false);
+    m_player->stop();
+    m_player->setSourceUrl(QUrl::fromLocalFile(wav));
+    m_player->setSpeed(1.0);
+    applyPitchToPlayer();
+    m_player->play();
+    m_playing = true;
+    emit playingChanged(true);
+    return true;
+}
+
 void TtsManager::testVoice(const QString &sampleText)
 {
     QString txt = sampleText;
     if (txt.isEmpty()) {
         QString l = m_language;
         if (l == "auto") l = m_detectedChapterLang;
-        if (l == "vi") {
-            txt = QString::fromUtf8("Xin chào, đây là giọng đọc sách trực tuyến của BerryReader.");
-        } else if (l == "fr") {
-            txt = QString::fromUtf8("Bonjour, ceci est la lecture vocale en ligne de BerryReader.");
-        } else if (l == "de") {
-            txt = QString::fromUtf8("Hallo, dies ist die Online-Sprachausgabe von BerryReader.");
-        } else if (l == "es") {
-            txt = QString::fromUtf8("Hola, esta es la lectura de voz en línea de BerryReader.");
-        } else if (l == "ru") {
-            txt = QString::fromUtf8("Здравствуйте, это онлайн голосовое чтение BerryReader.");
-        } else if (l == "zh-CN") {
-            txt = QString::fromUtf8("你好，这是 BerryReader 的在线语音朗读。");
-        } else if (l == "ja") {
-            txt = QString::fromUtf8("こんにちは、BerryReaderのオンライン音声読み上げです。");
-        } else if (l == "ko") {
-            txt = QString::fromUtf8("안녕하세요, BerryReader의 온라인 음성 읽기입니다.");
+        if (l.startsWith("vi")) {
+            txt = QString::fromUtf8("Xin chào, đây là giọng đọc sách trực tuyến của Libris.");
+        } else if (l.startsWith("fr")) {
+            txt = QString::fromUtf8("Bonjour, ceci est la lecture vocale en ligne de Libris.");
+        } else if (l.startsWith("de")) {
+            txt = QString::fromUtf8("Hallo, dies ist die Online-Sprachausgabe von Libris.");
+        } else if (l.startsWith("es")) {
+            txt = QString::fromUtf8("Hola, esta es la lectura de voz en línea de Libris.");
+        } else if (l.startsWith("ru")) {
+            txt = QString::fromUtf8("Здравствуйте, это онлайн голосовое чтение Libris.");
+        } else if (l.startsWith("zh")) {
+            txt = QString::fromUtf8("你好，这是 Libris 的在线语音朗读。");
+        } else if (l.startsWith("ja")) {
+            txt = QString::fromUtf8("こんにちは、Librisのオンライン音声読み上げです。");
+        } else if (l.startsWith("ko")) {
+            txt = QString::fromUtf8("안녕하세요, Libris의 온라인 음성 읽기입니다.");
         } else {
-            txt = QString::fromUtf8("Hello, this is the online text-to-speech voice of BerryReader.");
+            txt = QString::fromUtf8("Hello, this is the online text-to-speech voice of Libris.");
         }
     }
     startWithText(txt, m_language);
@@ -814,15 +963,14 @@ static void removeTagBlock(QString &str, const QString &startTag, const QString 
     }
 }
 
-static void appendChunkedSentences(QStringList &sentences, const QString &text)
+static void appendChunkedSentences(QStringList &sentences, const QString &text, int maxChunkLen)
 {
     QString trimmed = text.trimmed();
     if (trimmed.isEmpty() || !hasReadableWords(trimmed)) return;
 
-    const int MAX_CHUNK_LEN = 130;
-    while (trimmed.length() > MAX_CHUNK_LEN) {
+    while (trimmed.length() > maxChunkLen) {
         int splitPos = -1;
-        for (int k = MAX_CHUNK_LEN; k >= 35; --k) {
+        for (int k = maxChunkLen; k >= 35; --k) {
             QChar ch = trimmed[k];
             if (ch == ',' || ch == ';' || ch == ':' || ch == ' ' ||
                 ch == '.' || ch == '!' || ch == '?' || ch == QChar(0x2026)) {
@@ -831,9 +979,9 @@ static void appendChunkedSentences(QStringList &sentences, const QString &text)
             }
         }
         if (splitPos <= 0) {
-            splitPos = trimmed.indexOf(' ', MAX_CHUNK_LEN);
-            if (splitPos == -1 || splitPos > 160) {
-                splitPos = MAX_CHUNK_LEN;
+            splitPos = trimmed.indexOf(' ', maxChunkLen);
+            if (splitPos == -1 || splitPos > maxChunkLen + 30) {
+                splitPos = maxChunkLen;
             }
         }
         QString chunk = trimmed.left(splitPos).trimmed();
@@ -871,6 +1019,11 @@ void TtsManager::parseSentences(const QString &rawText)
     clean.replace("&apos;", "'");
     clean.replace(QRegExp("&[a-zA-Z0-9#]+;"), " ");
 
+    const int maxChunkLen = (m_ttsProvider == "gemini") ? 420 : (m_ttsProvider == "espeak" ? 240 : 160);
+    const int minChunkLen = (m_ttsProvider == "gemini") ? 180 : (m_ttsProvider == "espeak" ? 80 : 60);
+
+    QString currentAccum;
+
     QStringList lines = clean.split('\n', QString::SkipEmptyParts);
     for (int i = 0; i < lines.size(); ++i) {
         QString line = lines[i].trimmed();
@@ -879,36 +1032,95 @@ void TtsManager::parseSentences(const QString &rawText)
         int start = 0;
         for (int j = 0; j < line.length(); ++j) {
             QChar c = line[j];
-            bool isBoundary = (c == '.' || c == '!' || c == '?' || c == ';' || c == QChar(0x2026));
-            int len = j - start + 1;
+            bool isBoundary = (c == '.' || c == '!' || c == '?' || c == ';' || c == QChar(0x2026) ||
+                               c == QChar(0x3002) || c == QChar(0xFF01) || c == QChar(0xFF1F));
 
-            if (isBoundary && len >= 20) {
-                QString s = line.mid(start, len).trimmed();
-                appendChunkedSentences(m_sentences, s);
+            if (isBoundary) {
+                while (j + 1 < line.length() && (line[j + 1] == '"' || line[j + 1] == '\'' ||
+                                                 line[j + 1] == ')' || line[j + 1] == ']' ||
+                                                 line[j + 1] == QChar(0x201D) || line[j + 1] == QChar(0x00BB))) {
+                    j++;
+                }
+
+                QString s = line.mid(start, j - start + 1).trimmed();
                 start = j + 1;
-            } else if (len >= 120 && c.isSpace()) {
-                QString s = line.mid(start, len).trimmed();
-                appendChunkedSentences(m_sentences, s);
+                if (s.isEmpty() || !hasReadableWords(s)) continue;
+
+                if (currentAccum.isEmpty()) {
+                    if (s.length() > maxChunkLen) {
+                        appendChunkedSentences(m_sentences, s, maxChunkLen);
+                    } else {
+                        currentAccum = s;
+                    }
+                } else {
+                    if (currentAccum.length() + 1 + s.length() <= maxChunkLen) {
+                        currentAccum += " " + s;
+                    } else {
+                        appendChunkedSentences(m_sentences, currentAccum, maxChunkLen);
+                        if (s.length() > maxChunkLen) {
+                            appendChunkedSentences(m_sentences, s, maxChunkLen);
+                            currentAccum.clear();
+                        } else {
+                            currentAccum = s;
+                        }
+                    }
+                }
+            } else if (j - start + 1 >= maxChunkLen && c.isSpace()) {
+                QString s = line.mid(start, j - start + 1).trimmed();
                 start = j + 1;
+                if (!s.isEmpty() && hasReadableWords(s)) {
+                    if (!currentAccum.isEmpty()) {
+                        appendChunkedSentences(m_sentences, currentAccum, maxChunkLen);
+                        currentAccum.clear();
+                    }
+                    appendChunkedSentences(m_sentences, s, maxChunkLen);
+                }
             }
         }
+
         if (start < line.length()) {
             QString s = line.mid(start).trimmed();
-            appendChunkedSentences(m_sentences, s);
+            if (!s.isEmpty() && hasReadableWords(s)) {
+                if (currentAccum.isEmpty()) {
+                    if (s.length() > maxChunkLen) {
+                        appendChunkedSentences(m_sentences, s, maxChunkLen);
+                    } else {
+                        currentAccum = s;
+                    }
+                } else if (currentAccum.length() + 1 + s.length() <= maxChunkLen) {
+                    currentAccum += " " + s;
+                } else {
+                    appendChunkedSentences(m_sentences, currentAccum, maxChunkLen);
+                    if (s.length() > maxChunkLen) {
+                        appendChunkedSentences(m_sentences, s, maxChunkLen);
+                        currentAccum.clear();
+                    } else {
+                        currentAccum = s;
+                    }
+                }
+            }
         }
+
+        if (!currentAccum.isEmpty() && (currentAccum.length() >= minChunkLen || i == lines.size() - 1)) {
+            appendChunkedSentences(m_sentences, currentAccum, maxChunkLen);
+            currentAccum.clear();
+        }
+    }
+
+    if (!currentAccum.isEmpty()) {
+        appendChunkedSentences(m_sentences, currentAccum, maxChunkLen);
+        currentAccum.clear();
     }
 }
 
 QString TtsManager::getCacheFilePath(int index, const QString &lang) const
 {
     if (index < 0 || index >= m_sentences.size()) return QString();
-    QString speedStr = QString::number(m_speed, 'f', 2);
-    QString pitchStr = QString::number(m_pitch, 'f', 2);
     QString voiceKey = m_ttsVoice;
     if (m_ttsProvider == "gemini") {
         voiceKey = m_geminiVoice + ":" + m_geminiModel + ":" + m_geminiStyle;
     }
-    QString key = m_ttsProvider + ":" + voiceKey + ":" + speedStr + ":" + pitchStr + ":" + lang + ":" + m_sentences[index].trimmed();
+    QString key = m_ttsProvider + ":" + voiceKey + ":" + lang + ":" + m_sentences[index].trimmed();
     QByteArray hash = QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Md5).toHex();
     QString ext = (m_ttsProvider == "gemini") ? ".wav" : ".mp3";
     return m_cacheDir + "/" + hash + ext;
@@ -929,6 +1141,8 @@ void TtsManager::startWithText(const QString &htmlOrText, const QString &lang, b
 {
     stop();
 
+    m_currentRawText = htmlOrText;
+    m_rateLimitRetryCount = 0;
     m_isChapterReading = isChapter;
 
     parseSentences(htmlOrText);
@@ -975,8 +1189,31 @@ void TtsManager::play()
 
 void TtsManager::pause()
 {
+    if (m_rateLimitTimer && m_rateLimitTimer->isActive()) {
+        m_rateLimitTimer->stop();
+    }
+    if (m_currentReply) {
+        QNetworkReply *_dying = m_currentReply;
+        m_currentReply = NULL;
+        _dying->disconnect(this);
+        _dying->abort();
+        _dying->deleteLater();
+    }
+    if (m_downloadReply) {
+        QNetworkReply *_dying = m_downloadReply;
+        m_downloadReply = NULL;
+        _dying->disconnect(this);
+        _dying->abort();
+        _dying->deleteLater();
+    }
     if (m_player->mediaState() == bb::multimedia::MediaState::Started) {
         m_player->pause();
+    }
+    if (m_loading) {
+        m_loading = false;
+        emit loadingChanged(false);
+    }
+    if (m_playing) {
         m_playing = false;
         emit playingChanged(false);
     }
@@ -993,25 +1230,49 @@ void TtsManager::togglePlayPause()
 
 void TtsManager::stop()
 {
+    if (m_rateLimitTimer) {
+        m_rateLimitTimer->stop();
+    }
+    if (m_prefetchTimer) {
+        m_prefetchTimer->stop();
+    }
+    m_rateLimitRetryCount = 0;
+
     if (m_currentReply) {
-        m_currentReply->abort();
-        m_currentReply->deleteLater();
-        m_currentReply = NULL;
+        {
+            QNetworkReply *_dying = m_currentReply;
+            m_currentReply = NULL;
+            _dying->disconnect(this);
+            _dying->abort();
+            _dying->deleteLater();
+        }
     }
     if (m_prefetchReply) {
-        m_prefetchReply->abort();
-        m_prefetchReply->deleteLater();
-        m_prefetchReply = NULL;
+        {
+            QNetworkReply *_dying = m_prefetchReply;
+            m_prefetchReply = NULL;
+            _dying->disconnect(this);
+            _dying->abort();
+            _dying->deleteLater();
+        }
     }
     if (m_batchCacheReply) {
-        m_batchCacheReply->abort();
-        m_batchCacheReply->deleteLater();
-        m_batchCacheReply = NULL;
+        {
+            QNetworkReply *_dying = m_batchCacheReply;
+            m_batchCacheReply = NULL;
+            _dying->disconnect(this);
+            _dying->abort();
+            _dying->deleteLater();
+        }
     }
     if (m_downloadReply) {
-        m_downloadReply->abort();
-        m_downloadReply->deleteLater();
-        m_downloadReply = NULL;
+        {
+            QNetworkReply *_dying = m_downloadReply;
+            m_downloadReply = NULL;
+            _dying->disconnect(this);
+            _dying->abort();
+            _dying->deleteLater();
+        }
     }
 
     m_player->stop();
@@ -1036,7 +1297,17 @@ void TtsManager::nextSentence()
         emit playingChanged(false);
         emit sentenceFinished(m_currentIndex);
         if (m_isChapterReading) {
+            if (m_sleepAtChapterEnd) {
+                m_sleepAtChapterEnd = false;
+                emit sleepTimerChanged();
+                emit sleepTimerTick(0, tr("Tắt"));
+                emit sleepTimerFinished();
+                stop();
+                return;
+            }
             emit chapterFinished();
+        } else {
+            stop();
         }
     }
 }
@@ -1051,6 +1322,13 @@ void TtsManager::prevSentence()
 void TtsManager::seekSentence(int index)
 {
     if (index >= 0 && index < m_sentences.size()) {
+        if (m_prefetchTimer) {
+            m_prefetchTimer->stop();
+        }
+        if (m_rateLimitTimer) {
+            m_rateLimitTimer->stop();
+        }
+        m_rateLimitRetryCount = 0;
         m_currentIndex = index;
         emit currentSentenceChanged(m_currentIndex, m_sentences[m_currentIndex]);
         playCurrentSentence();
@@ -1227,22 +1505,32 @@ QNetworkReply* TtsManager::sendProviderRequest(const QString &text, const QStrin
             return NULL;
         }
 
-        QString model = m_geminiModel.trimmed().isEmpty() ? "gemini-2.5-flash" : m_geminiModel.trimmed();
+        QString model = normalizeGeminiTtsModel(m_geminiModel);
         QUrl url(QString("https://generativelanguage.googleapis.com/v1beta/models/%1:generateContent?key=%2")
-                 .arg(model)
-                 .arg(m_geminiApiKey.trimmed()));
+                 .arg(model, m_geminiApiKey.trimmed()));
 
         QNetworkRequest req(url);
         setupReplyBypassReq(req);
         req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
         QString voice = m_geminiVoice.trimmed().isEmpty() ? "Puck" : m_geminiVoice.trimmed();
-        QString escapedPromptText = escapeJsonString(text);
+        QString styleKey = m_geminiStyle.trimmed().toLower();
+        QString promptText = text;
+        if (styleKey == "storytelling") {
+            promptText = QString("Read aloud in an expressive storytelling tone: %1").arg(text);
+        } else if (styleKey == "formal") {
+            promptText = QString("Read aloud in a clear, formal narrator tone: %1").arg(text);
+        } else if (styleKey == "calm") {
+            promptText = QString("Read aloud in a calm, soothing tone: %1").arg(text);
+        } else if (!styleKey.isEmpty() && styleKey != "auto") {
+            promptText = QString("[%1] %2").arg(m_geminiStyle.trimmed(), text);
+        }
+        QString escapedPromptText = escapeJsonString(promptText);
 
         QString jsonBody = QString(
             "{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"%1\"}]}],"
             "\"generationConfig\":{\"responseModalities\":[\"AUDIO\"],\"speechConfig\":{\"voiceConfig\":{\"prebuiltVoiceConfig\":{\"voiceName\":\"%2\"}}}}}"
-        ).arg(escapedPromptText).arg(voice);
+        ).arg(escapedPromptText, voice);
 
         QNetworkReply *reply = m_nam->post(req, jsonBody.toUtf8());
         setupReplyBypass(reply);
@@ -1285,6 +1573,7 @@ void TtsManager::handleAudioData(int index, const QString &lang, const QString &
         emit isOfflineChanged(false);
 
         if (mode == "play" && index == m_currentIndex) {
+            m_rateLimitRetryCount = 0;
             m_loading = false;
             emit loadingChanged(false);
 
@@ -1297,11 +1586,11 @@ void TtsManager::handleAudioData(int index, const QString &lang, const QString &
             m_playing = true;
             emit playingChanged(true);
 
-            prefetchSentence(m_currentIndex + 1);
+            schedulePrefetch(m_currentIndex + 1);
         } else if (mode == "batch") {
             m_cachingIndex++;
             emit cacheProgressChanged(m_cachingIndex, m_sentences.size());
-            processNextBatchCache();
+            QTimer::singleShot(1500, this, SLOT(processNextBatchCache()));
         }
     } else {
         if (mode == "play" && index == m_currentIndex) {
@@ -1313,7 +1602,7 @@ void TtsManager::handleAudioData(int index, const QString &lang, const QString &
         } else if (mode == "batch") {
             m_cachingIndex++;
             emit cacheProgressChanged(m_cachingIndex, m_sentences.size());
-            processNextBatchCache();
+            QTimer::singleShot(1500, this, SLOT(processNextBatchCache()));
         }
     }
 }
@@ -1321,14 +1610,18 @@ void TtsManager::handleAudioData(int index, const QString &lang, const QString &
 void TtsManager::downloadAudioUrl(const QUrl &url, int index, const QString &lang, const QString &mode)
 {
     if (m_downloadReply) {
-        m_downloadReply->abort();
-        m_downloadReply->deleteLater();
-        m_downloadReply = NULL;
+        {
+            QNetworkReply *_dying = m_downloadReply;
+            m_downloadReply = NULL;
+            _dying->disconnect(this);
+            _dying->abort();
+            _dying->deleteLater();
+        }
     }
 
     QNetworkRequest req(url);
     setupReplyBypassReq(req);
-    req.setRawHeader("User-Agent", "Mozilla/5.0 BerryReader/1.0 (BlackBerry 10)");
+    req.setRawHeader("User-Agent", "Mozilla/5.0 Libris/1.0 (BlackBerry 10)");
 
     m_downloadReply = m_nam->get(req);
     setupReplyBypass(m_downloadReply);
@@ -1373,9 +1666,13 @@ void TtsManager::playCurrentSentence()
     if (m_currentIndex < 0 || m_currentIndex >= m_sentences.size()) return;
 
     if (m_currentReply) {
-        m_currentReply->abort();
-        m_currentReply->deleteLater();
-        m_currentReply = NULL;
+        {
+            QNetworkReply *_dying = m_currentReply;
+            m_currentReply = NULL;
+            _dying->disconnect(this);
+            _dying->abort();
+            _dying->deleteLater();
+        }
     }
 
     m_player->stop();
@@ -1383,8 +1680,21 @@ void TtsManager::playCurrentSentence()
     QString effLang = effectiveLanguageForSentence(m_currentIndex);
     QString cachedPath = getCacheFilePath(m_currentIndex, effLang);
 
+    if (m_ttsProvider == "espeak") {
+        m_rateLimitRetryCount = 0;
+        if (!playSentenceWithEspeak(m_currentIndex, effLang)) {
+            m_loading = false;
+            m_playing = false;
+            emit loadingChanged(false);
+            emit playingChanged(false);
+            emit errorOccurred(QString::fromUtf8("Không thể đọc bằng eSpeak-NG ngoại tuyến."));
+        }
+        return;
+    }
+
     // 1. Check local cache (Offline first!)
     if (isSentenceCached(m_currentIndex, effLang)) {
+        m_rateLimitRetryCount = 0;
         m_loading = false;
         emit loadingChanged(false);
 
@@ -1405,13 +1715,14 @@ void TtsManager::playCurrentSentence()
         emit playingChanged(true);
 
         if (m_ttsMode != "offline") {
-            prefetchSentence(m_currentIndex + 1);
+            schedulePrefetch(m_currentIndex + 1);
         }
         return;
     }
 
     // 2. Offline Mode check
     if (m_ttsMode == "offline") {
+        if (playSentenceWithEspeak(m_currentIndex, effLang)) return;
         m_loading = false;
         m_playing = false;
         emit loadingChanged(false);
@@ -1450,7 +1761,10 @@ void TtsManager::onNetworkReplyFinished()
     QString mode = reply->property("mode").toString();
     if (lang.isEmpty()) lang = effectiveLanguageForSentence(idx);
 
+    int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
     if (reply->error() == QNetworkReply::NoError) {
+        m_rateLimitRetryCount = 0;
         QByteArray data = reply->readAll();
         if (provider == "google") {
             // Verify valid audio MP3 data (size > 300 and not HTML captcha / error page)
@@ -1485,18 +1799,47 @@ void TtsManager::onNetworkReplyFinished()
         }
     } else {
         qWarning() << "[TtsManager] Network error:" << reply->error() << reply->errorString()
+                   << "statusCode:" << statusCode
                    << "from provider" << provider << "endpoint" << reply->property("googleEndpointIdx").toInt();
+
+        // Automatic retry with exponential backoff for HTTP 429 Rate Limit
+        if (statusCode == 429) {
+            if (mode == "play" && idx == m_currentIndex) {
+                if (m_rateLimitRetryCount < 3) {
+                    m_rateLimitRetryCount++;
+                    int delayMs = m_rateLimitRetryCount * 2500;
+                    m_pendingRetryIndex = idx;
+                    m_pendingRetryLang = lang;
+                    m_pendingRetryMode = mode;
+
+                    qDebug() << "[TtsManager] Rate limit (429) detected. Auto retry attempt"
+                             << m_rateLimitRetryCount << "in" << delayMs << "ms";
+
+                    m_loading = true;
+                    emit loadingChanged(true);
+                    m_rateLimitTimer->start(delayMs);
+                    return;
+                } else {
+                    m_rateLimitRetryCount = 0;
+                    m_loading = false;
+                    emit loadingChanged(false);
+                    m_playing = false;
+                    emit playingChanged(false);
+                    emit errorOccurred(tr("Đã vượt quá giới hạn lượt gọi (Rate Limit) của Gemini API. Vui lòng chờ vài giây rồi thử lại."));
+                    return;
+                }
+            }
+        }
+
         if (provider == "gemini") {
-            int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             QByteArray errBody = reply->readAll();
             QString errorMsg;
             QByteArray dummy;
             parseGeminiAudioResponse(errBody, dummy, errorMsg);
-            if (statusCode == 429) {
-                errorMsg = QString::fromUtf8("Đã vượt quá giới hạn lượt gọi (Rate Limit) của Gemini API. Vui lòng chờ vài giây rồi thử lại.");
-            } else if (errorMsg.isEmpty()) {
+            if (errorMsg.isEmpty()) {
                 errorMsg = reply->errorString();
             }
+            m_rateLimitRetryCount = 0;
             m_loading = false;
             emit loadingChanged(false);
             m_playing = false;
@@ -1524,6 +1867,12 @@ void TtsManager::onNetworkReplyFinished()
         }
     }
 
+    m_rateLimitRetryCount = 0;
+    if (m_ttsMode == "offline" && idx == m_currentIndex && m_active && playSentenceWithEspeak(idx, lang)) {
+        m_isOffline = true;
+        emit isOfflineChanged(true);
+        return;
+    }
     m_loading = false;
     emit loadingChanged(false);
     m_isOffline = true;
@@ -1531,6 +1880,55 @@ void TtsManager::onNetworkReplyFinished()
     emit errorOccurred(QString::fromUtf8("Lỗi kết nối khi tải giọng đọc. Hãy kiểm tra kết nối mạng hoặc máy chủ TTS."));
     m_playing = false;
     emit playingChanged(false);
+}
+
+void TtsManager::onRateLimitRetryTimeout()
+{
+    if (!m_active) return;
+    if (m_pendingRetryIndex != m_currentIndex) return;
+    if (m_pendingRetryIndex < 0 || m_pendingRetryIndex >= m_sentences.size()) return;
+
+    m_loading = true;
+    emit loadingChanged(true);
+
+    QString text = m_sentences[m_pendingRetryIndex];
+    m_currentReply = sendProviderRequest(text, m_pendingRetryLang, m_pendingRetryIndex, m_pendingRetryMode);
+    if (m_currentReply) {
+        connect(m_currentReply, SIGNAL(finished()), this, SLOT(onNetworkReplyFinished()));
+    } else {
+        m_loading = false;
+        emit loadingChanged(false);
+        m_playing = false;
+        emit playingChanged(false);
+    }
+}
+
+void TtsManager::schedulePrefetch(int nextIndex)
+{
+    if (m_ttsMode == "offline") return;
+    if (nextIndex < 0 || nextIndex >= m_sentences.size()) return;
+
+    QString effLang = effectiveLanguageForSentence(nextIndex);
+    if (isSentenceCached(nextIndex, effLang)) return;
+
+    m_pendingPrefetchIndex = nextIndex;
+
+    int delay = (m_currentReply != NULL) ? 3500 : 2500;
+    m_prefetchTimer->start(delay);
+}
+
+void TtsManager::onPrefetchTimerTimeout()
+{
+    if (!m_active) return;
+    if (m_currentReply != NULL) {
+        m_prefetchTimer->start(1500);
+        return;
+    }
+    if (m_pendingPrefetchIndex < 0 || m_pendingPrefetchIndex >= m_sentences.size()) return;
+    QString effLang = effectiveLanguageForSentence(m_pendingPrefetchIndex);
+    if (isSentenceCached(m_pendingPrefetchIndex, effLang)) return;
+
+    prefetchSentence(m_pendingPrefetchIndex);
 }
 
 void TtsManager::prefetchSentence(int index)
@@ -1559,6 +1957,12 @@ void TtsManager::onPrefetchReplyFinished()
     QString lang = reply->property("lang").toString();
     QString provider = reply->property("provider").toString();
     if (lang.isEmpty()) lang = effectiveLanguageForSentence(idx);
+
+    int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    if (statusCode == 429) {
+        qDebug() << "[TtsManager] Prefetch hit rate limit (429) for sentence" << idx << "-> dropped silently";
+        return;
+    }
 
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray data = reply->readAll();
@@ -1597,6 +2001,7 @@ void TtsManager::onPrefetchReplyFinished()
 
 void TtsManager::preCacheChapter()
 {
+    if (m_ttsProvider == "espeak") return;
     if (m_sentences.isEmpty() || m_isCaching) return;
 
     m_isCaching = true;
@@ -1651,6 +2056,15 @@ void TtsManager::onBatchCacheReplyFinished()
     QString provider = reply->property("provider").toString();
     if (lang.isEmpty()) lang = effectiveLanguageForSentence(idx);
 
+    int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    if (statusCode == 429) {
+        qDebug() << "[TtsManager] Batch cache hit rate limit (429) on item" << idx << "-> backing off 4000ms";
+        if (m_isCaching) {
+            QTimer::singleShot(4000, this, SLOT(processNextBatchCache()));
+        }
+        return;
+    }
+
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray data = reply->readAll();
         if (provider == "google") {
@@ -1691,7 +2105,7 @@ void TtsManager::onBatchCacheReplyFinished()
     emit cacheProgressChanged(m_cachingIndex, m_sentences.size());
 
     if (m_isCaching && m_cachingIndex < m_sentences.size()) {
-        processNextBatchCache();
+        QTimer::singleShot(1500, this, SLOT(processNextBatchCache()));
     } else {
         m_isCaching = false;
         emit isCachingChanged(false);
@@ -1710,9 +2124,13 @@ void TtsManager::clearCache()
 void TtsManager::testGeminiApiKey(const QString &keyToTest)
 {
     if (m_geminiTestReply) {
-        m_geminiTestReply->abort();
-        m_geminiTestReply->deleteLater();
-        m_geminiTestReply = NULL;
+        {
+            QNetworkReply *_dying = m_geminiTestReply;
+            m_geminiTestReply = NULL;
+            _dying->disconnect(this);
+            _dying->abort();
+            _dying->deleteLater();
+        }
     }
 
     QString key = keyToTest.trimmed();
@@ -1745,24 +2163,23 @@ void TtsManager::testGeminiApiKey(const QString &keyToTest)
     emit geminiTestStateChanged(m_geminiTestState);
     emit geminiTestStatusChanged(m_geminiTestStatus);
 
-    QString model = m_geminiModel.trimmed().isEmpty() ? "gemini-2.5-flash" : m_geminiModel.trimmed();
+    QString model = normalizeGeminiTtsModel(m_geminiModel);
     QString voice = m_geminiVoice.trimmed().isEmpty() ? "Puck" : m_geminiVoice.trimmed();
 
     QUrl url(QString("https://generativelanguage.googleapis.com/v1beta/models/%1:generateContent?key=%2")
-             .arg(model)
-             .arg(key));
+             .arg(model, key));
 
     QNetworkRequest req(url);
     setupReplyBypassReq(req);
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    QString testPhrase = QString::fromUtf8("BerryReader xin chào! Kết nối API thành công.");
+    QString testPhrase = QString::fromUtf8("Libris xin chào! Kết nối API thành công.");
     QString escapedPhrase = escapeJsonString(testPhrase);
 
     QString jsonBody = QString(
         "{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"%1\"}]}],"
         "\"generationConfig\":{\"responseModalities\":[\"AUDIO\"],\"speechConfig\":{\"voiceConfig\":{\"prebuiltVoiceConfig\":{\"voiceName\":\"%2\"}}}}}"
-    ).arg(escapedPhrase).arg(voice);
+    ).arg(escapedPhrase, voice);
 
     m_geminiTestTime.start();
     m_geminiTestReply = m_nam->post(req, jsonBody.toUtf8());
@@ -1776,9 +2193,13 @@ void TtsManager::testGeminiApiKey(const QString &keyToTest)
 void TtsManager::cancelGeminiTest()
 {
     if (m_geminiTestReply) {
-        m_geminiTestReply->abort();
-        m_geminiTestReply->deleteLater();
-        m_geminiTestReply = NULL;
+        {
+            QNetworkReply *_dying = m_geminiTestReply;
+            m_geminiTestReply = NULL;
+            _dying->disconnect(this);
+            _dying->abort();
+            _dying->deleteLater();
+        }
     }
     if (m_isTestingGemini) {
         m_isTestingGemini = false;
@@ -1900,5 +2321,117 @@ void TtsManager::onMediaStateChanged(bb::multimedia::MediaState::Type state)
             m_playing = false;
             emit playingChanged(false);
         }
+    }
+}
+
+bool TtsManager::isSleepTimerActive() const
+{
+    return (m_sleepTimer && m_sleepTimer->isActive()) || m_sleepAtChapterEnd;
+}
+
+int TtsManager::sleepTimerMinutes() const
+{
+    return m_sleepTimerMinutes;
+}
+
+int TtsManager::sleepTimerRemainingSeconds() const
+{
+    return m_sleepTimerRemainingSeconds;
+}
+
+QString TtsManager::sleepTimerDisplayStr() const
+{
+    if (m_sleepAtChapterEnd) {
+        return tr("Hết chương");
+    }
+    if (!m_sleepTimer || !m_sleepTimer->isActive() || m_sleepTimerRemainingSeconds <= 0) {
+        return tr("Tắt");
+    }
+    int mins = m_sleepTimerRemainingSeconds / 60;
+    int secs = m_sleepTimerRemainingSeconds % 60;
+    return QString("%1:%2").arg(mins, 2, 10, QChar('0')).arg(secs, 2, 10, QChar('0'));
+}
+
+bool TtsManager::sleepAtChapterEnd() const
+{
+    return m_sleepAtChapterEnd;
+}
+
+void TtsManager::setSleepAtChapterEnd(bool enable)
+{
+    if (m_sleepAtChapterEnd != enable) {
+        m_sleepAtChapterEnd = enable;
+        if (m_sleepAtChapterEnd) {
+            if (m_sleepTimer && m_sleepTimer->isActive()) {
+                m_sleepTimer->stop();
+            }
+            m_sleepTimerMinutes = 0;
+            m_sleepTimerRemainingSeconds = 0;
+        }
+        emit sleepTimerChanged();
+        emit sleepTimerTick(m_sleepTimerRemainingSeconds, sleepTimerDisplayStr());
+    }
+}
+
+void TtsManager::startSleepTimer(int minutes)
+{
+    if (minutes <= 0) {
+        cancelSleepTimer();
+        return;
+    }
+    m_sleepAtChapterEnd = false;
+    m_sleepTimerMinutes = minutes;
+    m_sleepTimerRemainingSeconds = minutes * 60;
+    m_sleepTimer->start();
+    emit sleepTimerChanged();
+    emit sleepTimerTick(m_sleepTimerRemainingSeconds, sleepTimerDisplayStr());
+}
+
+void TtsManager::cancelSleepTimer()
+{
+    if (m_sleepTimer && m_sleepTimer->isActive()) {
+        m_sleepTimer->stop();
+    }
+    m_sleepTimerMinutes = 0;
+    m_sleepTimerRemainingSeconds = 0;
+    m_sleepAtChapterEnd = false;
+    emit sleepTimerChanged();
+    emit sleepTimerTick(0, tr("Tắt"));
+}
+
+void TtsManager::cycleSleepTimer()
+{
+    // Cycle: Off (0) -> 15m -> 30m -> 45m -> 60m -> End of chapter -> Off (0)
+    if (m_sleepAtChapterEnd) {
+        cancelSleepTimer();
+    } else if (m_sleepTimerMinutes == 0) {
+        startSleepTimer(15);
+    } else if (m_sleepTimerMinutes == 15) {
+        startSleepTimer(30);
+    } else if (m_sleepTimerMinutes == 30) {
+        startSleepTimer(45);
+    } else if (m_sleepTimerMinutes == 45) {
+        startSleepTimer(60);
+    } else if (m_sleepTimerMinutes == 60) {
+        setSleepAtChapterEnd(true);
+    } else {
+        cancelSleepTimer();
+    }
+}
+
+void TtsManager::onSleepTimerTick()
+{
+    if (m_sleepTimerRemainingSeconds > 0) {
+        m_sleepTimerRemainingSeconds--;
+        emit sleepTimerTick(m_sleepTimerRemainingSeconds, sleepTimerDisplayStr());
+    }
+    if (m_sleepTimerRemainingSeconds <= 0) {
+        m_sleepTimer->stop();
+        m_sleepTimerMinutes = 0;
+        m_sleepTimerRemainingSeconds = 0;
+        emit sleepTimerChanged();
+        emit sleepTimerTick(0, tr("Tắt"));
+        emit sleepTimerFinished();
+        pause();
     }
 }

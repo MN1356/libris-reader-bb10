@@ -6,6 +6,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
+#include <QDateTime>
+#include <QTextStream>
 #include <QDebug>
 #include <QRegExp>
 #include <QNetworkConfigurationManager>
@@ -25,6 +27,7 @@ DictManager::DictManager(QObject *parent)
     , m_targetLanguage("vi")
 {
     initDatabase();
+    loadVocab();
 }
 
 DictManager::~DictManager()
@@ -54,7 +57,7 @@ void DictManager::initDatabase()
         return;
     }
 
-    m_db = QSqlDatabase::addDatabase("QSQLITE", "berry_dict_db");
+    m_db = QSqlDatabase::addDatabase("QSQLITE", "libris_dict_db");
     m_db.setDatabaseName(dbPath);
     m_db.setConnectOptions("QSQLITE_OPEN_READONLY");
 
@@ -174,13 +177,8 @@ void DictManager::lookupOnline(const QString &word, const QString &targetLang)
     QString clean = cleanWord(word);
     if (clean.isEmpty()) return;
 
-    QNetworkConfigurationManager netMgr;
-    if (!netMgr.isOnline()) {
-        m_isLookingUp = false;
-        emit lookupStateChanged();
-        lookupOffline(clean);
-        return;
-    }
+    // Always attempt the request and fall back to offline lookup on error
+    // because QNetworkConfigurationManager::isOnline() can return false negatives on BB10.
 
     m_isLookingUp = true;
     m_lastWord = clean;
@@ -219,7 +217,16 @@ void DictManager::onOnlineLookupFinished()
     if (reply->error() != QNetworkReply::NoError) {
         QString err = reply->errorString();
         reply->deleteLater();
-        emit onlineLookupDone(false, m_lastWord, "", "", tr("Không thể kết nối đến từ điển trực tuyến: ") + err);
+        QVariantMap offRes = lookupOffline(m_lastWord);
+        if (offRes.value("found").toBool()) {
+            emit onlineLookupDone(true,
+                                  offRes.value("word").toString(),
+                                  offRes.value("phonetic").toString(),
+                                  offRes.value("meaning").toString(),
+                                  "");
+        } else {
+            emit onlineLookupDone(false, m_lastWord, "", "", tr("Không thể kết nối đến từ điển trực tuyến: ") + err);
+        }
         return;
     }
 
@@ -265,11 +272,6 @@ void DictManager::onOnlineLookupFinished()
         phonetic = "/" + phonetic + "/";
     }
 
-    if (mainTranslation.contains('%')) {
-        QString dec = QUrl::fromPercentEncoding(mainTranslation.toUtf8());
-        if (!dec.isEmpty()) mainTranslation = dec;
-    }
-
     QString definitionText;
     if (!mainTranslation.isEmpty()) {
         definitionText += tr("★ Nghĩa: ") + mainTranslation + "\n\n";
@@ -302,10 +304,6 @@ void DictManager::onOnlineLookupFinished()
                     for (int t = 0; t < tLen && t < 10; ++t) {
                         QString tStr = terms.property(t).toString();
                         if (!tStr.isEmpty() && tStr != "null") {
-                            if (tStr.contains('%')) {
-                                QString decTerm = QUrl::fromPercentEncoding(tStr.toUtf8());
-                                if (!decTerm.isEmpty()) tStr = decTerm;
-                            }
                             termList << tStr;
                         }
                     }
@@ -316,10 +314,6 @@ void DictManager::onOnlineLookupFinished()
     }
 
     definitionText = definitionText.trimmed();
-    if (definitionText.contains('%')) {
-        QString decDef = QUrl::fromPercentEncoding(definitionText.toUtf8());
-        if (!decDef.isEmpty()) definitionText = decDef;
-    }
     if (definitionText.isEmpty()) {
         emit onlineLookupDone(false, m_lastWord, "", "", tr("Không tìm thấy định nghĩa cho từ này."));
         return;
@@ -335,9 +329,6 @@ void DictManager::onOnlineLookupFinished()
 void DictManager::translateText(const QString &text, const QString &sourceLang, const QString &targetLang)
 {
     QString trimmed = text.trimmed();
-    if (trimmed.contains('%')) {
-        trimmed = QUrl::fromPercentEncoding(trimmed.toUtf8()).trimmed();
-    }
     if (trimmed.isEmpty()) return;
 
     QString tl = targetLang.isEmpty() ? m_targetLanguage : targetLang;
@@ -345,7 +336,9 @@ void DictManager::translateText(const QString &text, const QString &sourceLang, 
 
     m_isTranslating = true;
     m_lastOriginalText = trimmed;
+    m_lastTranslatedText.clear();
     emit translateStateChanged();
+    emit translationResultChanged();
 
     // Google Translate public client API
     QString encoded = QUrl::toPercentEncoding(trimmed);
@@ -384,13 +377,11 @@ QString DictManager::parseGoogleTranslateResponse(const QByteArray &data, QStrin
         int sLen = sentences.property("length").toInt32();
         for (int i = 0; i < sLen; ++i) {
             QScriptValue s = sentences.property(i);
-            if (s.isArray() && s.property("length").toInt32() > 0) {
+            if (s.isArray() && s.property("length").toInt32() > 0 && !s.property(0).isNull() && !s.property(0).isUndefined()) {
                 QString part = s.property(0).toString();
-                if (part.contains('%')) {
-                    QString decPart = QUrl::fromPercentEncoding(part.toUtf8());
-                    if (!decPart.isEmpty()) part = decPart;
+                if (!part.isEmpty() && part != "null") {
+                    translated += part;
                 }
-                translated += part;
             }
         }
     }
@@ -400,13 +391,7 @@ QString DictManager::parseGoogleTranslateResponse(const QByteArray &data, QStrin
         outDetectedLang = root.property(2).toString();
     }
 
-    translated = translated.trimmed();
-    if (translated.contains('%')) {
-        QString dec = QUrl::fromPercentEncoding(translated.toUtf8());
-        if (!dec.isEmpty()) translated = dec;
-    }
-
-    return translated;
+    return translated.trimmed();
 }
 
 void DictManager::onTranslationFinished()
@@ -420,6 +405,8 @@ void DictManager::onTranslationFinished()
     if (reply->error() != QNetworkReply::NoError) {
         QString err = reply->errorString();
         reply->deleteLater();
+        m_lastTranslatedText.clear();
+        emit translationResultChanged();
         emit translationDone(false, m_lastOriginalText, tr("Lỗi dịch thuật: ") + err, "");
         return;
     }
@@ -435,6 +422,8 @@ void DictManager::onTranslationFinished()
         emit translationResultChanged();
         emit translationDone(true, m_lastOriginalText, translated, detectedLang);
     } else {
+        m_lastTranslatedText.clear();
+        emit translationResultChanged();
         emit translationDone(false, m_lastOriginalText, tr("Không thể phân tích kết quả dịch thuật."), "");
     }
 }
@@ -477,4 +466,185 @@ void DictManager::copyToClipboard(const QString &text)
     clipboard.clear();
     clipboard.insert("text/plain", text.toUtf8());
     emit toastMessage(tr("Đã sao chép vào bộ nhớ tạm"));
+}
+
+static QString escapeVocabJson(const QString &str)
+{
+    QString out;
+    out.reserve(str.length() + 8);
+    for (int i = 0; i < str.length(); ++i) {
+        QChar c = str.at(i);
+        if (c == '\\') out += "\\\\";
+        else if (c == '"') out += "\\\"";
+        else if (c == '\n') out += "\\n";
+        else if (c == '\r') out += "\\r";
+        else if (c == '\t') out += "\\t";
+        else out += c;
+    }
+    return out;
+}
+
+static QString escapeCsvField(const QString &str)
+{
+    QString s = str;
+    s.replace("\r\n", " ").replace('\n', ' ').replace('\r', ' ');
+    s.replace('"', "\"\"");
+    return "\"" + s + "\"";
+}
+
+QString DictManager::vocabFilePath() const
+{
+    QString dirPath = (QDir("/accounts/1000/shared/documents").exists() || QDir("/accounts/1000/shared").exists())
+        ? "/accounts/1000/shared/documents/Libris"
+        : (QDir::homePath() + "/.libris");
+    QDir().mkpath(dirPath);
+    return dirPath + "/libris_vocab.json";
+}
+
+void DictManager::loadVocab()
+{
+    m_vocabList.clear();
+    QFile f(vocabFilePath());
+    if (!f.exists() || !f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return;
+    }
+    QString content = QString::fromUtf8(f.readAll());
+    f.close();
+
+    QScriptEngine engine;
+    QScriptValue arr = engine.evaluate("(" + content + ")");
+    if (!arr.isArray()) return;
+
+    int len = arr.property("length").toInt32();
+    for (int i = 0; i < len; ++i) {
+        QScriptValue it = arr.property(i);
+        if (!it.isObject()) continue;
+        QVariantMap m;
+        m["word"] = it.property("word").toString();
+        m["phonetic"] = it.property("phonetic").toString();
+        m["meaning"] = it.property("meaning").toString();
+        m["context"] = it.property("context").toString();
+        m["bookTitle"] = it.property("bookTitle").toString();
+        m["mastered"] = it.property("mastered").toBool();
+        m["createdAt"] = it.property("createdAt").toString();
+        if (!m["word"].toString().trimmed().isEmpty()) {
+            m_vocabList.append(m);
+        }
+    }
+}
+
+void DictManager::saveVocab() const
+{
+    QFile f(vocabFilePath());
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        return;
+    }
+    QTextStream out(&f);
+    out.setCodec("UTF-8");
+    out << "[\n";
+    for (int i = 0; i < m_vocabList.size(); ++i) {
+        const QVariantMap m = m_vocabList.at(i).toMap();
+        out << "  {"
+            << "\"word\":\"" << escapeVocabJson(m.value("word").toString()) << "\","
+            << "\"phonetic\":\"" << escapeVocabJson(m.value("phonetic").toString()) << "\","
+            << "\"meaning\":\"" << escapeVocabJson(m.value("meaning").toString()) << "\","
+            << "\"context\":\"" << escapeVocabJson(m.value("context").toString()) << "\","
+            << "\"bookTitle\":\"" << escapeVocabJson(m.value("bookTitle").toString()) << "\","
+            << "\"mastered\":" << (m.value("mastered").toBool() ? "true" : "false") << ","
+            << "\"createdAt\":\"" << escapeVocabJson(m.value("createdAt").toString()) << "\""
+            << "}";
+        if (i + 1 < m_vocabList.size()) out << ",";
+        out << "\n";
+    }
+    out << "]\n";
+    f.close();
+}
+
+bool DictManager::saveVocabWord(const QString &word, const QString &phonetic, const QString &meaning, const QString &context, const QString &bookTitle)
+{
+    QString cleanW = word.trimmed();
+    if (cleanW.isEmpty()) return false;
+
+    for (int i = 0; i < m_vocabList.size(); ++i) {
+        QVariantMap existing = m_vocabList.at(i).toMap();
+        if (existing.value("word").toString().compare(cleanW, Qt::CaseInsensitive) == 0) {
+            if (!phonetic.trimmed().isEmpty()) existing["phonetic"] = phonetic.trimmed();
+            if (!meaning.trimmed().isEmpty()) existing["meaning"] = meaning.trimmed();
+            if (!context.trimmed().isEmpty()) existing["context"] = context.trimmed();
+            if (!bookTitle.trimmed().isEmpty()) existing["bookTitle"] = bookTitle.trimmed();
+            m_vocabList[i] = existing;
+            saveVocab();
+            emit vocabChanged();
+            return true;
+        }
+    }
+
+    QVariantMap item;
+    item["word"] = cleanW;
+    item["phonetic"] = phonetic.trimmed();
+    item["meaning"] = meaning.trimmed();
+    item["context"] = context.trimmed();
+    item["bookTitle"] = bookTitle.trimmed();
+    item["mastered"] = false;
+    item["createdAt"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    m_vocabList.prepend(item);
+    saveVocab();
+    emit vocabChanged();
+    return true;
+}
+
+QVariantList DictManager::vocabList() const
+{
+    return m_vocabList;
+}
+
+void DictManager::reloadVocab()
+{
+    loadVocab();
+    emit vocabChanged();
+}
+
+bool DictManager::removeVocabWord(int index)
+{
+    if (index < 0 || index >= m_vocabList.size()) return false;
+    m_vocabList.removeAt(index);
+    saveVocab();
+    emit vocabChanged();
+    return true;
+}
+
+bool DictManager::toggleVocabMastered(int index)
+{
+    if (index < 0 || index >= m_vocabList.size()) return false;
+    QVariantMap item = m_vocabList.at(index).toMap();
+    item["mastered"] = !item.value("mastered").toBool();
+    m_vocabList[index] = item;
+    saveVocab();
+    emit vocabChanged();
+    return true;
+}
+
+QString DictManager::exportVocabCsv()
+{
+    if (m_vocabList.isEmpty()) return QString();
+    QFileInfo fi(vocabFilePath());
+    QString csvPath = fi.absolutePath() + "/libris_vocab_anki.csv";
+    QFile f(csvPath);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        return QString();
+    }
+    QTextStream out(&f);
+    out.setCodec("UTF-8");
+    out << "Word,Phonetic,Meaning,Context,Book,Mastered\n";
+    for (int i = 0; i < m_vocabList.size(); ++i) {
+        const QVariantMap m = m_vocabList.at(i).toMap();
+        out << escapeCsvField(m.value("word").toString()) << ","
+            << escapeCsvField(m.value("phonetic").toString()) << ","
+            << escapeCsvField(m.value("meaning").toString()) << ","
+            << escapeCsvField(m.value("context").toString()) << ","
+            << escapeCsvField(m.value("bookTitle").toString()) << ","
+            << (m.value("mastered").toBool() ? "1" : "0") << "\n";
+    }
+    f.close();
+    return csvPath;
 }

@@ -2,17 +2,18 @@ import bb.cascades 1.3
 
 Container {
     id: bookSlotItem
-    topMargin: 8
+    topMargin: bookManager.dp(8)
     horizontalAlignment: HorizontalAlignment.Fill
     background: isSelected ?
-                (appTheme === "dark" ? Color.create("#14221D") : Color.create("#ECFDF5")) :
-                (appTheme === "dark" ? Color.create("#111111") : Color.create("#FFFFFF"))
-    topPadding: 10
-    bottomPadding: 10
-    leftPadding: 12
-    rightPadding: 12
+                Color.create(bookManager.uiActive) :
+                Color.create(bookManager.uiCard)
+    topPadding: bookManager.dp(12)
+    bottomPadding: bookManager.dp(12)
+    leftPadding: bookManager.dp(12)
+    rightPadding: bookManager.dp(12)
     layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
+    property real uiScale: 1.0
     property string filePath: ""
     property alias titleText: slotTitle.text
     property alias authorText: slotAuthor.text
@@ -23,6 +24,8 @@ Container {
     property alias progressText: slotProgressPct.text
     property int progressVal: 0
     property bool isSelected: false
+    property bool openOnRowTap: false
+    property bool showActionButton: true
     property string appTheme: "dark"
 
     signal bookSelected(string path)
@@ -31,20 +34,20 @@ Container {
     // Selection indicator bar on left
     Container {
         visible: bookSlotItem.isSelected
-        preferredWidth: 4
+        preferredWidth: bookManager.dp(4)
         verticalAlignment: VerticalAlignment.Fill
-        background: Color.create("#10B981")
-        rightMargin: 8
+        background: Color.create(bookManager.uiAccent)
+        rightMargin: bookManager.dp(8)
     }
 
     // Cover Thumbnail
     Container {
-        preferredWidth: 48
-        preferredHeight: 66
-        minWidth: 48
-        minHeight: 66
+        preferredWidth: bookManager.dp(46)
+        preferredHeight: bookManager.dp(64)
+        minWidth: bookManager.dp(46)
+        minHeight: bookManager.dp(64)
         verticalAlignment: VerticalAlignment.Center
-        background: appTheme === "dark" ? Color.create("#222222") : Color.create("#E5E5E5")
+        background: Color.create(bookManager.uiSurface)
         layout: DockLayout {}
 
         ImageView {
@@ -54,17 +57,39 @@ Container {
             scalingMethod: ScalingMethod.AspectFill
             imageSource: "asset:///icons/default_cover.png"
         }
+
+        // Overlay Title on Default Cover
+        Container {
+            visible: ("" + slotCover.imageSource).indexOf("default_cover") !== -1
+            horizontalAlignment: HorizontalAlignment.Center
+            verticalAlignment: VerticalAlignment.Center
+            leftPadding: bookManager.dp(4)
+            rightPadding: bookManager.dp(4)
+            bottomPadding: bookManager.dp(6)
+
+            Label {
+                horizontalAlignment: HorizontalAlignment.Center
+                verticalAlignment: VerticalAlignment.Center
+                text: slotTitle.text
+                textStyle.base: SystemDefaults.TextStyles.SmallText
+                textStyle.fontWeight: FontWeight.W500
+                textStyle.textAlign: TextAlign.Center
+                textStyle.color: Color.create("#F5EFE6")
+                multiline: true
+                autoSize.maxLineCount: 2
+            }
+        }
     }
 
-    // Book Information Column (Clickable to select)
+    // Book Information Column
     Container {
-        leftMargin: 12
+        leftMargin: bookManager.dp(10)
         layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
         horizontalAlignment: HorizontalAlignment.Fill
         verticalAlignment: VerticalAlignment.Center
         layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
-        // Title + Format Badge
+        // Title + Format Pill
         Container {
             horizontalAlignment: HorizontalAlignment.Fill
             layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
@@ -72,119 +97,150 @@ Container {
             Label {
                 id: slotTitle
                 layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                rightMargin: bookManager.dp(6)
                 verticalAlignment: VerticalAlignment.Center
-                textStyle.base: SystemDefaults.TextStyles.SmallText
+                textStyle.base: SystemDefaults.TextStyles.SubtitleText
                 textStyle.fontWeight: FontWeight.Bold
-                textStyle.color: appTheme === "dark" ? Color.White : Color.create("#000000")
+                textStyle.color: Color.create(bookManager.uiInk)
                 autoSize.maxLineCount: 1
             }
 
             Container {
-                leftMargin: 6
                 verticalAlignment: VerticalAlignment.Center
-                background: Color.create("#10B981")
-                leftPadding: 6
-                rightPadding: 6
-                topPadding: 1
-                bottomPadding: 1
+                background: Color.create(bookManager.uiSurface)
+                leftPadding: bookManager.dp(6)
+                rightPadding: bookManager.dp(6)
+                topPadding: bookManager.dp(2)
+                bottomPadding: bookManager.dp(2)
 
                 Label {
                     id: slotFormat
                     text: "EPUB"
-                    textStyle.fontSize: FontSize.XXSmall
+                    textStyle.base: SystemDefaults.TextStyles.SmallText
                     textStyle.fontWeight: FontWeight.Bold
-                    textStyle.color: Color.White
+                    textStyle.color: Color.create(bookManager.uiAccent)
                 }
             }
         }
 
         // Author + Duration Read
         Container {
-            topMargin: 2
+            topMargin: bookManager.dp(2)
             horizontalAlignment: HorizontalAlignment.Fill
             layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
             Label {
                 id: slotAuthor
                 layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                rightMargin: bookManager.dp(6)
                 verticalAlignment: VerticalAlignment.Center
-                textStyle.base: SystemDefaults.TextStyles.XSmallText
-                textStyle.color: appTheme === "dark" ? Color.create("#8E9AA8") : Color.create("#777777")
+                textStyle.base: SystemDefaults.TextStyles.SmallText
+                textStyle.fontWeight: FontWeight.Normal
+                textStyle.color: Color.create(bookManager.uiMuted)
                 autoSize.maxLineCount: 1
             }
 
             Label {
                 id: slotDuration
-                leftMargin: 6
                 verticalAlignment: VerticalAlignment.Center
-                textStyle.base: SystemDefaults.TextStyles.XSmallText
+                textStyle.base: SystemDefaults.TextStyles.SmallText
                 textStyle.fontWeight: FontWeight.Bold
-                textStyle.color: Color.create("#10B981")
+                textStyle.color: Color.create(bookManager.uiAccent)
+                autoSize.maxLineCount: 1
             }
         }
 
-        // Progress Bar + %
+        // Progress Bar + Page/Chapter Count + %
         Container {
-            topMargin: 6
+            topMargin: bookManager.dp(6)
             horizontalAlignment: HorizontalAlignment.Fill
             layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
             Container {
                 verticalAlignment: VerticalAlignment.Center
                 layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                preferredHeight: 6
-                background: appTheme === "dark" ? Color.create("#222222") : Color.create("#E5E5E5")
+                preferredHeight: bookManager.dp(5)
+                background: Color.create(bookManager.uiHairline)
                 layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
                 Container {
+                    visible: bookSlotItem.progressVal > 0
                     verticalAlignment: VerticalAlignment.Fill
-                    background: Color.create("#10B981")
-                    layoutProperties: StackLayoutProperties { spaceQuota: Math.max(1, bookSlotItem.progressVal) }
+                    background: Color.create(bookManager.uiAccent)
+                    layoutProperties: StackLayoutProperties { spaceQuota: Math.max(0.001, bookSlotItem.progressVal) }
                 }
                 Container {
+                    visible: bookSlotItem.progressVal < 100
                     verticalAlignment: VerticalAlignment.Fill
                     background: Color.Transparent
-                    layoutProperties: StackLayoutProperties { spaceQuota: Math.max(1, 100 - bookSlotItem.progressVal) }
+                    layoutProperties: StackLayoutProperties { spaceQuota: Math.max(0.001, 100 - bookSlotItem.progressVal) }
                 }
             }
 
             Label {
                 id: slotPageCount
-                leftMargin: 8
+                leftMargin: bookManager.dp(8)
                 verticalAlignment: VerticalAlignment.Center
-                textStyle.fontSize: FontSize.XXSmall
-                textStyle.color: appTheme === "dark" ? Color.create("#8E9AA8") : Color.create("#777777")
+                textStyle.base: SystemDefaults.TextStyles.SmallText
+                textStyle.color: Color.create(bookManager.uiMuted)
                 visible: text !== "" && text.indexOf("%") === -1
+                autoSize.maxLineCount: 1
             }
 
             Label {
                 id: slotProgressPct
-                leftMargin: 4
+                leftMargin: bookManager.dp(6)
                 verticalAlignment: VerticalAlignment.Center
-                textStyle.fontSize: FontSize.XXSmall
+                textStyle.base: SystemDefaults.TextStyles.SmallText
                 textStyle.fontWeight: FontWeight.Bold
-                textStyle.color: Color.create("#10B981")
+                textStyle.color: Color.create(bookManager.uiAccent)
+                autoSize.maxLineCount: 1
             }
         }
     }
 
-    // Single Prominent Action Button: Đọc
-    Button {
-        leftMargin: 8
-        preferredWidth: 64
-        minWidth: 58
+    // Compact Action Pill
+    Container {
+        visible: bookSlotItem.showActionButton
+        leftMargin: bookManager.dp(8)
         verticalAlignment: VerticalAlignment.Center
-        text: qsTr("Đọc") + Retranslate.onLanguageChanged
-        appearance: bookSlotItem.isSelected ? ButtonAppearance.Primary : ButtonAppearance.Default
-        onClicked: {
-            bookSlotItem.bookOpened(bookSlotItem.filePath);
+        background: bookSlotItem.isSelected ?
+                    Color.create(bookManager.uiAccent) :
+                    Color.create(bookManager.uiSurface)
+        leftPadding: bookManager.dp(10)
+        rightPadding: bookManager.dp(10)
+        topPadding: bookManager.dp(6)
+        bottomPadding: bookManager.dp(6)
+        layout: DockLayout {}
+
+        Label {
+            horizontalAlignment: HorizontalAlignment.Center
+            verticalAlignment: VerticalAlignment.Center
+            text: qsTr("Đọc") + Retranslate.onLanguageChanged
+            textStyle.base: SystemDefaults.TextStyles.SmallText
+            textStyle.fontWeight: FontWeight.Bold
+            textStyle.color: bookSlotItem.isSelected ?
+                             (appTheme === "dark" ? Color.create("#0E0C0A") : Color.create("#FFFFFF")) :
+                             Color.create(bookManager.uiAccent)
         }
+
+        gestureHandlers: [
+            TapHandler {
+                onTapped: {
+                    bookSlotItem.bookOpened(bookSlotItem.filePath);
+                }
+            }
+        ]
     }
 
     gestureHandlers: [
         TapHandler {
             onTapped: {
-                bookSlotItem.bookSelected(bookSlotItem.filePath);
+                if (bookSlotItem.openOnRowTap) {
+                    bookSlotItem.bookOpened(bookSlotItem.filePath);
+                } else {
+                    bookSlotItem.bookSelected(bookSlotItem.filePath);
+                }
             }
         }
     ]

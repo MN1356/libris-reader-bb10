@@ -25,6 +25,7 @@ class OpdsManager : public QObject
     Q_PROPERTY(bool isDownloading READ isDownloading NOTIFY isDownloadingChanged)
     Q_PROPERTY(int downloadProgress READ downloadProgress NOTIFY downloadProgressChanged)
     Q_PROPERTY(QString downloadStatus READ downloadStatus NOTIFY downloadStatusChanged)
+    Q_PROPERTY(int queuedCount READ queuedCount NOTIFY queuedCountChanged)
     Q_PROPERTY(QString currentTitle READ currentTitle NOTIFY currentTitleChanged)
     Q_PROPERTY(QString currentUrl READ currentUrl NOTIFY currentUrlChanged)
     Q_PROPERTY(bool canGoBack READ canGoBack NOTIFY canGoBackChanged)
@@ -43,6 +44,7 @@ public:
     bool isDownloading() const { return m_isDownloading; }
     int downloadProgress() const { return m_downloadProgress; }
     QString downloadStatus() const { return m_downloadStatus; }
+    int queuedCount() const { return m_downloadQueue.size(); }
     QString currentTitle() const { return m_currentTitle; }
     QString currentUrl() const { return m_currentUrl; }
     bool canGoBack() const { return !m_historyStack.isEmpty(); }
@@ -65,6 +67,7 @@ public:
 
     Q_INVOKABLE void downloadBook(const QString &title, const QString &author, const QString &downloadUrl, const QString &format, const QString &coverUrl = "");
     Q_INVOKABLE void cancelDownload();
+    Q_INVOKABLE void clearDownloadQueue();
 
 Q_SIGNALS:
     void catalogsChanged();
@@ -81,9 +84,12 @@ Q_SIGNALS:
     void isAtRootChanged();
     void bookDownloaded(const QString &filePath, const QString &title);
     void downloadFailed(const QString &errorMsg);
+    void queuedCountChanged();
+    void downloadQueued(const QString &title, int queueSize);
 
 private Q_SLOTS:
     void onFeedReplyFinished();
+    void onOpenSearchReplyFinished();
     void onDownloadDataReceived();
     void onDownloadProgress(qint64 received, qint64 total);
     void onDownloadFinished();
@@ -94,10 +100,16 @@ private Q_SLOTS:
 private:
     void prepareRequest(QNetworkRequest &req);
     void setupReply(QNetworkReply *reply);
+    void parseFeedResponse(const QByteArray &data, const QString &contentType);
     void parseAtomFeed(const QByteArray &data);
+    void parseOpds2Json(const QByteArray &data);
+    QString formatNetworkError(int statusCode, QNetworkReply::NetworkError netErr, const QString &errStr, bool isDownload) const;
+    void startNextQueuedDownload();
+    void fetchOpenSearchDescription(const QString &url);
     QString resolveUrl(const QString &baseUrl, const QString &relativeUrl) const;
     QString stripHtml(const QString &html) const;
     void sendFeedRequest(const QString &url);
+    void saveCatalogs();
     void rebuildCatalogModel();
 
     BookManager *m_bookManager;
@@ -127,8 +139,10 @@ private:
     // Navigation history stack: QVariantMap with "url", "title", "username", "password"
     QList<QVariantMap> m_historyStack;
 
-    // Active feed reply
+    // Active feed reply & OpenSearch descriptor reply
     QNetworkReply *m_feedReply;
+    QNetworkReply *m_openSearchReply;
+    QString m_pendingSearchQuery;
 
     // Active book download
     QNetworkReply *m_downloadReply;
@@ -136,6 +150,13 @@ private:
     QString m_downloadDestPath;
     QString m_downloadBookTitle;
     QString m_downloadCoverUrl;
+    QList<QVariantMap> m_downloadQueue;
+
+    // Redirect tracking and SSL fallback protection
+    int m_feedRedirectCount;
+    int m_downloadRedirectCount;
+    bool m_feedFailedFallbackAttempted;
+    bool m_downloadFailedFallbackAttempted;
 };
 
 #endif // OPDSMANAGER_HPP

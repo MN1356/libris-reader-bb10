@@ -1,9 +1,9 @@
-#ifndef __NSRREADERCORE_GLOBAL_H__
-#define __NSRREADERCORE_GLOBAL_H__
+#ifndef __PDFCORE_GLOBAL_H__
+#define __PDFCORE_GLOBAL_H__
 
 /**
- * @file nsrreadercore_global.h
- * @author Alexander Saprykin
+ * @file pdfcore_global.h
+ * @author Libris Team
  * @brief Global library header
  */
 
@@ -16,4 +16,4 @@
 #  define NSRREADERCORE_SHARED	Q_DECL_IMPORT
 #endif
 
-#endif /* __NSRREADERCORE_GLOBAL_H__ */
+#endif /* __PDFCORE_GLOBAL_H__ */

@@ -1,16 +1,16 @@
-#ifndef __NSRRENDERINFO_H__
-#define __NSRRENDERINFO_H__
+#ifndef __PDFRENDERINFO_H__
+#define __PDFRENDERINFO_H__
 
 /**
- * @file nsrrenderinfo.h
- * @author Alexander Saprykin
+ * @file pdfrenderinfo.h
+ * @author Libris Team
  * @brief Page rendering info
  */
 
-#include "nsrreadercore_global.h"
+#include "pdfcore_global.h"
 
 /**
- * @class NSRRenderInfo nsrrenderinfo.h
+ * @class NSRRenderInfo pdfrenderinfo.h
  * @brief Page rendering info class
  * @since 1.4.3
  *
@@ -22,12 +22,12 @@ public:
 	/**
 	 * @brief Constructor
 	 */
-	NSRRenderInfo ();
+	inline NSRRenderInfo () : _minZoom(0.0), _maxZoom(0.0), _isSuccessRender(false) {}
 
 	/**
 	 * @brief Destructor
 	 */
-	~NSRRenderInfo ();
+	inline ~NSRRenderInfo () {}
 
 	/**
 	 * @brief Gets page min zoom value
@@ -89,4 +89,4 @@ private:
 	bool	_isSuccessRender;	/**< Rendering result flag	*/
 };
 
-#endif /* __NSRRENDERINFO_H__ */
+#endif /* __PDFRENDERINFO_H__ */

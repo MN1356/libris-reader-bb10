@@ -1,16 +1,16 @@
-#ifndef __NSRABSTRACTDOCUMENT_H__
-#define __NSRABSTRACTDOCUMENT_H__
+#ifndef __PDFABSTRACTDOCUMENT_H__
+#define __PDFABSTRACTDOCUMENT_H__
 
 /**
- * @file nsrabstractdocument.h
- * @author Alexander Saprykin
+ * @file pdfabstractdocument.h
+ * @author Libris Team
  * @brief Base class for supported file type
  */
 
-#include "nsrcroppads.h"
-#include "nsrrenderinfo.h"
-#include "nsrtocentry.h"
-#include "nsrreadercore_global.h"
+#include "pdfcroppads.h"
+#include "pdfrenderinfo.h"
+#include "pdftocentry.h"
+#include "pdfcore_global.h"
 
 #include <QObject>
 #include <QtGui/QPixmap>
@@ -33,7 +33,7 @@
 #endif
 
 /**
- * @class NSRAbstractDocument nsrabstractdocument.h
+ * @class NSRAbstractDocument pdfabstractdocument.h
  * @brief Base class for supported file type
  *
  * Implement it to add support for any file type.
@@ -396,4 +396,4 @@ private:
 	NSRDocumentRotation	_rotation;		/**< Rotation angle		*/
 };
 
-#endif /* __NSRABSTRACTDOCUMENT_H__ */
+#endif /* __PDFABSTRACTDOCUMENT_H__ */

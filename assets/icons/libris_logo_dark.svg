@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="librisBrassGradDark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F2D08A" />
+      <stop offset="100%" stop-color="#C08938" />
+    </linearGradient>
+    <linearGradient id="librisSpineGradDark" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D4A359" stop-opacity="0.34" />
+      <stop offset="100%" stop-color="#D4A359" stop-opacity="0.06" />
+    </linearGradient>
+  </defs>
+
+  <!-- Architectural "L" hardcover book spine in Warm Ivory -->
+  <path d="M 278 196 H 442 V 668 H 768 V 796 H 278 Z" fill="#F5EFE6" />
+
+  <!-- Subtle left spine shadow & brass spine rule -->
+  <path d="M 278 196 H 356 V 796 H 278 Z" fill="url(#librisSpineGradDark)" />
+  <rect x="356" y="196" width="6" height="600" fill="#D4A359" opacity="0.45" />
+
+  <!-- Vertical Swallowtail Bookmark Ribbon in Brass Gold -->
+  <path d="M 566 196 H 716 V 540 L 641 466 L 566 540 Z" fill="url(#librisBrassGradDark)" />
+
+  <!-- Crisp Brass Gold Baseline Rule -->
+  <line x1="278" y1="818" x2="768" y2="818" stroke="#D4A359" stroke-width="24" stroke-linecap="round" />
+</svg>

@@ -1,16 +1,16 @@
-#ifndef __NSRPAGECROPPER_H__
-#define __NSRPAGECROPPER_H__
+#ifndef __PDFPAGECROPPER_H__
+#define __PDFPAGECROPPER_H__
 
 /**
- * @file nsrpagecropper.h
- * @author Alexander Saprykin
+ * @file pdfpagecropper.h
+ * @author Libris Team
  * @brief Page cropper
  */
 
-#include "nsrcroppads.h"
+#include "pdfcroppads.h"
 
 /**
- * @class NSRPageCropper nsrpagecropper.h
+ * @class NSRPageCropper pdfpagecropper.h
  * @brief Page cropper class
  */
 class NSRPageCropper
@@ -47,4 +47,4 @@ private:
 	NSRPageCropper ();
 };
 
-#endif /* __NSRPAGECROPPER_H__ */
+#endif /* __PDFPAGECROPPER_H__ */

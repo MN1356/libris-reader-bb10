@@ -9,33 +9,43 @@
 #include <QTimer>
 #include <bb/cascades/DataModel>
 #include <bb/cascades/GroupDataModel>
+#include <bb/cascades/ArrayDataModel>
 #include <bb/cascades/Image>
 #include <bb/device/BatteryInfo>
 #include <bb/device/HardwareInfo>
 #include <bb/platform/PlatformInfo>
 #include <bb/system/Clipboard>
+#include <bb/multimedia/MediaKey>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include "EpubParser.hpp"
 #include "TxtParser.hpp"
 #include "Fb2Parser.hpp"
+#include "CbzParser.hpp"
+#include "MobiParser.hpp"
 #include "AppTranslator.hpp"
 #include "TtsManager.hpp"
 #include "DictManager.hpp"
-#include "nsrreadercore/nsrreadercore.h"
-#include "nsrreadercore/nsrsession.h"
-#include "nsrreadercore/nsrtocentry.h"
+#include "PdfParser.hpp"
+#include "WiFiDropServer.hpp"
 
 namespace bb {
     namespace cascades {
         class Control;
     }
+    namespace multimedia {
+        class MediaKeyWatcher;
+    }
 }
 
 class SearchWorker;
 class ScanWorker;
+class CoverExtractWorker;
 class OpdsManager;
+class QSettings;
+class WiFiDropServer;
+class QSettings;
 
 class BookManager : public QObject {
     Q_OBJECT
@@ -73,7 +83,10 @@ class BookManager : public QObject {
     Q_PROPERTY(int readingBooksCount READ readingBooksCount NOTIFY statsChanged)
     Q_PROPERTY(int unreadBooksCount READ unreadBooksCount NOTIFY statsChanged)
     Q_PROPERTY(int averageProgress READ averageProgress NOTIFY statsChanged)
+    Q_PROPERTY(int currentStreak READ currentStreak NOTIFY statsChanged)
+    Q_PROPERTY(int dailyGoalMinutes READ dailyGoalMinutes WRITE setDailyGoalMinutes NOTIFY statsChanged)
     Q_PROPERTY(bb::cascades::DataModel* readingHistoryModel READ readingHistoryModel CONSTANT)
+    Q_PROPERTY(bb::cascades::DataModel* homeFeedModel READ homeFeedModel CONSTANT)
 
     Q_PROPERTY(bb::cascades::DataModel* model READ model NOTIFY modelChanged)
     Q_PROPERTY(bb::cascades::DataModel* folderModel READ folderModel CONSTANT)
@@ -84,15 +97,30 @@ class BookManager : public QObject {
     Q_PROPERTY(QString selectedFolderPath READ selectedFolderPath NOTIFY selectedFolderChanged)
     Q_PROPERTY(QString selectedFolderName READ selectedFolderName NOTIFY selectedFolderChanged)
     Q_PROPERTY(int screenWidth READ screenWidth CONSTANT)
+    Q_PROPERTY(int screenHeight READ screenHeight CONSTANT)
+    Q_PROPERTY(bool isSquareScreen READ isSquareScreen CONSTANT)
+    Q_PROPERTY(bool isHiRes READ isHiRes CONSTANT)
+    Q_PROPERTY(double uiScale READ uiScale CONSTANT)
+    Q_PROPERTY(QString uiBg READ uiBg NOTIFY appThemeChanged)
+    Q_PROPERTY(QString uiCard READ uiCard NOTIFY appThemeChanged)
+    Q_PROPERTY(QString uiSurface READ uiSurface NOTIFY appThemeChanged)
+    Q_PROPERTY(QString uiActive READ uiActive NOTIFY appThemeChanged)
+    Q_PROPERTY(QString uiHairline READ uiHairline NOTIFY appThemeChanged)
+    Q_PROPERTY(QString uiInk READ uiInk NOTIFY appThemeChanged)
+    Q_PROPERTY(QString uiMuted READ uiMuted NOTIFY appThemeChanged)
+    Q_PROPERTY(QString uiAccent READ uiAccent NOTIFY appThemeChanged)
+    Q_PROPERTY(QString uiDanger READ uiDanger NOTIFY appThemeChanged)
     Q_PROPERTY(QString sortBy READ sortBy WRITE setSortBy NOTIFY sortByChanged)
     Q_PROPERTY(QString groupBy READ groupBy WRITE setGroupBy NOTIFY groupByChanged)
     Q_PROPERTY(QString formatFilter READ formatFilter WRITE setFormatFilter NOTIFY formatFilterChanged)
     Q_PROPERTY(QString categoryFilter READ categoryFilter WRITE setCategoryFilter NOTIFY categoryFilterChanged)
+    Q_PROPERTY(QStringList customShelves READ customShelves NOTIFY customShelvesChanged)
     Q_PROPERTY(QString searchQuery READ searchQuery WRITE setSearchQuery NOTIFY searchQueryChanged)
     Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY languageChanged)
     Q_PROPERTY(TtsManager* tts READ ttsManager CONSTANT)
     Q_PROPERTY(DictManager* dict READ dictManager CONSTANT)
     Q_PROPERTY(OpdsManager* opds READ opdsManager CONSTANT)
+    Q_PROPERTY(WiFiDropServer* wifiDropServer READ wifiDropServer CONSTANT)
     Q_PROPERTY(bool ttsAutoAdvance READ ttsAutoAdvance WRITE setTtsAutoAdvance NOTIFY ttsAutoAdvanceChanged)
 
     // Table of contents, search, and PDF reflow/OCR
@@ -134,8 +162,19 @@ class BookManager : public QObject {
     Q_PROPERTY(QString currentContent READ currentContent NOTIFY currentChapterChanged)
     Q_PROPERTY(int fontSize READ fontSize WRITE setFontSize NOTIFY fontSizeChanged)
     Q_PROPERTY(QString fontFamily READ fontFamily WRITE setFontFamily NOTIFY fontFamilyChanged)
+    Q_PROPERTY(QString currentFontDisplayName READ currentFontDisplayName NOTIFY fontFamilyChanged)
+    Q_PROPERTY(QVariantList customFonts READ customFonts NOTIFY customFontsChanged)
     Q_PROPERTY(QString theme READ theme WRITE setTheme NOTIFY themeChanged)
+    Q_PROPERTY(bool warmFilterEnabled READ warmFilterEnabled WRITE setWarmFilterEnabled NOTIFY warmFilterChanged)
+    Q_PROPERTY(int warmFilterIntensity READ warmFilterIntensity WRITE setWarmFilterIntensity NOTIFY warmFilterChanged)
+    Q_PROPERTY(bool autoNightTheme READ autoNightTheme WRITE setAutoNightTheme NOTIFY autoNightThemeChanged)
+    Q_PROPERTY(bool focusModeEnabled READ focusModeEnabled WRITE setFocusModeEnabled NOTIFY focusModeChanged)
+    Q_PROPERTY(bool volumeKeyTurnEnabled READ volumeKeyTurnEnabled WRITE setVolumeKeyTurnEnabled NOTIFY volumeKeyTurnEnabledChanged)
+    Q_PROPERTY(QVariantMap dailyRecallQuote READ dailyRecallQuote NOTIFY highlightsChanged)
     Q_PROPERTY(QString readingMode READ readingMode WRITE setReadingMode NOTIFY readingModeChanged)
+    Q_PROPERTY(QString columnLayout READ columnLayout WRITE setColumnLayout NOTIFY columnLayoutChanged)
+    Q_PROPERTY(bool isTwoColumnActive READ isTwoColumnActive NOTIFY columnLayoutChanged)
+    Q_PROPERTY(bool mangaRtlMode READ mangaRtlMode WRITE setMangaRtlMode NOTIFY mangaRtlModeChanged)
     Q_PROPERTY(int readingProgress READ readingProgress NOTIFY readingProgressChanged)
     Q_PROPERTY(int currentPageInChapter READ currentPageInChapter NOTIFY pagePositionChanged)
     Q_PROPERTY(int totalPagesInChapter READ totalPagesInChapter NOTIFY pagePositionChanged)
@@ -146,6 +185,7 @@ class BookManager : public QObject {
     Q_PROPERTY(bb::cascades::Image currentPdfImage READ currentPdfImage NOTIFY currentPdfImageChanged)
     Q_PROPERTY(QString currentPdfPagePath READ currentPdfPagePath NOTIFY currentPdfImageChanged)
     Q_PROPERTY(bool isPdfInverted READ isPdfInverted NOTIFY pdfInvertedChanged)
+    Q_PROPERTY(bool isPdfAutoCrop READ isPdfAutoCrop WRITE setIsPdfAutoCrop NOTIFY pdfAutoCropChanged)
 
     // Last read book (Hero Card)
     Q_PROPERTY(bool hasLastBook READ hasLastBook NOTIFY lastBookChanged)
@@ -180,6 +220,11 @@ class BookManager : public QObject {
     Q_PROPERTY(QString persistentStorageDir READ persistentDataDir CONSTANT)
     Q_PROPERTY(QString persistentStorageStatus READ persistentStorageStatus NOTIFY persistentStorageStatusChanged)
 
+    // App Version, Build & Changelog (synchronized on every build bump)
+    Q_PROPERTY(QString appVersion READ appVersion CONSTANT)
+    Q_PROPERTY(QString buildNumber READ buildNumber CONSTANT)
+    Q_PROPERTY(QString changelogText READ changelogText NOTIFY languageChanged)
+
 public:
     explicit BookManager(QObject *parent = 0);
     ~BookManager();
@@ -191,6 +236,9 @@ public:
     QString language() const;
     Q_INVOKABLE void setLanguage(const QString &lang);
     Q_INVOKABLE QString tr(const QString &sourceText) const;
+    QString appVersion() const;
+    QString buildNumber() const;
+    QString changelogText() const;
 
     bb::cascades::DataModel* folderModel() const;
     QString libraryBrowseMode() const;
@@ -201,6 +249,8 @@ public:
     Q_INVOKABLE void selectFolder(const QString &folderPath);
     Q_INVOKABLE void clearSelectedFolder();
     int screenWidth() const;
+    int screenHeight() const;
+    bool isSquareScreen() const;
 
     QString libraryViewMode() const;
     Q_INVOKABLE void setLibraryViewMode(const QString &mode);
@@ -217,6 +267,16 @@ public:
 
     QString categoryFilter() const;
     Q_INVOKABLE void setCategoryFilter(const QString &category);
+
+    // Custom Shelves
+    QStringList customShelves() const;
+    Q_INVOKABLE bool createShelf(const QString &name);
+    Q_INVOKABLE bool deleteShelf(const QString &name);
+    Q_INVOKABLE bool renameShelf(const QString &oldName, const QString &newName);
+    Q_INVOKABLE bool toggleBookInShelf(const QString &filePath, const QString &shelfName);
+    Q_INVOKABLE bool isBookInShelf(const QString &filePath, const QString &shelfName) const;
+    Q_INVOKABLE QStringList getBookShelves(const QString &filePath) const;
+    Q_INVOKABLE int getShelfBookCount(const QString &shelfName) const;
 
     Q_INVOKABLE bool isFavorite(const QString &filePath) const;
     Q_INVOKABLE bool toggleFavorite(const QString &filePath);
@@ -251,13 +311,58 @@ public:
     Q_INVOKABLE void setFontSize(int size);
     QString fontFamily() const;
     Q_INVOKABLE void setFontFamily(const QString &family);
+    QString currentFontDisplayName() const;
+    QVariantList customFonts() const;
+    Q_INVOKABLE void refreshCustomFonts();
+    Q_INVOKABLE QString currentFontCss() const;
+    Q_INVOKABLE QString currentFontFaceCss() const;
+
+    bool warmFilterEnabled() const;
+    Q_INVOKABLE void setWarmFilterEnabled(bool enabled);
+    int warmFilterIntensity() const;
+    Q_INVOKABLE void setWarmFilterIntensity(int intensity);
+    Q_INVOKABLE void toggleWarmFilter();
+    bool autoNightTheme() const;
+    Q_INVOKABLE void setAutoNightTheme(bool enabled);
+    Q_INVOKABLE void checkAutoNightTheme();
+    bool focusModeEnabled() const;
+    Q_INVOKABLE void setFocusModeEnabled(bool enabled);
+    Q_INVOKABLE void toggleFocusMode();
+    Q_INVOKABLE QVariantMap nextSeriesBook(const QString &filePath = QString()) const;
+    Q_INVOKABLE QVariantList allBooksSnapshot() const;
+
+    bool volumeKeyTurnEnabled() const;
+    Q_INVOKABLE void setVolumeKeyTurnEnabled(bool enabled);
+
+    QVariantMap dailyRecallQuote() const;
+    Q_INVOKABLE QString exportQuoteCardImage(const QString &quoteText, const QString &bookTitle, const QString &author = QString(), const QString &note = QString());
     QString theme() const;
     Q_INVOKABLE void setTheme(const QString &theme);
     QString appTheme() const;
     Q_INVOKABLE void setAppTheme(const QString &theme);
+    bool isHiRes() const { return m_screenWidth >= 1200; }
+    double uiScale() const { return (m_screenWidth >= 1200) ? 1.5 : 1.0; }
+    Q_INVOKABLE int dp(double px) const { return (px == 0.0) ? 0 : qRound(px * uiScale()); }
+    QString uiBg() const { return (m_appTheme == "dark") ? QString("#0E0C0A") : QString("#F4EFE6"); }
+    QString uiCard() const { return (m_appTheme == "dark") ? QString("#181512") : QString("#FFFFFF"); }
+    QString uiSurface() const { return (m_appTheme == "dark") ? QString("#221E1A") : QString("#EAE3D6"); }
+    QString uiActive() const { return (m_appTheme == "dark") ? QString("#261F15") : QString("#EFE4CF"); }
+    QString uiHairline() const { return (m_appTheme == "dark") ? QString("#26211B") : QString("#E0D7C7"); }
+    QString uiInk() const { return (m_appTheme == "dark") ? QString("#F5EFE6") : QString("#1C1916"); }
+    QString uiMuted() const { return (m_appTheme == "dark") ? QString("#9C9488") : QString("#635B51"); }
+    QString uiAccent() const { return (m_appTheme == "dark") ? QString("#D9AB60") : QString("#8A5D16"); }
+    QString uiDanger() const { return (m_appTheme == "dark") ? QString("#E06C65") : QString("#B43B34"); }
     QString readingMode() const;
     Q_INVOKABLE void setReadingMode(const QString &mode);
     Q_INVOKABLE void toggleReadingMode();
+    QString columnLayout() const;
+    Q_INVOKABLE void setColumnLayout(const QString &layout);
+    Q_INVOKABLE void toggleColumnLayout();
+    bool isTwoColumnActive() const;
+    bool mangaRtlMode() const;
+    Q_INVOKABLE void setMangaRtlMode(bool enabled);
+    Q_INVOKABLE void toggleMangaRtlMode();
+    Q_INVOKABLE void renderCurrentChapter();
     int readingProgress() const;
     int currentPageInChapter() const;
     int totalPagesInChapter() const;
@@ -268,6 +373,9 @@ public:
     bb::cascades::Image currentPdfImage() const;
     QString currentPdfPagePath() const;
     bool isPdfInverted() const;
+    bool isPdfAutoCrop() const;
+    Q_INVOKABLE void setIsPdfAutoCrop(bool enabled);
+    Q_INVOKABLE void togglePdfAutoCrop();
 
     // Main View Mode
     QString mainViewMode() const;
@@ -308,7 +416,11 @@ public:
     int readingBooksCount() const;
     int unreadBooksCount() const;
     int averageProgress() const;
+    int currentStreak() const;
+    int dailyGoalMinutes() const;
+    Q_INVOKABLE void setDailyGoalMinutes(int minutes);
     bb::cascades::DataModel* readingHistoryModel() const;
+    bb::cascades::DataModel* homeFeedModel() const;
     QString recentSearchQuery() const { return m_recentSearchQuery; }
     Q_INVOKABLE void setRecentSearchQuery(const QString &query);
     int recentHistoryCount() const { return m_readingHistoryModel ? m_readingHistoryModel->size() : 0; }
@@ -318,7 +430,6 @@ public:
     Q_INVOKABLE int getDailyReadingSeconds(const QString &dateStr) const;
     Q_INVOKABLE QString getDailyReadingTimeStr(const QString &dateStr) const;
     Q_INVOKABLE QVariantList getCalendarDays(int year, int month);
-    Q_INVOKABLE QVariantList getCalendarMonthBookTracks(int year, int month);
     Q_INVOKABLE QVariantMap getWeekData(const QString &anchorDateStr);
     Q_INVOKABLE void setControlSpaceQuota(bb::cascades::Control *control, float quota);
     Q_INVOKABLE QVariantMap getMonthStats(int year, int month);
@@ -329,11 +440,13 @@ public:
     Q_INVOKABLE QString formatShortDuration(int seconds) const;
     Q_INVOKABLE void exitApp();
     Q_INVOKABLE void promptExit();
+    void cancelWorkers();
     Q_INVOKABLE void saveSettings();
 
     // KOReader-style Extended Reading Statistics
     Q_INVOKABLE QVariantList getBookStatsList();
     Q_INVOKABLE QVariantMap getBookDetailedStats(const QString &filePath);
+    Q_INVOKABLE QVariantMap getBookMetadata(const QString &filePath);
     Q_INVOKABLE QVariantList getRecentDaysTrend(int numDays = 7);
     Q_INVOKABLE QVariantMap getFormatDistribution();
 
@@ -381,7 +494,8 @@ public:
 
 public Q_SLOTS:
     void saveCurrentProgress();
-    void pauseTimersForSleep();
+    void saveForShutdown();
+    void pauseTimersForSleep(bool saveProgress = true);
     void resumeTimersFromSleep();
 
     // TTS Support
@@ -395,6 +509,7 @@ public Q_SLOTS:
     // Cover and progress cache & update
     Q_INVOKABLE void updateBookCoverInLibrary(const QString &filePath, const QString &coverPath);
     Q_INVOKABLE void updateBookProgressInLibrary(const QString &filePath, int progress);
+    Q_INVOKABLE void registerBookFile(const QString &filePath);
 
     // PDF specific actions
     Q_INVOKABLE void rotatePdf();
@@ -406,6 +521,7 @@ public Q_SLOTS:
     // TOC, Search, Reflow and Dictionary
     DictManager* dictManager() { return &m_dictManager; }
     OpdsManager* opdsManager();
+    WiFiDropServer* wifiDropServer() const { return m_wifiDropServer; }
     QString cacheDir() const { return m_cacheDir; }
     QVariantList tocList() const { return m_tocList; }
     QVariantList searchResults() const { return m_searchResults; }
@@ -433,6 +549,8 @@ public Q_SLOTS:
     Q_INVOKABLE void jumpToHighlight(const QString &id);
     Q_INVOKABLE QString getHighlightsJsonForCurrentChapter() const;
     Q_INVOKABLE void refreshHighlights();
+    Q_INVOKABLE QString exportBookHighlightsToMarkdown(const QString &filePath = QString());
+    Q_INVOKABLE QString exportAllHighlightsToMarkdown();
 
     QVariantList currentBookHighlights() const;
     QVariantList allHighlights() const;
@@ -478,7 +596,10 @@ public Q_SLOTS:
     Q_INVOKABLE QString persistentStorageStatus() const;
     Q_INVOKABLE void syncToPersistentStorage();
     Q_INVOKABLE void restoreFromPersistentStorage();
+    Q_INVOKABLE QString createBackupArchive();
+    Q_INVOKABLE bool restoreBackupArchive(const QString &archivePath);
     Q_INVOKABLE void cancelScan();
+    Q_INVOKABLE void openInternalLink(const QString &href, const QString &refTitle = QString());
 
 public slots:
     void resetLoadingState();
@@ -486,12 +607,9 @@ public slots:
     void scanLibrary();
     void onPdfPageRendered(int pageNumber);
     void onPdfIndicatorRequested(bool enabled);
-    void onPdfError(NSRAbstractDocument::NSRDocumentError error);
+    void onPdfError(int error);
     void onPdfFileOpened(const QString &file);
-    void onDevLogPostFinished();
-    void onCloudLogPostFinished();
-    void onLogPostTimeout();
-    void onCloudLogTimeout();
+    void onBookUploadedFromWifi(const QString &filePath, const QString &fileName, qint64 fileSize);
 
 signals:
     void promptExitRequested();
@@ -506,22 +624,35 @@ signals:
     void groupByChanged();
     void formatFilterChanged();
     void categoryFilterChanged();
+    void customShelvesChanged();
     void searchQueryChanged();
     void languageChanged();
 
     void currentBookChanged();
     void currentChapterChanged();
     void requestScrollToAnchor(const QString &anchor);
+    void showFootnotePopup(const QString &title, const QString &body);
     void fontSizeChanged();
     void fontFamilyChanged();
+    void customFontsChanged();
     void themeChanged();
+    void warmFilterChanged();
+    void autoNightThemeChanged();
+    void focusModeChanged();
+    void volumeKeyTurnEnabledChanged();
+    void volumePageNextRequested();
+    void volumePagePrevRequested();
     void appThemeChanged();
     void readingModeChanged();
+    void columnLayoutChanged();
+    void mangaRtlModeChanged();
     void readingProgressChanged();
     void isReaderActiveChanged();
     void pagePositionChanged();
     void currentPdfImageChanged();
     void pdfInvertedChanged();
+    void pdfAutoCropChanged();
+    void pdfOpenError(const QString &errorMsg);
     void pageRenderTimeout();
 
     void lastBookChanged();
@@ -562,10 +693,14 @@ signals:
 private slots:
     void onClockTick();
     void onBatteryLevelChanged(int level, bb::device::BatteryChargingState::Type chargingState);
+    void onVolumeUpPressed(bb::multimedia::MediaKey::Type key);
+    void onVolumeDownPressed(bb::multimedia::MediaKey::Type key);
+    void onTtsActiveChangedForVolume(bool active);
     void onReadingHeartbeat();
     void onTtsChapterFinished();
     void onSearchCompleted(const QVariantList &results);
     void onScanCompleted(const QList<QVariantMap> &allBooks);
+    void onCoverExtracted(const QString &filePath, const QString &coverPath);
     void onScanWatchdogTimeout();
     void onProgressSaveTimeout();
 
@@ -573,8 +708,9 @@ private:
     mutable EpubParser m_epubParser;
     mutable TxtParser m_txtParser;
     mutable Fb2Parser m_fb2Parser;
-    NSRReaderCore *m_pdfCore;
-    NSRSession m_pdfSession;
+    mutable CbzParser m_cbzParser;
+    mutable MobiParser m_mobiParser;
+    PdfParser *m_pdfParser;
 
     AppTranslator *m_translator;
     QString m_language; // "vi" or "en"
@@ -594,6 +730,8 @@ private:
     void saveBookmarks();
     void loadBookmarks();
     int readBookTotalPages(const QString &filePath, const QString &ext);
+    QString resolveStatsCoverPath(const QString &existingCover, const QString &filePath, const QString &format) const;
+    QVariantMap resolveBookMetaForStats(const QString &rawPath, QSettings &settings) const;
 
     bb::cascades::GroupDataModel *m_model;
     bb::cascades::GroupDataModel *m_folderModel;
@@ -616,6 +754,7 @@ private:
     QString m_selectedFolderPath;
     QString m_selectedFolderName;
     int m_screenWidth;
+    int m_screenHeight;
     QString m_sortBy;          // "date_desc", "date_asc", "title_asc", "title_desc", "author_asc", "size_desc"
     QString m_groupBy;         // "none", "author", "series"
     QString m_formatFilter;    // "all", "epub", "pdf", "txt", "fb2", "djvu"
@@ -640,6 +779,8 @@ private:
     QString m_theme;       // "dark", "sepia", "light"
     QString m_appTheme;    // "dark", "light"
     QString m_readingMode; // "paged", "scroll"
+    QString m_columnLayout; // "single", "double"
+    bool m_mangaRtlMode;
     int m_currentPageInChapter;
     int m_totalPagesInChapter;
     int m_currentScrollPos;
@@ -657,6 +798,7 @@ private:
     bb::cascades::Image m_currentPdfImage;
     QString m_currentPdfPagePath;
     bool m_pdfInverted;
+    bool m_isPdfAutoCrop;
 
     QString m_lastBookPath;
     QString m_lastBookTitle;
@@ -683,11 +825,13 @@ private:
 
     int m_totalReadingSeconds;
     int m_todayReadingSeconds;
+    int m_dailyGoalMinutes;
     QString m_todayDate;
     QMap<QString, int> m_bookReadingSeconds;
     QMap<QString, int> m_dailyReadingSeconds;
     QMap<QString, QMap<QString, int> > m_dailyBookReadingSeconds;
     bb::cascades::GroupDataModel *m_readingHistoryModel;
+    bb::cascades::ArrayDataModel *m_homeFeedModel;
 
     bool m_isSearching;
     bool m_isReaderActive;
@@ -698,33 +842,50 @@ private:
     bool m_ttsAutoAdvance;
     SearchWorker *m_searchWorker;
     ScanWorker *m_scanWorker;
+    CoverExtractWorker *m_coverWorker;
 
     void loadSettings();
+    void loadSettingsFromQSettings(QSettings &settings);
+    void restoreFromPersistentStorageInternal(bool forceOverwrite, bool reloadState);
+    void loadReadingStatsFromSettings(QSettings &settings);
+    void reconcileLibraryWithSettings(QSettings &settings);
     void applyVisualStyle();
     void loadCurrentChapter();
     void savePdfCoverThumbnail(const QString &filePath, const bb::ImageData &imgData);
-    void scanDirectoryRecursively(const QString &dirPath, int depth, QSet<QString> &addedPaths);
     void updateFolderList();
     void applyFilterAndSort();
     void updateReadingHistoryModel();
     void ensureBookInLibrary(const QString &filePath);
-
-    // SendLog Helpers & Members
-    QString collectDiagnosticReport() const;
-    void triggerCloudFallback(const QString &reportData);
-    void finishLogSend(bool success, const QString &status, const QString &url = QString());
+    void saveLibraryCache();
+    bool loadLibraryCache();
+    QString libraryCacheFilePath() const;
+    void installBundledSamplesIfNeeded();
 
     bool m_isSendingLog;
     QString m_lastLogStatus;
     QString m_devServerIp;
-    QNetworkAccessManager *m_logNetworkManager;
-    QNetworkReply *m_devLogReply;
-    QNetworkReply *m_cloudLogReply;
     bool m_isAppSleeping;
+    bool m_suppressPersistentSync;
+    bool m_pendingTtsAfterPdfRender;
+    int m_pendingJumpPageAfterPdfOpen;
     OpdsManager *m_opdsManager;
-    QTimer m_logTimeoutTimer;
-    QString m_cachedDiagnosticReport;
+    WiFiDropServer *m_wifiDropServer;
     QString m_persistentStorageStatus;
+
+    QStringList m_customShelves;
+    QMap<QString, QStringList> m_shelfBooks;
+    QVariantList m_customFonts;
+    bool m_warmFilterEnabled;
+    int m_warmFilterIntensity;
+    bool m_autoNightTheme;
+    bool m_focusModeEnabled;
+    bool m_volumeKeyTurnEnabled;
+    bb::multimedia::MediaKeyWatcher *m_volUpWatcher;
+    bb::multimedia::MediaKeyWatcher *m_volDownWatcher;
+
+    void updateVolumeKeyWatchers();
+    void loadCustomShelvesFromSettings(QSettings &settings);
+    void saveCustomShelvesToSettings(QSettings &settings);
 };
 
 #endif // BOOKMANAGER_HPP

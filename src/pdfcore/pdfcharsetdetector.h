@@ -1,9 +1,9 @@
-#ifndef __NSRCHARSETDETECTOR_H__
-#define __NSRCHARSETDETECTOR_H__
+#ifndef __PDFCHARSETDETECTOR_H__
+#define __PDFCHARSETDETECTOR_H__
 
 /**
- * @file nsrcharsetdetector.h
- * @author Alexander Saprykin
+ * @file pdfcharsetdetector.h
+ * @author Libris Team
  * @brief Charset (encoding) detector
  */
 
@@ -12,13 +12,13 @@
 #include <QString>
 
 /**
- * @class NSRCharsetDetector nsrcharsetdetector.h
+ * @class LibrisCharsetDetector pdfcharsetdetector.h
  * @brief Charset (encoding) detector class
  * @since 1.4.2
  *
- * NSRCharsetDetector tries to detect charset of the given text
+ * LibrisCharsetDetector tries to detect charset of the given text
  * using universalchardet library from Mozilla project, which
- * was adopted and ported for NSRCharsetDetector internal usage.
+ * was adopted and ported for LibrisCharsetDetector internal usage.
  *
  * Supported charsets:
  * - Chinese
@@ -58,14 +58,14 @@
  * -- WINDOWS-1252
  * -- WINDOWS-874 (Thai)
  */
-class NSRCharsetDetector : public nsUniversalDetector
+class LibrisCharsetDetector : public nsUniversalDetector
 {
 public:
 	/** @brief Default constructor */
-	NSRCharsetDetector ();
+	LibrisCharsetDetector ();
 
 	/** @brief Destructor */
-	~NSRCharsetDetector ();
+	~LibrisCharsetDetector ();
 
 	/**
 	 * @brief Adds more text data for charset detection
@@ -119,4 +119,4 @@ private:
 	QString	_charset; /**< Detected charset */
 };
 
-#endif /* __NSRCHARSETDETECTOR_H__ */
+#endif /* __PDFCHARSETDETECTOR_H__ */

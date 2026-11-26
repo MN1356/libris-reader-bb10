@@ -1,5 +1,6 @@
 import bb.cascades 1.3
 import bb.system 1.2
+import bb.cascades.pickers 1.0
 
 Page {
     id: librarySettingsPage
@@ -8,181 +9,213 @@ Page {
 
     titleBar: TitleBar {
         title: qsTr("Tủ sách & Quản lý") + Retranslate.onLanguageChanged
-        appearance: TitleBarAppearance.Default
+        appearance: TitleBarAppearance.Plain
     }
 
-    ScrollView {
-        scrollRole: ScrollRole.Main
+    Container {
         horizontalAlignment: HorizontalAlignment.Fill
         verticalAlignment: VerticalAlignment.Fill
+        background: Color.create(bookManager.uiBg)
 
-        Container {
+        ScrollView {
+            scrollRole: ScrollRole.Main
             horizontalAlignment: HorizontalAlignment.Fill
-            background: bookManager.appTheme === "dark" ? Color.create("#000000") : Color.create("#FFFFFF")
-            topPadding: 16
-            leftPadding: 16
-            rightPadding: 16
-            bottomPadding: 32
-
-            Header {
-                title: qsTr("GIAO DIỆN TỦ SÁCH") + Retranslate.onLanguageChanged
-            }
-
-            DropDown {
-                id: viewModeDropDown
-                topMargin: 8
-                title: qsTr("Kiểu hiển thị") + Retranslate.onLanguageChanged
-
-                Option {
-                    text: qsTr("Lưới bìa") + Retranslate.onLanguageChanged
-                    value: "mosaic"
-                    selected: bookManager.libraryViewMode === "mosaic"
-                }
-                Option {
-                    text: qsTr("Danh sách") + Retranslate.onLanguageChanged
-                    value: "detailed"
-                    selected: bookManager.libraryViewMode === "detailed"
-                }
-
-                onSelectedValueChanged: {
-                    if (selectedValue && selectedValue !== bookManager.libraryViewMode) {
-                        bookManager.setLibraryViewMode(selectedValue);
-                    }
-                }
-            }
-
-            Header {
-                topMargin: 20
-                title: qsTr("QUÉT DỮ LIỆU") + Retranslate.onLanguageChanged
-            }
-
-            Button {
-                topMargin: 8
-                text: qsTr("Quét lại bộ nhớ & thẻ nhớ") + Retranslate.onLanguageChanged
-                horizontalAlignment: HorizontalAlignment.Fill
-                onClicked: {
-                    bookManager.scanLibrary();
-                    scanFeedbackLabel.visible = true;
-                }
-            }
-
-            Label {
-                id: scanFeedbackLabel
-                visible: false
-                topMargin: 6
-                text: (qsTr("Đã quét xong! Tổng cộng: %1 cuốn sách.").arg(bookManager.bookCount) + Retranslate.onLanguageChanged)
-                textStyle.base: SystemDefaults.TextStyles.BodyText
-                textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.Black
-                multiline: true
-            }
-
-            Header {
-                topMargin: 20
-                title: qsTr("BẢO TOÀN DỮ LIỆU") + Retranslate.onLanguageChanged
-            }
+            verticalAlignment: VerticalAlignment.Fill
 
             Container {
-                topMargin: 8
                 horizontalAlignment: HorizontalAlignment.Fill
-                background: bookManager.appTheme === "dark" ? Color.create("#111111") : Color.create("#F5F5F5")
-                topPadding: 14
-                bottomPadding: 14
-                leftPadding: 14
-                rightPadding: 14
+                bottomPadding: bookManager.dp(32)
 
-                Label {
-                    multiline: true
-                    text: qsTr("Tự động sao lưu lịch sử, tiến độ và ghi chú vào bộ nhớ chung khi cài lại app.") + Retranslate.onLanguageChanged
-                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                    textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#666666")
-                    bottomMargin: 8
-                }
-
-                Label {
-                    text: qsTr("Thư mục lưu trữ bảo toàn:") + Retranslate.onLanguageChanged
-                    textStyle.base: SystemDefaults.TextStyles.SubtitleText
-                    textStyle.fontWeight: FontWeight.Bold
-                    textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.Black
-                }
-
-                Label {
-                    topMargin: 2
-                    bottomMargin: 12
-                    multiline: true
-                    text: bookManager.persistentStorageDir
-                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                    textStyle.color: bookManager.appTheme === "dark" ? Color.create("#10B981") : Color.create("#059669")
+                Header {
+                    title: qsTr("GIAO DIỆN TỦ SÁCH") + Retranslate.onLanguageChanged
                 }
 
                 Container {
                     horizontalAlignment: HorizontalAlignment.Fill
-                    layout: StackLayout {
-                        orientation: LayoutOrientation.LeftToRight
-                    }
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    topPadding: bookManager.dp(10)
+                    bottomPadding: bookManager.dp(16)
 
-                    Button {
-                        layoutProperties: StackLayoutProperties {
-                            spaceQuota: 1.0
-                        }
-                        text: qsTr("Sao Lưu Ngay") + Retranslate.onLanguageChanged
-                        imageSource: "asset:///icons/ic_storage.png"
-                        onClicked: {
-                            bookManager.syncToPersistentStorage();
-                        }
-                    }
+                    DropDown {
+                        id: viewModeDropDown
+                        title: qsTr("Kiểu hiển thị") + Retranslate.onLanguageChanged
 
-                    Button {
-                        leftMargin: 10
-                        layoutProperties: StackLayoutProperties {
-                            spaceQuota: 1.0
+                        Option {
+                            text: qsTr("Lưới bìa") + Retranslate.onLanguageChanged
+                            value: "mosaic"
+                            selected: bookManager.libraryViewMode === "mosaic"
                         }
-                        text: qsTr("Khôi Phục") + Retranslate.onLanguageChanged
-                        imageSource: "asset:///icons/ic_open.png"
-                        onClicked: {
-                            bookManager.restoreFromPersistentStorage();
+                        Option {
+                            text: qsTr("Danh sách") + Retranslate.onLanguageChanged
+                            value: "detailed"
+                            selected: bookManager.libraryViewMode === "detailed"
+                        }
+
+                        onSelectedValueChanged: {
+                            if (selectedValue && selectedValue !== bookManager.libraryViewMode) {
+                                bookManager.setLibraryViewMode(selectedValue);
+                            }
                         }
                     }
                 }
 
-                Label {
-                    topMargin: 10
-                    multiline: true
-                    text: bookManager.persistentStorageStatus
-                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                    textStyle.fontStyle: FontStyle.Italic
-                    textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#666666")
+                Header {
+                    title: qsTr("QUÉT DỮ LIỆU") + Retranslate.onLanguageChanged
                 }
-            }
 
-            // =========================================================
-            // LỊCH SỬ ĐỌC
-            // =========================================================
-            Header {
-                topMargin: 20
-                title: qsTr("LỊCH SỬ ĐỌC") + Retranslate.onLanguageChanged
-            }
-
-            Container {
-                topMargin: 8
-                horizontalAlignment: HorizontalAlignment.Fill
-
-                Button {
+                Container {
                     horizontalAlignment: HorizontalAlignment.Fill
-                    text: qsTr("Xóa toàn bộ lịch sử đọc") + Retranslate.onLanguageChanged
-                    imageSource: "asset:///icons/ic_recent.png"
-                    onClicked: {
-                        clearHistoryDialog.show();
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    topPadding: bookManager.dp(10)
+                    bottomPadding: bookManager.dp(16)
+
+                    Button {
+                        text: qsTr("Quét lại bộ nhớ & thẻ nhớ") + Retranslate.onLanguageChanged
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        appearance: ControlAppearance.Primary
+                        onClicked: {
+                            bookManager.scanLibrary();
+                            scanToast.body = (qsTr("Đã quét xong! Tổng cộng: %1 cuốn sách.").arg(bookManager.bookCount)) + Retranslate.onLanguageChanged;
+                            scanToast.show();
+                        }
                     }
                 }
 
-                Label {
-                    id: clearHistoryFeedbackLabel
-                    visible: false
-                    topMargin: 8
-                    text: qsTr("Đã xóa sạch lịch sử đọc gần đây và đặt lại tiến độ.") + Retranslate.onLanguageChanged
-                    textStyle.base: SystemDefaults.TextStyles.BodyText
-                    textStyle.color: Color.create("#10B981")
-                    multiline: true
+                Header {
+                    title: qsTr("BẢO TOÀN DỮ LIỆU") + Retranslate.onLanguageChanged
+                }
+
+                Container {
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    topPadding: bookManager.dp(10)
+                    bottomPadding: bookManager.dp(16)
+
+                    Container {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        background: Color.create(bookManager.uiCard)
+                        topPadding: bookManager.dp(14)
+                        bottomPadding: bookManager.dp(14)
+                        leftPadding: bookManager.dp(14)
+                        rightPadding: bookManager.dp(14)
+
+                        Label {
+                            multiline: true
+                            text: qsTr("Tự động sao lưu lịch sử, tiến độ và ghi chú vào bộ nhớ chung khi cài lại app.") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.color: Color.create(bookManager.uiMuted)
+                            bottomMargin: bookManager.dp(8)
+                        }
+
+                        Label {
+                            text: qsTr("Thư mục lưu trữ bảo toàn:") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SubtitleText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiInk)
+                        }
+
+                        Label {
+                            topMargin: bookManager.dp(2)
+                            bottomMargin: bookManager.dp(12)
+                            multiline: true
+                            text: bookManager.persistentStorageDir
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.color: Color.create(bookManager.uiAccent)
+                        }
+
+                        Container {
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            layout: StackLayout {
+                                orientation: LayoutOrientation.LeftToRight
+                            }
+
+                            Button {
+                                layoutProperties: StackLayoutProperties {
+                                    spaceQuota: 1.0
+                                }
+                                text: qsTr("Sao Lưu Ngay") + Retranslate.onLanguageChanged
+                                imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_storage.png" : "asset:///icons/ic_storage_dark.png"
+                                onClicked: {
+                                    bookManager.syncToPersistentStorage();
+                                }
+                            }
+
+                            Button {
+                                leftMargin: bookManager.dp(10)
+                                layoutProperties: StackLayoutProperties {
+                                    spaceQuota: 1.0
+                                }
+                                text: qsTr("Khôi Phục") + Retranslate.onLanguageChanged
+                                imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_refresh.png" : "asset:///icons/ic_refresh_dark.png"
+                                onClicked: {
+                                    bookManager.restoreFromPersistentStorage();
+                                }
+                            }
+                        }
+
+                        Container {
+                            topMargin: bookManager.dp(10)
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                            Button {
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                text: qsTr("Xuất .librisbackup") + Retranslate.onLanguageChanged
+                                imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_download.png" : "asset:///icons/ic_download_dark.png"
+                                onClicked: {
+                                    var outPath = bookManager.createBackupArchive();
+                                    backupToast.body = (outPath !== "" ? (qsTr("Đã tạo gói sao lưu: ") + outPath) : qsTr("Không thể tạo gói sao lưu")) + Retranslate.onLanguageChanged;
+                                    backupToast.show();
+                                }
+                            }
+
+                            Button {
+                                leftMargin: bookManager.dp(10)
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                text: qsTr("Nhập .librisbackup") + Retranslate.onLanguageChanged
+                                imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_open.png" : "asset:///icons/ic_open_dark.png"
+                                onClicked: {
+                                    backupFilePicker.open();
+                                }
+                            }
+                        }
+
+                        Label {
+                            visible: bookManager.persistentStorageStatus !== ""
+                            topMargin: bookManager.dp(10)
+                            multiline: true
+                            text: bookManager.persistentStorageStatus
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.fontStyle: FontStyle.Italic
+                            textStyle.color: Color.create(bookManager.uiMuted)
+                        }
+                    }
+                }
+
+                // =========================================================
+                // LỊCH SỬ ĐỌC
+                // =========================================================
+                Header {
+                    title: qsTr("LỊCH SỬ ĐỌC") + Retranslate.onLanguageChanged
+                }
+
+                Container {
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    topPadding: bookManager.dp(10)
+
+                    Button {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        text: qsTr("Xóa toàn bộ lịch sử đọc") + Retranslate.onLanguageChanged
+                        imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_recent.png" : "asset:///icons/ic_recent_dark.png"
+                        onClicked: {
+                            clearHistoryDialog.show();
+                        }
+                    }
                 }
             }
         }
@@ -198,14 +231,34 @@ Page {
             onFinished: {
                 if (value === SystemUiResult.ConfirmButtonSelection) {
                     bookManager.clearReadingHistory();
-                    clearHistoryFeedbackLabel.visible = true;
                     clearHistoryToast.show();
                 }
             }
         },
         SystemToast {
+            id: scanToast
+            body: ""
+        },
+        SystemToast {
             id: clearHistoryToast
             body: qsTr("Đã xóa toàn bộ lịch sử đọc.") + Retranslate.onLanguageChanged
+        },
+        SystemToast {
+            id: backupToast
+            body: ""
+        },
+        FilePicker {
+            id: backupFilePicker
+            type: FileType.Other
+            title: qsTr("Chọn tệp sao lưu .librisbackup") + Retranslate.onLanguageChanged
+            filter: [ "*.librisbackup", "*.zip" ]
+            onFileSelected: {
+                if (selectedFiles && selectedFiles.length > 0) {
+                    var ok = bookManager.restoreBackupArchive(selectedFiles[0]);
+                    backupToast.body = (ok ? qsTr("Đã khôi phục dữ liệu từ gói sao lưu!") : qsTr("Gói sao lưu không hợp lệ hoặc bị lỗi")) + Retranslate.onLanguageChanged;
+                    backupToast.show();
+                }
+            }
         }
     ]
 }

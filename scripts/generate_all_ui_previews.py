@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-BerryLeaf True BlackBerry 10 UI Preview & Device Mockup Generator
+Libris True BlackBerry 10 UI Preview & Device Mockup Generator
 Produces authentic BlackBerry 10 Cascades screenshots and physical device mockups:
 1. True 720x1280 (Z10/Z30 full-touch) and 720x720 (Classic/Q10/Passport square) native resolutions.
 2. Authentic BlackBerry 10 System Status Bar (Signal bars, Viettel 4G/BlackBerry, Clock, Wi-Fi, Battery glyph).
@@ -227,7 +227,7 @@ def render_recent_page(out_path):
     draw_bb10_status_bar(img, draw, w)
 
     # 2. Cascades TitleBar with Search Action on the Right
-    draw_cascades_titlebar(img, draw, w, "BerryLeaf", y0=38, right_action={"icon": "assets/icons/ic_search.png"})
+    draw_cascades_titlebar(img, draw, w, "Libris", y0=38, right_action={"icon": "assets/icons/ic_search.png"})
 
     # 3. Main Content
     pad = 16
@@ -588,7 +588,7 @@ def render_settings_page(out_path):
         ("Chân trang (Footer)", "Hiển thị tên chương, tiến độ, pin & đồng hồ", "assets/icons/ic_chart.png"),
         ("Đọc sách giọng nói (TTS)", "Bộ máy đọc AI, giọng đọc và tốc độ đọc", "assets/icons/ic_tts.png"),
         ("Tủ sách & Quản lý", "Bố cục lưới/danh sách, quét tệp & sao lưu bảo toàn", "assets/icons/ic_library.png"),
-        ("Thông tin ứng dụng", "Giới thiệu BerryLeaf 2.0, phím tắt & nhật ký cập nhật", "assets/icons/ic_info.png")
+        ("Thông tin ứng dụng", "Giới thiệu Libris 2.0, phím tắt & nhật ký cập nhật", "assets/icons/ic_info.png")
     ]
 
     pad = 20
@@ -961,7 +961,7 @@ def render_active_frame_preview(out_path):
     draw.rectangle([0, bar_y, w, h], fill=(255, 255, 255))
     paste_icon(img, "assets/icons/ic_app_light.png", 14, bar_y + 12, (24, 24))
     f_bar = ImageFont.truetype(FONT_BOLD, 15)
-    draw.text((46, bar_y + 14), "Berry Leaf", font=f_bar, fill=(30, 30, 30))
+    draw.text((46, bar_y + 14), "Libris", font=f_bar, fill=(30, 30, 30))
 
     # Close '✕' on right
     f_x = ImageFont.truetype(FONT_REG, 17)

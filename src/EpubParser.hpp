@@ -41,6 +41,10 @@ public:
     // Read full XHTML/HTML of a chapter by index (with optional image resolution)
     QString getChapterContent(int index, const QString &cacheDir = QString());
 
+    // Read raw XHTML/HTML of any archive entry by path (including non-spine footnote files)
+    QString readHtmlByPath(const QString &entryPath);
+    QString opfDir() const { return m_opfDir; }
+
     // Extract real human-readable chapter title from chapter content (or anchor point)
     QString extractChapterTitle(int chapterIndex, const QString &anchor = QString());
 

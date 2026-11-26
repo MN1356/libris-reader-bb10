@@ -8,6 +8,13 @@ Page {
     // NATIVE BLACKBERRY 10 TOP SWIPE-DOWN APPLICATION MENU (Inside Reader)
     // =========================================================================
     Menu.definition: MenuDefinition {
+        helpAction: HelpActionItem {
+            title: qsTr("Giới Thiệu") + Retranslate.onLanguageChanged
+            imageSource: "asset:///icons/ic_info.png"
+            onTriggered: {
+                app.showAbout();
+            }
+        }
         settingsAction: SettingsActionItem {
             title: qsTr("Cài Đặt") + Retranslate.onLanguageChanged
             imageSource: "asset:///icons/ic_settings.png"
@@ -16,42 +23,6 @@ Page {
             }
         }
         actions: [
-            ActionItem {
-                title: qsTr("Tủ sách") + Retranslate.onLanguageChanged
-                imageSource: "asset:///icons/ic_book.png"
-                onTriggered: {
-                    bookManager.saveCurrentProgress();
-                    bookManager.setIsReaderActive(false);
-                    if (ttsManager.active) {
-                        ttsManager.stop();
-                    }
-                    if (navPane) {
-                        navPane.pop();
-                    }
-                    app.switchToTab("shelf");
-                }
-            },
-            ActionItem {
-                title: qsTr("Mục lục") + Retranslate.onLanguageChanged
-                imageSource: "asset:///icons/ic_toc.png"
-                onTriggered: {
-                    tocSheet.open();
-                }
-            },
-            ActionItem {
-                title: qsTr("Ghi chú") + Retranslate.onLanguageChanged
-                imageSource: "asset:///icons/ic_highlight.png"
-                onTriggered: {
-                    highlightSheet.open();
-                }
-            },
-            ActionItem {
-                title: qsTr("Thông tin") + Retranslate.onLanguageChanged
-                imageSource: "asset:///icons/ic_info.png"
-                onTriggered: {
-                    bookDetailSheet.open();
-                }
-            },
             ActionItem {
                 title: qsTr("Thoát") + Retranslate.onLanguageChanged
                 imageSource: "asset:///icons/ic_exit.png"
@@ -64,11 +35,100 @@ Page {
 
     property variant navPane: null
     property bool fullscreenMode: true
+    property bool showDisplayHud: false
+    property bool showThemePopup: false
+    property bool showFontPopup: false
+    property bool showLayoutPopup: false
+    property bool isScrubSyncing: false
+    property bool autoScrollActive: false
+    property int autoScrollSpeed: 2
+    property int autoScrollPageTickCounter: 0
     property bool isRendering: true
     property string selectedText: ""
+    property string pendingSearchQuery: ""
+    property int pendingSearchMatchIndex: -1
 
     onFullscreenModeChanged: {
+        if (fullscreenMode) {
+            showDisplayHud = false;
+            showThemePopup = false;
+            showFontPopup = false;
+            showLayoutPopup = false;
+        }
         webView.evaluateJavaScript("window.isChromeVisible = " + (!fullscreenMode) + ";");
+    }
+
+    onShowDisplayHudChanged: {
+        if (!showDisplayHud) {
+            showThemePopup = false;
+            showFontPopup = false;
+            showLayoutPopup = false;
+        }
+    }
+
+    function syncScrubberFromBookManager() {
+        readerPage.isScrubSyncing = true;
+        if (bookManager.isPdf && !bookManager.isPdfReflow) {
+            pageScrubberSlider.toValue = Math.max(2, bookManager.totalChapters);
+            pageScrubberSlider.value = Math.max(1, Math.min(pageScrubberSlider.toValue, bookManager.currentChapterIndex + 1));
+        } else {
+            pageScrubberSlider.toValue = Math.max(2, bookManager.totalPagesInChapter);
+            pageScrubberSlider.value = Math.max(1, Math.min(pageScrubberSlider.toValue, bookManager.currentPageInChapter));
+        }
+        readerPage.isScrubSyncing = false;
+    }
+
+    function rebuildFontList() {
+        fontListModel.clear();
+        var items = [
+            { name: "Sans", value: "sans" },
+            { name: "Serif", value: "serif" },
+            { name: "Garamond", value: "garamond" },
+            { name: "Times", value: "times" },
+            { name: "Mono", value: "monospace" },
+            { name: "EPUB", value: "original" }
+        ];
+        var customs = bookManager.customFonts;
+        for (var i = 0; i < customs.length; ++i) {
+            if (customs[i] && customs[i].value) {
+                items.push({ name: customs[i].name, value: customs[i].value });
+            }
+        }
+        fontListModel.append(items);
+    }
+
+    onShowFontPopupChanged: {
+        if (showFontPopup) { rebuildFontList(); }
+    }
+
+    function cycleFontFamily() {
+        var order = ["sans", "serif", "garamond", "times", "monospace", "original"];
+        var customs = bookManager.customFonts;
+        for (var i = 0; i < customs.length; ++i) {
+            if (customs[i] && customs[i].value) {
+                order.push(customs[i].value);
+            }
+        }
+        var idx = order.indexOf(bookManager.fontFamily);
+        var next = order[(idx + 1) % order.length];
+        bookManager.setFontFamily(next);
+        applyStyleLive();
+    }
+
+    function toggleAutoScroll() {
+        if (!autoScrollActive && ((bookManager.isPdf && !bookManager.isPdfReflow) || bookManager.readingMode !== "scroll")) {
+            return;
+        }
+        autoScrollActive = !autoScrollActive;
+        autoScrollPageTickCounter = 0;
+        if (autoScrollActive) {
+            if (ttsManager.active) {
+                ttsManager.stop();
+            }
+            autoScrollTimer.start();
+        } else {
+            autoScrollTimer.stop();
+        }
     }
 
     function dismissOpeningBook() {
@@ -94,10 +154,14 @@ Page {
 
     titleBar: TitleBar {
         kind: TitleBarKind.FreeForm
+        appearance: TitleBarAppearance.Plain
         scrollBehavior: TitleBarScrollBehavior.Sticky
         visibility: readerPage.fullscreenMode ? ChromeVisibility.Hidden : ChromeVisibility.Visible
 
         kindProperties: FreeFormTitleBarKindProperties {
+            expandableArea {
+                indicatorVisibility: TitleBarExpandableAreaIndicatorVisibility.Hidden
+            }
             Container {
                 layout: StackLayout {
                     orientation: LayoutOrientation.LeftToRight
@@ -110,6 +174,7 @@ Page {
                 rightPadding: 0
                 topPadding: 0
                 bottomPadding: 0
+                background: bookManager.appTheme === "dark" ? Color.create("#141210") : Color.create("#F7F4EE")
 
                 // 1. Back Button to exit reader (expanded, generous touch target)
                 Container {
@@ -122,8 +187,8 @@ Page {
                     ImageButton {
                         horizontalAlignment: HorizontalAlignment.Center
                         verticalAlignment: VerticalAlignment.Center
-                        defaultImageSource: "asset:///icons/ic_previous.png"
-                        pressedImageSource: "asset:///icons/ic_previous.png"
+                        defaultImageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_previous.png" : "asset:///icons/ic_previous_dark.png"
+                        pressedImageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_previous.png" : "asset:///icons/ic_previous_dark.png"
                         preferredWidth: 104
                         preferredHeight: 88
                         onClicked: {
@@ -145,7 +210,7 @@ Page {
                     verticalAlignment: VerticalAlignment.Center
                     preferredWidth: 2
                     preferredHeight: 52
-                    background: Color.create(1.0, 1.0, 1.0, 0.22)
+                    background: bookManager.appTheme === "dark" ? Color.create("#2A251E") : Color.create("#E6DFD3")
                 }
 
                 // 3. Clickable Book Title area navigating to Book Information
@@ -175,7 +240,7 @@ Page {
                         textStyle.base: SystemDefaults.TextStyles.TitleText
                         textStyle.fontWeight: FontWeight.Bold
                         textStyle.textAlign: TextAlign.Center
-                        textStyle.color: Color.White
+                        textStyle.color: bookManager.appTheme === "dark" ? Color.create("#F5EFE6") : Color.create("#1A1714")
                         autoSize.maxLineCount: 1
                     }
                 }
@@ -241,6 +306,29 @@ Page {
                 repeat: false
                 onTriggered: {
                     readerRootContainer.requestFocus();
+                }
+            },
+            Timer {
+                id: autoScrollTimer
+                interval: 60
+                repeat: true
+                onTriggered: {
+                    if (!readerPage.autoScrollActive || ttsManager.active) {
+                        autoScrollTimer.stop();
+                        return;
+                    }
+                    var spd = Math.max(1, Math.min(5, readerPage.autoScrollSpeed));
+                    if ((!bookManager.isPdf || bookManager.isPdfReflow) && bookManager.readingMode === "scroll") {
+                        var pxSteps = [1.2, 2.2, 3.5, 5.2, 7.5];
+                        readerPage.scrollByDelta(pxSteps[spd - 1]);
+                    } else {
+                        readerPage.autoScrollPageTickCounter++;
+                        var tickThresholds = [300, 215, 150, 100, 66]; // ~18s, 13s, 9s, 6s, 4s
+                        if (readerPage.autoScrollPageTickCounter >= tickThresholds[spd - 1]) {
+                            readerPage.autoScrollPageTickCounter = 0;
+                            readerPage.turnNext();
+                        }
+                    }
                 }
             }
         ]
@@ -329,6 +417,18 @@ Page {
                         readerRootContainer.requestFocus();
                     }
 
+                    onNavigationRequested: {
+                        if (request.navigationType === WebNavigationType.LinkClicked) {
+                            request.action = WebNavigationRequestAction.Ignore;
+                            var navUrl = "" + request.url;
+                            if (navUrl.indexOf("http://") === 0 || navUrl.indexOf("https://") === 0 || navUrl.indexOf("mailto:") === 0) {
+                                Qt.openUrlExternally(navUrl);
+                            } else if (navUrl !== "" && navUrl !== "about:blank") {
+                                bookManager.openInternalLink(navUrl, "");
+                            }
+                        }
+                    }
+
                     onLoadingChanged: {
                         if (loadRequest.status === WebLoadStatus.Started) {
                             webContainer.opacity = 0.55;
@@ -338,12 +438,26 @@ Page {
                             bookManager.stopWatchdog();
                             webFadeInAnim.play();
                             readerRootContainer.requestFocus();
-                            webView.evaluateJavaScript("if (typeof updatePageInfo === 'function') updatePageInfo();");
+                            webView.evaluateJavaScript("window.isChromeVisible = " + (!readerPage.fullscreenMode) + "; if (typeof updatePageInfo === 'function') updatePageInfo();");
                             var pendingAnc = bookManager.consumePendingScrollAnchor();
                             if (pendingAnc && pendingAnc !== "") {
-                                webView.evaluateJavaScript("if (typeof scrollToAnchor === 'function') scrollToAnchor('" + pendingAnc + "');");
+                                var escAnc = pendingAnc.replace(/\\/g, "\\\\").replace(new RegExp("\x27", "g"), "\\\x27");
+                                webView.evaluateJavaScript("if (typeof scrollToAnchor === 'function') scrollToAnchor('" + escAnc + "');");
                             } else {
                                 webView.evaluateJavaScript("if (typeof readingMode !== 'undefined' && readingMode === 'scroll') { if (typeof savedTargetScroll !== 'undefined' && savedTargetScroll > 0) { var vp = document.getElementById('reader-viewport'); if (vp) vp.scrollTop = savedTargetScroll; } else if (typeof savedTargetPage !== 'undefined' && savedTargetPage > 1 && typeof goToPage === 'function') { goToPage(savedTargetPage); } } else { if (typeof savedTargetPage !== 'undefined' && savedTargetPage > 1 && typeof goToPage === 'function') { goToPage(savedTargetPage); } else if (typeof savedTargetScroll !== 'undefined' && savedTargetScroll > 0) { var vp = document.getElementById('reader-viewport'); var h = window.innerHeight || (vp ? vp.clientHeight : 0) || 720; var p = Math.floor(savedTargetScroll / h) + 1; if (typeof goToPage === 'function') goToPage(p); } }");
+                            }
+                            if (readerPage.pendingSearchQuery !== "") {
+                                var qPending = readerPage.pendingSearchQuery;
+                                var idxPending = readerPage.pendingSearchMatchIndex;
+                                readerPage.pendingSearchQuery = "";
+                                readerPage.pendingSearchMatchIndex = -1;
+                                var escQ = qPending.replace(/\\/g, "\\\\").replace(new RegExp("\x27", "g"), "\\\x27");
+                                var searchJs = "if (typeof searchInPage === 'function') { searchInPage('" + escQ + "', false); ";
+                                if (idxPending >= 0) {
+                                    searchJs += "if (typeof jumpToMatch === 'function') jumpToMatch(" + idxPending + "); ";
+                                }
+                                searchJs += "}";
+                                webView.evaluateJavaScript(searchJs);
                             }
                             if (ttsManager.active && ttsManager.currentSentenceText !== "") {
                                 webView.evaluateJavaScript("if (typeof highlightTtsSentence === 'function') highlightTtsSentence(" + JSON.stringify(ttsManager.currentSentenceText) + ");");
@@ -369,7 +483,7 @@ Page {
                             readerPage.toggleFullscreen();
                             readerPage.selectedText = "";
                             readerRootContainer.requestFocus();
-                            webView.evaluateJavaScript("if (window.getSelection && window.getSelection().removeAllRanges) window.getSelection().removeAllRanges(); var b = document.getElementById('berry-selection-bubble'); if (b) b.style.display = 'none';");
+                            webView.evaluateJavaScript("if (window.getSelection && window.getSelection().removeAllRanges) window.getSelection().removeAllRanges(); var b = document.getElementById('libris-selection-bubble'); if (b) b.style.display = 'none';");
                         } else if (str.indexOf("pageInfo:") === 0) {
                             var parts = str.split(":");
                             if (parts.length >= 3) {
@@ -435,12 +549,35 @@ Page {
                             if (hlObj && hlObj.id) {
                                 highlightNoteSheet.openForHighlight(hlObj.id, hlObj.text, hlObj.note, hlObj.color);
                             }
+                        } else if (str.indexOf("showFootnote:") === 0) {
+                            var fnPayload = str.substr(13);
+                            var fnColon = fnPayload.indexOf(":");
+                            if (fnColon !== -1) {
+                                var fnTitle = decodeURIComponent(fnPayload.substring(0, fnColon));
+                                var fnBody = decodeURIComponent(fnPayload.substring(fnColon + 1));
+                                footnoteOverlayContainer.footnoteTitle = fnTitle.length > 0 ? fnTitle : qsTr("Chú thích");
+                                footnoteOverlayContainer.footnoteBody = fnBody;
+                                footnoteOverlayContainer.visible = true;
+                            }
+                        } else if (str.indexOf("openInternalLink:") === 0) {
+                            var linkPayload = str.substr(17);
+                            var linkColon = linkPayload.indexOf(":");
+                            if (linkColon !== -1) {
+                                var linkHref = decodeURIComponent(linkPayload.substring(0, linkColon));
+                                var linkTitle = decodeURIComponent(linkPayload.substring(linkColon + 1));
+                                bookManager.openInternalLink(linkHref, linkTitle);
+                            } else {
+                                bookManager.openInternalLink(decodeURIComponent(linkPayload), "");
+                            }
+                        } else if (str.indexOf("openExternalUrl:") === 0) {
+                            var extUrl = decodeURIComponent(str.substr(16));
+                            Qt.openUrlExternally(extUrl);
                         }
                     }
                 }
             }
 
-            // View 2: PDF & DJVU (NSR Reader Engine / Poppler vector render - Fit to Width)
+            // View 2: PDF & DJVU (Libris Vector Engine / Poppler vector render - Fit to Width)
             ScrollView {
                 id: pdfScrollView
                 visible: bookManager.isPdf && !bookManager.isPdfReflow
@@ -458,6 +595,19 @@ Page {
                 property real pdfTouchStartTime: 0
                 property real lastPdfTapTime: 0
                 property bool scrollPdfToBottomOnLoad: false
+
+                attachedObjects: [
+                    Timer {
+                        id: pdfTapTimer
+                        interval: 230
+                        repeat: false
+                        onTriggered: {
+                            if (!readerPage.fullscreenMode || pdfScrollView.contentScale <= 1.05) {
+                                readerPage.toggleFullscreen();
+                            }
+                        }
+                    }
+                ]
 
                 function getPdfContentHeight() {
                     if (pdfLayoutHandler.layoutFrame.height > 0) {
@@ -482,7 +632,8 @@ Page {
                         if (Math.abs(dx) < 30 && Math.abs(dy) < 30 && dt < 450) {
                             var now = new Date().getTime();
                             if (now - lastPdfTapTime < 350) {
-                                // Double tap: reset zoom if zoomed in, or zoom in 2x if normal
+                                // Double tap: cancel pending chrome toggle, reset or zoom 2x
+                                pdfTapTimer.stop();
                                 lastPdfTapTime = 0;
                                 if (pdfScrollView.contentScale > 1.05) {
                                     pdfScrollView.resetViewableArea(ScrollAnimation.Smooth);
@@ -493,10 +644,7 @@ Page {
                                 }
                             } else {
                                 lastPdfTapTime = now;
-                                // Only toggle fullscreen on single tap when normal scale
-                                if (pdfScrollView.contentScale <= 1.05) {
-                                    readerPage.toggleFullscreen();
-                                }
+                                pdfTapTimer.start();
                             }
                         } else if (pdfScrollView.contentScale <= 1.05) {
                             // Cuộn liền trang kiểu truyền thống (chỉ khi không zoom)
@@ -533,18 +681,12 @@ Page {
                         attachedObjects: [
                             LayoutUpdateHandler {
                                 id: pdfLayoutHandler
-                                onLayoutFrameChanged: {
-                                    if (layoutFrame.height > 0) {
-                                        pdfImageView.preferredHeight = layoutFrame.height;
-                                    }
-                                    if (layoutFrame.width > 0) {
-                                        pdfImageView.preferredWidth = layoutFrame.width;
-                                    }
-                                }
                             }
                         ]
 
                         onImageChanged: {
+                            pdfImageView.resetPreferredWidth();
+                            pdfImageView.resetPreferredHeight();
                             readerPage.isRendering = false;
                             bookManager.stopWatchdog();
                             pdfScrollView.resetViewableArea(ScrollAnimation.None);
@@ -575,9 +717,17 @@ Page {
             Container {
                 id: readerRenderOverlay
                 visible: readerPage.isRendering
+                gestureHandlers: [
+                    TapHandler {
+                        onTapped: {
+                            readerPage.handlePageRenderTimeout();
+                        }
+                    }
+                ]
                 horizontalAlignment: HorizontalAlignment.Fill
                 verticalAlignment: VerticalAlignment.Fill
-                background: bookManager.theme == "dark" ? Color.create("#D0000000") : Color.create("#D0FFFFFF")
+                background: bookManager.theme === "dark" ? Color.create("#D0000000") :
+                            (bookManager.theme === "sepia" ? Color.create("#D0F4ECD8") : Color.create("#D0FFFFFF"))
                 layout: DockLayout {}
 
                 Container {
@@ -590,6 +740,7 @@ Page {
                         running: readerRenderOverlay.visible
                         preferredWidth: 60
                         preferredHeight: 60
+                        onCreationCompleted: { if (visible) start(); }
                         onVisibleChanged: { if (visible) start(); else stop(); }
                     }
 
@@ -598,41 +749,592 @@ Page {
                         horizontalAlignment: HorizontalAlignment.Center
                         text: qsTr("Đang hiển thị nội dung...") + Retranslate.onLanguageChanged
                         textStyle.base: SystemDefaults.TextStyles.SmallText
-                        textStyle.color: bookManager.appTheme === "dark" ? Color.create("#AAAAAA") : Color.create("#555555")
+                        textStyle.color: bookManager.theme === "dark" ? Color.create("#AAAAAA") :
+                                         (bookManager.theme === "sepia" ? Color.create("#665544") : Color.create("#5C554C"))
                     }
 
                     Label {
                         topMargin: 8
                         horizontalAlignment: HorizontalAlignment.Center
                         text: qsTr("Chạm màn hình để hủy") + Retranslate.onLanguageChanged
-                        textStyle.base: SystemDefaults.TextStyles.XSmallText
-                        textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.Black
+                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                        textStyle.color: bookManager.theme === "dark" ? Color.White :
+                                         (bookManager.theme === "sepia" ? Color.create("#3E2D1D") : Color.Black)
+                    }
+                }
+            }
+
+            // Chrome dismissal on tap is handled directly inside WebView JS (window.isChromeVisible)
+            // and pdfScrollView.onTouch so that scroll, text selection, highlights, footnotes, and
+            // double-tap zoom remain interactive even while chrome is open.
+            Container {
+                id: chromeDismissOverlay
+                visible: false
+                enabled: false
+                horizontalAlignment: HorizontalAlignment.Fill
+                verticalAlignment: VerticalAlignment.Fill
+            }
+
+            // =========================================================================
+            // NON-BLOCKING WARM AMBER NIGHT FILTER OVERLAY
+            // =========================================================================
+            Container {
+                id: warmNightOverlay
+                visible: bookManager.warmFilterEnabled
+                horizontalAlignment: HorizontalAlignment.Fill
+                verticalAlignment: VerticalAlignment.Fill
+                touchPropagationMode: TouchPropagationMode.None
+                overlapTouchPolicy: OverlapTouchPolicy.Allow
+                background: Color.create(0.96, 0.54, 0.08, Math.max(0.06, Math.min(0.42, bookManager.warmFilterIntensity / 145.0)))
+            }
+
+            // =========================================================================
+            // FOOTNOTE POPUP OVERLAY
+            // Displays footnote / annotation content in a floating modal card
+            // =========================================================================
+            Container {
+                id: footnoteOverlayContainer
+                visible: false
+                horizontalAlignment: HorizontalAlignment.Fill
+                verticalAlignment: VerticalAlignment.Fill
+                background: Color.create(0.0, 0.0, 0.0, 0.6)
+                touchPropagationMode: TouchPropagationMode.Full
+
+                property string footnoteTitle: qsTr("Chú thích")
+                property string footnoteBody: ""
+
+                layout: DockLayout {}
+
+                gestureHandlers: [
+                    TapHandler {
+                        onTapped: {
+                            footnoteOverlayContainer.visible = false;
+                        }
+                    }
+                ]
+
+                Container {
+                    horizontalAlignment: HorizontalAlignment.Center
+                    verticalAlignment: VerticalAlignment.Center
+                    preferredWidth: bookManager.screenWidth > 0 ? Math.min(bookManager.screenWidth - bookManager.dp(48), bookManager.dp(500)) : bookManager.dp(460)
+                    gestureHandlers: [
+                        TapHandler {
+                            onTapped: {}
+                        }
+                    ]
+                    maxHeight: bookManager.dp(440)
+                    background: bookManager.theme === "dark" ? Color.create("#181512") :
+                                (bookManager.theme === "sepia" ? Color.create("#F4ECD8") : Color.create("#FFFFFF"))
+                    topPadding: bookManager.dp(16)
+                    bottomPadding: bookManager.dp(16)
+                    leftPadding: bookManager.dp(20)
+                    rightPadding: bookManager.dp(20)
+                    touchPropagationMode: TouchPropagationMode.Full
+
+                    layout: StackLayout {
+                        orientation: LayoutOrientation.TopToBottom
+                    }
+
+                    // Header: Title & Close Button
+                    Container {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        layout: StackLayout {
+                            orientation: LayoutOrientation.LeftToRight
+                        }
+
+                        Label {
+                            layoutProperties: StackLayoutProperties {
+                                spaceQuota: 1.0
+                            }
+                            verticalAlignment: VerticalAlignment.Center
+                            text: footnoteOverlayContainer.footnoteTitle
+                            textStyle.base: SystemDefaults.TextStyles.TitleText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: bookManager.theme === "dark" ? Color.create("#F5EFE6") :
+                                             (bookManager.theme === "sepia" ? Color.create("#3E2D1D") : Color.create("#1C1916"))
+                            autoSize.maxLineCount: 1
+                        }
+
+                        ImageButton {
+                            verticalAlignment: VerticalAlignment.Center
+                            defaultImageSource: bookManager.theme === "dark" ? "asset:///icons/ic_clear.png" :
+                                                (bookManager.theme === "sepia" ? "asset:///icons/ic_clear_sepia.png" : "asset:///icons/ic_clear_dark.png")
+                            pressedImageSource: bookManager.theme === "dark" ? "asset:///icons/ic_clear.png" :
+                                                (bookManager.theme === "sepia" ? "asset:///icons/ic_clear_sepia.png" : "asset:///icons/ic_clear_dark.png")
+                            preferredWidth: bookManager.dp(36)
+                            preferredHeight: bookManager.dp(36)
+                            onClicked: {
+                                footnoteOverlayContainer.visible = false;
+                            }
+                        }
+                    }
+
+                    Divider {
+                        topMargin: bookManager.dp(8)
+                        bottomMargin: bookManager.dp(10)
+                    }
+
+                    // Content ScrollView
+                    ScrollView {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        maxHeight: bookManager.dp(340)
+                        scrollRole: ScrollRole.None
+
+                        Container {
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            topPadding: bookManager.dp(4)
+                            bottomPadding: bookManager.dp(8)
+
+                            Label {
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                text: footnoteOverlayContainer.footnoteBody
+                                multiline: true
+                                textStyle.base: SystemDefaults.TextStyles.BodyText
+                                textStyle.color: bookManager.theme === "dark" ? Color.create("#E6DFD3") :
+                                                 (bookManager.theme === "sepia" ? Color.create("#3E2D1D") : Color.create("#2B2621"))
+                            }
+                        }
+                    }
+                }
+            }
+
+            // READING LAYOUT POPUP (mode / columns / line spacing)
+            Container {
+                id: layoutPickerOverlay
+                visible: readerPage.showLayoutPopup && readerPage.showDisplayHud && !readerPage.fullscreenMode && !ttsManager.active
+                horizontalAlignment: HorizontalAlignment.Fill
+                verticalAlignment: VerticalAlignment.Fill
+                background: Color.create(0.0, 0.0, 0.0, 0.35)
+                touchPropagationMode: TouchPropagationMode.Full
+                layout: DockLayout {}
+                gestureHandlers: [ TapHandler { onTapped: { readerPage.showLayoutPopup = false; } } ]
+
+                property bool isSyncingHud: false
+                property string syncedReadingMode: bookManager.readingMode
+                property string syncedColumnLayout: bookManager.columnLayout
+                property string syncedLineSpacing: bookManager.lineSpacing
+
+                function syncHudLayoutControls() {
+                    if (!hudReadingModeControl || !hudColumnControl || !hudSpacingControl) {
+                        return;
+                    }
+                    isSyncingHud = true;
+                    hudReadingModeControl.selectedIndex = (bookManager.readingMode === "scroll" ? 1 : 0);
+                    hudColumnControl.selectedIndex = (bookManager.columnLayout === "double" ? 1 : 0);
+                    hudSpacingControl.selectedIndex = (bookManager.lineSpacing === "tight" ? 0 : (bookManager.lineSpacing === "loose" ? 2 : 1));
+                    isSyncingHud = false;
+                }
+
+                onCreationCompleted: {
+                    syncHudLayoutControls();
+                }
+
+                onVisibleChanged: {
+                    if (visible) {
+                        syncHudLayoutControls();
+                    }
+                }
+
+                onSyncedReadingModeChanged: {
+                    syncHudLayoutControls();
+                }
+
+                onSyncedColumnLayoutChanged: {
+                    syncHudLayoutControls();
+                }
+
+                onSyncedLineSpacingChanged: {
+                    syncHudLayoutControls();
+                }
+
+                Container {
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    verticalAlignment: VerticalAlignment.Bottom
+                    leftMargin: bookManager.dp(12)
+                    rightMargin: bookManager.dp(12)
+                    bottomMargin: bookManager.dp(14)
+                    background: Color.create(bookManager.uiCard)
+                    touchPropagationMode: TouchPropagationMode.Full
+                    gestureHandlers: [ TapHandler { onTapped: {} } ]
+                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                    Container {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        preferredHeight: bookManager.dp(3)
+                        background: Color.create(bookManager.uiAccent)
+                    }
+
+                    Container {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        topPadding: bookManager.dp(14)
+                        bottomPadding: bookManager.dp(14)
+                        leftPadding: bookManager.dp(14)
+                        rightPadding: bookManager.dp(14)
+                        layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                        Label {
+                            bottomMargin: bookManager.dp(6)
+                            text: qsTr("CHẾ ĐỘ ĐỌC") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiMuted)
+                        }
+                        SegmentedControl {
+                            id: hudReadingModeControl
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            bottomMargin: bookManager.dp(14)
+                            onSelectedValueChanged: {
+                                if (!layoutPickerOverlay.isSyncingHud && selectedValue && selectedValue !== bookManager.readingMode) { bookManager.setReadingMode(selectedValue); }
+                            }
+                            Option { text: qsTr("Lật trang") + Retranslate.onLanguageChanged; value: "paged"; selected: bookManager.readingMode === "paged" }
+                            Option { text: qsTr("Cuộn") + Retranslate.onLanguageChanged; value: "scroll"; selected: bookManager.readingMode === "scroll" }
+                        }
+                        Label {
+                            bottomMargin: bookManager.dp(6)
+                            text: qsTr("SỐ CỘT") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiMuted)
+                        }
+                        SegmentedControl {
+                            id: hudColumnControl
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            bottomMargin: bookManager.dp(14)
+                            onSelectedValueChanged: {
+                                if (!layoutPickerOverlay.isSyncingHud && selectedValue && selectedValue !== bookManager.columnLayout) { bookManager.setColumnLayout(selectedValue); }
+                            }
+                            Option { text: qsTr("1 cột") + Retranslate.onLanguageChanged; value: "single"; selected: bookManager.columnLayout !== "double" }
+                            Option { text: qsTr("2 cột") + Retranslate.onLanguageChanged; value: "double"; selected: bookManager.columnLayout === "double" }
+                        }
+                        Label {
+                            bottomMargin: bookManager.dp(6)
+                            text: qsTr("DÃN DÒNG") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiMuted)
+                        }
+                        SegmentedControl {
+                            id: hudSpacingControl
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            bottomMargin: 0
+                            onSelectedValueChanged: {
+                                if (!layoutPickerOverlay.isSyncingHud && selectedValue && selectedValue !== bookManager.lineSpacing) { bookManager.setLineSpacing(selectedValue); }
+                            }
+                            Option { text: qsTr("Hẹp") + Retranslate.onLanguageChanged; value: "tight"; selected: bookManager.lineSpacing === "tight" }
+                            Option { text: qsTr("Vừa") + Retranslate.onLanguageChanged; value: "normal"; selected: bookManager.lineSpacing === "normal" }
+                            Option { text: qsTr("Rộng") + Retranslate.onLanguageChanged; value: "loose"; selected: bookManager.lineSpacing === "loose" }
+                        }
+                    }
+                }
+            }
+
+            // FONT SIZE POPUP (A- / size / A+)
+            Container {
+                id: fontPickerOverlay
+                visible: readerPage.showFontPopup && readerPage.showDisplayHud && !readerPage.fullscreenMode && !ttsManager.active
+                horizontalAlignment: HorizontalAlignment.Fill
+                verticalAlignment: VerticalAlignment.Fill
+                background: Color.create(0.0, 0.0, 0.0, 0.35)
+                touchPropagationMode: TouchPropagationMode.Full
+                layout: DockLayout {}
+                gestureHandlers: [ TapHandler { onTapped: { readerPage.showFontPopup = false; } } ]
+
+                Container {
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    verticalAlignment: VerticalAlignment.Bottom
+                    leftMargin: bookManager.dp(12)
+                    rightMargin: bookManager.dp(12)
+                    bottomMargin: bookManager.dp(14)
+                    background: Color.create(bookManager.uiCard)
+                    touchPropagationMode: TouchPropagationMode.Full
+                    gestureHandlers: [ TapHandler { onTapped: {} } ]
+                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                    Container {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        preferredHeight: bookManager.dp(3)
+                        background: Color.create(bookManager.uiAccent)
+                    }
+
+                    Container {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        topPadding: bookManager.dp(14)
+                        bottomPadding: bookManager.dp(14)
+                        leftPadding: bookManager.dp(14)
+                        rightPadding: bookManager.dp(14)
+                        layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                        Label {
+                            bottomMargin: bookManager.dp(6)
+                            text: qsTr("FONT CHỮ") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiMuted)
+                        }
+
+                        ListView {
+                            id: fontListView
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            bottomMargin: bookManager.dp(14)
+                            preferredHeight: bookManager.dp(240)
+                            maxHeight: bookManager.dp(240)
+                            dataModel: fontListModel
+                            function pickFont(v) {
+                                bookManager.setFontFamily(v);
+                                readerPage.applyStyleLive();
+                            }
+                            listItemComponents: [
+                                ListItemComponent {
+                                    type: "item"
+                                    Container {
+                                        id: fontRow
+                                        horizontalAlignment: HorizontalAlignment.Fill
+                                        preferredHeight: bookManager.dp(44)
+                                        leftPadding: bookManager.dp(12)
+                                        rightPadding: bookManager.dp(12)
+                                        background: ListItemData.value === bookManager.fontFamily ? Color.create(bookManager.uiActive) : Color.Transparent
+                                        layout: DockLayout {}
+                                        Label {
+                                            verticalAlignment: VerticalAlignment.Center
+                                            text: ListItemData.name
+                                            textStyle.base: SystemDefaults.TextStyles.BodyText
+                                            textStyle.fontWeight: ListItemData.value === bookManager.fontFamily ? FontWeight.W500 : FontWeight.Normal
+                                            textStyle.color: ListItemData.value === bookManager.fontFamily ? Color.create(bookManager.uiAccent) :
+                                                             Color.create(bookManager.uiInk)
+                                            autoSize.maxLineCount: 1
+                                        }
+                                    }
+                                }
+                            ]
+                            onTriggered: {
+                                var d = fontListModel.data(indexPath);
+                                if (d && d.value) { fontListView.pickFont(d.value); }
+                            }
+                        }
+
+                        Label {
+                            bottomMargin: bookManager.dp(10)
+                            text: qsTr("CỠ CHỮ") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiMuted)
+                        }
+
+                        Container {
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                            Button {
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                preferredHeight: bookManager.dp(46)
+                                enabled: bookManager.fontSize > 10
+                                imageSource: bookManager.appTheme === "dark" ?
+                                             "asset:///icons/ic_font_dec.png" : "asset:///icons/ic_font_dec_dark.png"
+                                onClicked: { readerPage.decreaseFont(); }
+                            }
+                            Label {
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                verticalAlignment: VerticalAlignment.Center
+                                horizontalAlignment: HorizontalAlignment.Center
+                                textStyle.textAlign: TextAlign.Center
+                                textStyle.fontWeight: FontWeight.W500
+                                textStyle.color: Color.create(bookManager.uiInk)
+                                text: bookManager.fontSize + " px"
+                            }
+                            Button {
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                preferredHeight: bookManager.dp(46)
+                                enabled: bookManager.fontSize < 36
+                                imageSource: bookManager.appTheme === "dark" ?
+                                             "asset:///icons/ic_font_inc.png" : "asset:///icons/ic_font_inc_dark.png"
+                                onClicked: { readerPage.increaseFont(); }
+                            }
+                        }
                     }
                 }
             }
 
             // =========================================================================
-            // TAP TO DISMISS CHROME OVERLAY
-            // When titleBar & bottom bar are visible (!fullscreenMode), ANY tap on the
-            // reading viewport immediately dismisses chrome back to immersive reading!
+            // 3-MODE READING THEME POPUP (Opened from Quick HUD Theme Button)
             // =========================================================================
             Container {
-                id: chromeDismissOverlay
-                visible: !readerPage.fullscreenMode && !ttsManager.active
+                id: themePickerOverlay
+                visible: readerPage.showThemePopup && readerPage.showDisplayHud && !readerPage.fullscreenMode && !ttsManager.active
                 horizontalAlignment: HorizontalAlignment.Fill
                 verticalAlignment: VerticalAlignment.Fill
-                background: Color.create(0.0, 0.0, 0.0, 0.005)
+                background: Color.create(0.0, 0.0, 0.0, 0.35)
                 touchPropagationMode: TouchPropagationMode.Full
                 layout: DockLayout {}
 
                 gestureHandlers: [
                     TapHandler {
                         onTapped: {
-                            readerPage.fullscreenMode = true;
-                            webView.evaluateJavaScript("window.isChromeVisible = false; if (typeof clearInPageSearch === 'function') clearInPageSearch(); if (window.getSelection && window.getSelection().removeAllRanges) window.getSelection().removeAllRanges(); var b = document.getElementById('berry-selection-bubble'); if (b) b.style.display = 'none';");
+                            readerPage.showThemePopup = false;
                         }
                     }
                 ]
+
+                Container {
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    verticalAlignment: VerticalAlignment.Bottom
+                    leftMargin: bookManager.dp(12)
+                    rightMargin: bookManager.dp(12)
+                    bottomMargin: bookManager.dp(14)
+                    background: Color.create(bookManager.uiCard)
+                    touchPropagationMode: TouchPropagationMode.Full
+                    gestureHandlers: [ TapHandler { onTapped: {} } ]
+                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                    Container {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        preferredHeight: bookManager.dp(3)
+                        background: Color.create(bookManager.uiAccent)
+                    }
+
+                    Container {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        topPadding: bookManager.dp(14)
+                        bottomPadding: bookManager.dp(14)
+                        leftPadding: bookManager.dp(14)
+                        rightPadding: bookManager.dp(14)
+                        layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                        Label {
+                            bottomMargin: bookManager.dp(10)
+                            text: qsTr("MÀU NỀN ĐỌC") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiMuted)
+                        }
+
+                        Container {
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                            // Option 1: Dark (AMOLED)
+                            Container {
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                background: bookManager.theme === "dark" ? Color.create(bookManager.uiAccent) : Color.create(bookManager.uiHairline)
+                                topPadding: bookManager.dp(2)
+                                bottomPadding: bookManager.dp(2)
+                                leftPadding: bookManager.dp(2)
+                                rightPadding: bookManager.dp(2)
+                                gestureHandlers: [
+                                    TapHandler {
+                                        onTapped: {
+                                            bookManager.setTheme("dark");
+                                            readerPage.showThemePopup = false;
+                                        }
+                                    }
+                                ]
+                                Container {
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    background: Color.create("#0E0C0A")
+                                    topPadding: bookManager.dp(12)
+                                    bottomPadding: bookManager.dp(12)
+                                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+                                    ImageView {
+                                        horizontalAlignment: HorizontalAlignment.Center
+                                        preferredWidth: bookManager.dp(36)
+                                        preferredHeight: bookManager.dp(36)
+                                        scalingMethod: ScalingMethod.AspectFit
+                                        imageSource: "asset:///icons/ic_mode_dark.png"
+                                    }
+                                    Label {
+                                        topMargin: bookManager.dp(6)
+                                        horizontalAlignment: HorizontalAlignment.Center
+                                        text: qsTr("Tối") + Retranslate.onLanguageChanged
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.fontWeight: FontWeight.W500
+                                        textStyle.color: bookManager.theme === "dark" ? Color.create("#D9AB60") : Color.create("#F5EFE6")
+                                    }
+                                }
+                            }
+
+                            // Option 2: Sepia
+                            Container {
+                                leftMargin: bookManager.dp(8)
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                background: bookManager.theme === "sepia" ? Color.create(bookManager.uiAccent) : Color.create(bookManager.uiHairline)
+                                topPadding: bookManager.dp(2)
+                                bottomPadding: bookManager.dp(2)
+                                leftPadding: bookManager.dp(2)
+                                rightPadding: bookManager.dp(2)
+                                gestureHandlers: [
+                                    TapHandler {
+                                        onTapped: {
+                                            bookManager.setTheme("sepia");
+                                            readerPage.showThemePopup = false;
+                                        }
+                                    }
+                                ]
+                                Container {
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    background: Color.create("#F4ECD8")
+                                    topPadding: bookManager.dp(12)
+                                    bottomPadding: bookManager.dp(12)
+                                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+                                    ImageView {
+                                        horizontalAlignment: HorizontalAlignment.Center
+                                        preferredWidth: bookManager.dp(36)
+                                        preferredHeight: bookManager.dp(36)
+                                        scalingMethod: ScalingMethod.AspectFit
+                                        imageSource: "asset:///icons/ic_mode_sepia_dark.png"
+                                    }
+                                    Label {
+                                        topMargin: bookManager.dp(6)
+                                        horizontalAlignment: HorizontalAlignment.Center
+                                        text: qsTr("Sepia") + Retranslate.onLanguageChanged
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.fontWeight: FontWeight.W500
+                                        textStyle.color: Color.create("#3E2D1D")
+                                    }
+                                }
+                            }
+
+                            // Option 3: Light
+                            Container {
+                                leftMargin: bookManager.dp(8)
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                background: bookManager.theme === "light" ? Color.create(bookManager.uiAccent) : Color.create(bookManager.uiHairline)
+                                topPadding: bookManager.dp(2)
+                                bottomPadding: bookManager.dp(2)
+                                leftPadding: bookManager.dp(2)
+                                rightPadding: bookManager.dp(2)
+                                gestureHandlers: [
+                                    TapHandler {
+                                        onTapped: {
+                                            bookManager.setTheme("light");
+                                            readerPage.showThemePopup = false;
+                                        }
+                                    }
+                                ]
+                                Container {
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    background: Color.create("#FFFFFF")
+                                    topPadding: bookManager.dp(12)
+                                    bottomPadding: bookManager.dp(12)
+                                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+                                    ImageView {
+                                        horizontalAlignment: HorizontalAlignment.Center
+                                        preferredWidth: bookManager.dp(36)
+                                        preferredHeight: bookManager.dp(36)
+                                        scalingMethod: ScalingMethod.AspectFit
+                                        imageSource: "asset:///icons/ic_mode_light_dark.png"
+                                    }
+                                    Label {
+                                        topMargin: bookManager.dp(6)
+                                        horizontalAlignment: HorizontalAlignment.Center
+                                        text: qsTr("Sáng") + Retranslate.onLanguageChanged
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.fontWeight: FontWeight.W500
+                                        textStyle.color: Color.create("#1C1916")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -641,115 +1343,215 @@ Page {
             id: ttsControlPanel
             visible: ttsManager.active
             horizontalAlignment: HorizontalAlignment.Fill
-            background: bookManager.appTheme === "dark" ? Color.create("#1C1C1C") : Color.create("#F8F9FA")
-            topPadding: 8
-            bottomPadding: 8
-            leftPadding: 12
-            rightPadding: 12
+            background: bookManager.theme === "dark" ? Color.create("#181512") :
+                        (bookManager.theme === "sepia" ? Color.create("#EADEC3") : Color.create("#F4EFE6"))
+            topPadding: bookManager.dp(8)
+            bottomPadding: bookManager.dp(8)
+            leftPadding: bookManager.dp(12)
+            rightPadding: bookManager.dp(12)
 
             layout: StackLayout {
-                orientation: LayoutOrientation.LeftToRight
+                orientation: LayoutOrientation.TopToBottom
             }
 
-            // Bên trái: Đoạn TTS đang chạy và tên voice + model phía dưới
+            // Row 1: Sentence status + Settings + Close
             Container {
-                layoutProperties: StackLayoutProperties {
-                    spaceQuota: 1.0
-                }
-                verticalAlignment: VerticalAlignment.Center
-                layout: StackLayout {
-                    orientation: LayoutOrientation.TopToBottom
-                }
-
-                Label {
-                    text: ttsManager.loading ? 
-                          (qsTr("Đang tải dữ liệu...") + Retranslate.onLanguageChanged) :
-                          (ttsManager.currentSentenceText !== "" ? ("\"" + ttsManager.currentSentenceText + "\"") : qsTr("BerryLeaf TTS"))
-                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                    textStyle.color: ttsManager.loading ? Color.create("#FFA500") : 
-                                    (bookManager.appTheme === "dark" ? Color.White : Color.Black)
-                    textStyle.fontStyle: FontStyle.Italic
-                    autoSize.maxLineCount: 1
-                }
-
-                Label {
-                    topMargin: 2
-                    text: (ttsManager.ttsProvider === "gemini" ? 
-                           (ttsManager.geminiVoice + " • " + ttsManager.geminiModel) : 
-                           (ttsManager.voiceDisplayName !== "" ? ttsManager.voiceDisplayName : (bookManager.language === "en" ? "Google Translate" : "Google Dịch"))) + 
-                          " (" + (ttsManager.currentSentenceIndex + 1) + "/" + ttsManager.totalSentences + ")"
-                    textStyle.base: SystemDefaults.TextStyles.XSmallText
-                    textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#777777")
-                    autoSize.maxLineCount: 1
-                }
-            }
-
-            // Bên phải: Nút back, tiếp, pause, bánh răng, thoát
-            Container {
-                verticalAlignment: VerticalAlignment.Center
+                horizontalAlignment: HorizontalAlignment.Fill
                 layout: StackLayout {
                     orientation: LayoutOrientation.LeftToRight
                 }
 
-                // Nút lùi (Back)
-                ImageButton {
+                Container {
+                    layoutProperties: StackLayoutProperties {
+                        spaceQuota: 1.0
+                    }
                     verticalAlignment: VerticalAlignment.Center
-                    defaultImageSource: "asset:///icons/ic_previous.png"
-                    pressedImageSource: "asset:///icons/ic_previous.png"
-                    preferredWidth: 44
-                    preferredHeight: 44
-                    onClicked: {
-                        ttsManager.prevSentence();
+                    layout: StackLayout {
+                        orientation: LayoutOrientation.TopToBottom
+                    }
+
+                    Label {
+                        text: ttsManager.loading ?
+                              (qsTr("Đang tải dữ liệu...") + Retranslate.onLanguageChanged) :
+                              (ttsManager.currentSentenceText !== "" ? ("\"" + ttsManager.currentSentenceText + "\"") : qsTr("Libris TTS"))
+                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                        textStyle.color: ttsManager.loading ? Color.create(bookManager.uiAccent) :
+                                        (bookManager.theme === "dark" ? Color.create("#F5EFE6") :
+                                         (bookManager.theme === "sepia" ? Color.create("#3E2D1D") : Color.create("#1C1916")))
+                        textStyle.fontStyle: FontStyle.Italic
+                        autoSize.maxLineCount: 1
+                    }
+
+                    Label {
+                        topMargin: bookManager.dp(2)
+                        text: (ttsManager.ttsProvider === "gemini" ?
+                               (ttsManager.geminiVoice + " • " + ttsManager.geminiModel) :
+                               ttsManager.ttsProvider === "espeak" ? ttsManager.voiceDisplayName :
+                               (ttsManager.voiceDisplayName !== "" ? ttsManager.voiceDisplayName : (bookManager.language === "en" ? "Google Translate" : "Google Dịch"))) +
+                              " (" + (ttsManager.currentSentenceIndex + 1) + "/" + ttsManager.totalSentences + ")" +
+                              (ttsManager.isSleepTimerActive ? (" • ⏱ " + ttsManager.sleepTimerDisplayStr) : "")
+                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                        textStyle.color: bookManager.theme === "dark" ? Color.create("#9C9488") :
+                                         (bookManager.theme === "sepia" ? Color.create("#665544") : Color.create("#635B51"))
+                        autoSize.maxLineCount: 1
                     }
                 }
 
-                // Nút tiếp (Next)
                 ImageButton {
                     verticalAlignment: VerticalAlignment.Center
-                    defaultImageSource: "asset:///icons/ic_next.png"
-                    pressedImageSource: "asset:///icons/ic_next.png"
-                    preferredWidth: 44
-                    preferredHeight: 44
-                    leftMargin: 4
-                    onClicked: {
-                        ttsManager.nextSentence();
-                    }
-                }
-
-                // Nút Pause / Play
-                Button {
-                    verticalAlignment: VerticalAlignment.Center
-                    text: ttsManager.playing ? qsTr("Dừng") : qsTr("Đọc")
-                    preferredWidth: 64
-                    preferredHeight: 44
-                    leftMargin: 6
-                    onClicked: {
-                        ttsManager.togglePlayPause();
-                    }
-                }
-
-                // Nút Bánh răng Cài đặt (Settings)
-                ImageButton {
-                    verticalAlignment: VerticalAlignment.Center
-                    defaultImageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_settings.png" : "asset:///icons/ic_settings_dark.png"
-                    pressedImageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_settings.png" : "asset:///icons/ic_settings_dark.png"
-                    preferredWidth: 44
-                    preferredHeight: 44
-                    leftMargin: 6
+                    defaultImageSource: bookManager.theme === "dark" ? "asset:///icons/ic_settings.png" :
+                                        (bookManager.theme === "sepia" ? "asset:///icons/ic_settings_sepia.png" : "asset:///icons/ic_settings_dark.png")
+                    pressedImageSource: bookManager.theme === "dark" ? "asset:///icons/ic_settings.png" :
+                                        (bookManager.theme === "sepia" ? "asset:///icons/ic_settings_sepia.png" : "asset:///icons/ic_settings_dark.png")
+                    preferredWidth: bookManager.dp(38)
+                    preferredHeight: bookManager.dp(38)
+                    leftMargin: bookManager.dp(8)
                     onClicked: {
                         settingsSheet.openToTts();
                     }
                 }
 
-                // Nút Thoát
                 Button {
                     verticalAlignment: VerticalAlignment.Center
-                    text: qsTr("Đóng")
-                    preferredWidth: 64
-                    preferredHeight: 44
-                    leftMargin: 6
+                    text: qsTr("Đóng") + Retranslate.onLanguageChanged
+                    preferredHeight: bookManager.dp(38)
+                    leftMargin: bookManager.dp(6)
                     onClicked: {
                         ttsManager.stop();
+                    }
+                }
+            }
+
+            Container {
+                horizontalAlignment: HorizontalAlignment.Fill
+                preferredHeight: 1
+                topMargin: bookManager.dp(6)
+                bottomMargin: bookManager.dp(6)
+                background: Color.create(bookManager.uiHairline)
+            }
+
+            // Row 2: Playback transport (Prev, single Play/Pause, Next, Sleep Timer)
+            Container {
+                horizontalAlignment: HorizontalAlignment.Fill
+                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                ImageButton {
+                    verticalAlignment: VerticalAlignment.Center
+                    defaultImageSource: bookManager.theme === "dark" ? "asset:///icons/ic_previous.png" :
+                                        (bookManager.theme === "sepia" ? "asset:///icons/ic_previous_sepia.png" : "asset:///icons/ic_previous_dark.png")
+                    pressedImageSource: bookManager.theme === "dark" ? "asset:///icons/ic_previous.png" :
+                                        (bookManager.theme === "sepia" ? "asset:///icons/ic_previous_sepia.png" : "asset:///icons/ic_previous_dark.png")
+                    preferredWidth: bookManager.dp(40)
+                    preferredHeight: bookManager.dp(40)
+                    onClicked: {
+                        ttsManager.prevSentence();
+                    }
+                }
+
+                Button {
+                    layoutProperties: StackLayoutProperties { spaceQuota: 1.3 }
+                    verticalAlignment: VerticalAlignment.Center
+                    leftMargin: bookManager.dp(6)
+                    preferredHeight: bookManager.dp(40)
+                    text: (ttsManager.playing ? qsTr("Tạm dừng") : qsTr("Phát tiếp")) + Retranslate.onLanguageChanged
+                    appearance: ControlAppearance.Primary
+                    onClicked: {
+                        ttsManager.togglePlayPause();
+                    }
+                }
+
+                ImageButton {
+                    verticalAlignment: VerticalAlignment.Center
+                    defaultImageSource: bookManager.theme === "dark" ? "asset:///icons/ic_next.png" :
+                                        (bookManager.theme === "sepia" ? "asset:///icons/ic_next_sepia.png" : "asset:///icons/ic_next_dark.png")
+                    pressedImageSource: bookManager.theme === "dark" ? "asset:///icons/ic_next.png" :
+                                        (bookManager.theme === "sepia" ? "asset:///icons/ic_next_sepia.png" : "asset:///icons/ic_next_dark.png")
+                    preferredWidth: bookManager.dp(40)
+                    preferredHeight: bookManager.dp(40)
+                    leftMargin: bookManager.dp(6)
+                    onClicked: {
+                        ttsManager.nextSentence();
+                    }
+                }
+
+                Button {
+                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                    verticalAlignment: VerticalAlignment.Center
+                    leftMargin: bookManager.dp(8)
+                    preferredHeight: bookManager.dp(40)
+                    text: ttsManager.isSleepTimerActive ? ("⏱ " + ttsManager.sleepTimerDisplayStr) : (qsTr("Hẹn giờ") + Retranslate.onLanguageChanged)
+                    onClicked: {
+                        ttsManager.cycleSleepTimer();
+                        readerToast.body = ttsManager.sleepAtChapterEnd ?
+                                           (qsTr("Hẹn giờ: Dừng khi hết chương") + Retranslate.onLanguageChanged) :
+                                           (ttsManager.isSleepTimerActive ?
+                                            (qsTr("Hẹn giờ tắt: ") + ttsManager.sleepTimerMinutes + qsTr(" phút") + Retranslate.onLanguageChanged) :
+                                            (qsTr("Đã tắt hẹn giờ") + Retranslate.onLanguageChanged));
+                        readerToast.show();
+                    }
+                }
+            }
+
+            // Row 3: Quick TTS settings (Speed, Source, Mode, Voice)
+            Container {
+                topMargin: bookManager.dp(6)
+                horizontalAlignment: HorizontalAlignment.Fill
+                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                Button {
+                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                    verticalAlignment: VerticalAlignment.Center
+                    preferredHeight: bookManager.dp(40)
+                    text: (qsTr("Tốc độ") + ": " + ttsManager.speed.toFixed(2).replace(/0$/, "") + "x") + Retranslate.onLanguageChanged
+                    onClicked: {
+                        var steps = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+                        var cur = ttsManager.speed;
+                        var next = steps[0];
+                        for (var i = 0; i < steps.length; ++i) {
+                            if (steps[i] > cur + 0.01) { next = steps[i]; break; }
+                        }
+                        ttsManager.setSpeed(next);
+                    }
+                }
+
+                Button {
+                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                    verticalAlignment: VerticalAlignment.Center
+                    leftMargin: bookManager.dp(6)
+                    preferredHeight: bookManager.dp(40)
+                    text: (qsTr("Nguồn") + ": " + (ttsManager.ttsProvider === "gemini" ? "Gemini" : (ttsManager.ttsProvider === "espeak" ? "eSpeak" : "Google"))) + Retranslate.onLanguageChanged
+                    onClicked: {
+                        var nxt = ttsManager.ttsProvider === "google" ? "gemini" : (ttsManager.ttsProvider === "gemini" ? "espeak" : "google");
+                        ttsManager.setTtsProvider(nxt);
+                    }
+                }
+
+                Button {
+                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                    verticalAlignment: VerticalAlignment.Center
+                    leftMargin: bookManager.dp(6)
+                    preferredHeight: bookManager.dp(40)
+                    text: (ttsManager.ttsMode === "offline" ? qsTr("Ngoại tuyến") : qsTr("Trực tuyến")) + Retranslate.onLanguageChanged
+                    onClicked: {
+                        ttsManager.toggleMode();
+                        readerToast.body = (ttsManager.ttsMode === "offline" ?
+                                            qsTr("Chế độ ngoại tuyến: đọc âm thanh đã tải hoặc eSpeak-NG") :
+                                            qsTr("Chế độ trực tuyến")) + Retranslate.onLanguageChanged;
+                        readerToast.show();
+                    }
+                }
+
+                Button {
+                    visible: ttsManager.ttsProvider === "espeak"
+                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                    verticalAlignment: VerticalAlignment.Center
+                    leftMargin: bookManager.dp(6)
+                    preferredHeight: bookManager.dp(40)
+                    text: (qsTr("Giọng") + ": " + ttsManager.espeakVariant) + Retranslate.onLanguageChanged
+                    onClicked: {
+                        var v = ["std", "f3", "f4", "m1", "m3", "klatt", "Nguyen"];
+                        var i = v.indexOf(ttsManager.espeakVariant);
+                        ttsManager.setEspeakVariant(v[(i + 1) % v.length]);
                     }
                 }
             }
@@ -760,11 +1562,12 @@ Page {
             id: inPageSearchControlPanel
             visible: searchSheet.inPageTotal > 0 && !ttsManager.active && !readerPage.fullscreenMode
             horizontalAlignment: HorizontalAlignment.Fill
-            background: bookManager.appTheme === "dark" ? Color.create("#111111") : Color.create("#FFFFFF")
-            topPadding: 8
-            bottomPadding: 8
-            leftPadding: 12
-            rightPadding: 12
+            background: bookManager.theme === "dark" ? Color.create("#181512") :
+                        (bookManager.theme === "sepia" ? Color.create("#EADEC3") : Color.create("#F4EFE6"))
+            topPadding: bookManager.dp(8)
+            bottomPadding: bookManager.dp(8)
+            leftPadding: bookManager.dp(12)
+            rightPadding: bookManager.dp(12)
 
             layout: StackLayout {
                 orientation: LayoutOrientation.LeftToRight
@@ -772,28 +1575,30 @@ Page {
 
             ImageView {
                 verticalAlignment: VerticalAlignment.Center
-                preferredWidth: 32
-                preferredHeight: 32
-                imageSource: "asset:///icons/ic_search.png"
+                preferredWidth: bookManager.dp(24)
+                preferredHeight: bookManager.dp(24)
+                scalingMethod: ScalingMethod.AspectFit
+                imageSource: bookManager.theme === "dark" ? "asset:///icons/ic_search.png" :
+                             (bookManager.theme === "sepia" ? "asset:///icons/ic_search_sepia.png" : "asset:///icons/ic_search_dark.png")
             }
 
             Label {
-                leftMargin: 8
+                leftMargin: bookManager.dp(8)
                 verticalAlignment: VerticalAlignment.Center
                 layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
                 text: searchSheet.activeSearchTerm + " (" + searchSheet.inPageCurrent + "/" + searchSheet.inPageTotal + ")"
                 textStyle.base: SystemDefaults.TextStyles.SmallText
-                textStyle.fontWeight: FontWeight.Bold
-                textStyle.color: bookManager.appTheme === "dark" ? Color.White : Color.Black
+                textStyle.fontWeight: FontWeight.W500
+                textStyle.color: bookManager.theme === "dark" ? Color.create("#F5EFE6") :
+                                 (bookManager.theme === "sepia" ? Color.create("#3E2D1D") : Color.create("#1C1916"))
                 autoSize.maxLineCount: 1
             }
 
             Button {
                 verticalAlignment: VerticalAlignment.Center
-                text: qsTr("Trước")
-                preferredWidth: 70
-                preferredHeight: 44
-                leftMargin: 6
+                text: qsTr("Trước") + Retranslate.onLanguageChanged
+                preferredHeight: bookManager.dp(40)
+                leftMargin: bookManager.dp(6)
                 onClicked: {
                     searchSheet.inPagePrev();
                 }
@@ -801,10 +1606,9 @@ Page {
 
             Button {
                 verticalAlignment: VerticalAlignment.Center
-                text: qsTr("Tiếp")
-                preferredWidth: 64
-                preferredHeight: 44
-                leftMargin: 6
+                text: qsTr("Tiếp") + Retranslate.onLanguageChanged
+                preferredHeight: bookManager.dp(40)
+                leftMargin: bookManager.dp(6)
                 onClicked: {
                     searchSheet.inPageNext();
                 }
@@ -812,10 +1616,9 @@ Page {
 
             Button {
                 verticalAlignment: VerticalAlignment.Center
-                text: qsTr("Đóng")
-                preferredWidth: 64
-                preferredHeight: 44
-                leftMargin: 6
+                text: qsTr("Đóng") + Retranslate.onLanguageChanged
+                preferredHeight: bookManager.dp(40)
+                leftMargin: bookManager.dp(6)
                 onClicked: {
                     searchSheet.inPageClear();
                     searchSheet.inPageTotal = 0;
@@ -831,8 +1634,8 @@ Page {
             preferredHeight: 3
             minHeight: 3
             maxHeight: 3
-            background: bookManager.theme == "dark" ? Color.create("#1A1A1A") : 
-                        (bookManager.theme == "sepia" ? Color.create("#E2D7C2") : Color.create("#E2E8F0"))
+            background: bookManager.theme == "dark" ? Color.create("#1F1B16") : 
+                        (bookManager.theme == "sepia" ? Color.create("#E2D7C2") : Color.create("#E6DFD3"))
 
             layout: StackLayout {
                 orientation: LayoutOrientation.LeftToRight
@@ -840,7 +1643,7 @@ Page {
 
             Container {
                 verticalAlignment: VerticalAlignment.Fill
-                background: bookManager.readingProgress >= 100 ? Color.create("#059669") : Color.create("#10B981")
+                background: bookManager.readingProgress >= 100 ? Color.create("#E6C07B") : Color.create("#D4A359")
                 layoutProperties: StackLayoutProperties {
                     spaceQuota: Math.max(0.001, bookManager.readingProgress)
                 }
@@ -873,6 +1676,7 @@ Page {
 
             Label {
                 visible: bookManager.showFooterChapter
+                rightMargin: 12
                 verticalAlignment: VerticalAlignment.Center
                 text: bookManager.currentChapterTitle
                 textStyle.base: SystemDefaults.TextStyles.SmallText
@@ -892,16 +1696,25 @@ Page {
                        ((qsTr("Bìa sách") + Retranslate.onLanguageChanged) + " • " + bookManager.readingProgress + "%") :
                        ((qsTr("Trang ") + Retranslate.onLanguageChanged) + bookManager.currentPageInChapter + " / " + bookManager.totalPagesInChapter + " • " + bookManager.readingProgress + "%"))
                 textStyle.base: SystemDefaults.TextStyles.SmallText
-                textStyle.color: bookManager.readingProgress >= 100 ? Color.create("#10B981") : (bookManager.theme == "dark" ? Color.White : (bookManager.theme == "sepia" ? Color.create("#403020") : Color.Black))
+                textStyle.color: bookManager.readingProgress >= 100 ? (bookManager.theme == "dark" ? Color.create("#D9AB60") : Color.create("#8A5D16")) : (bookManager.theme == "dark" ? Color.White : (bookManager.theme == "sepia" ? Color.create("#403020") : Color.Black))
+            }
+
+            ImageView {
+                visible: bookManager.showFooterBattery
+                leftMargin: 12
+                verticalAlignment: VerticalAlignment.Center
+                preferredWidth: 20
+                preferredHeight: 20
+                imageSource: bookManager.theme == "dark" ? "asset:///icons/ic_bat.png" : "asset:///icons/ic_bat_dark.png"
             }
 
             Label {
                 visible: bookManager.showFooterBattery
-                leftMargin: 12
+                leftMargin: 4
                 verticalAlignment: VerticalAlignment.Center
-                text: (qsTr("PIN: ") + Retranslate.onLanguageChanged) + bookManager.batteryLevel + "%"
+                text: bookManager.batteryLevel + "%"
                 textStyle.base: SystemDefaults.TextStyles.SmallText
-                textStyle.color: bookManager.theme == "dark" ? Color.create("#888888") : Color.create("#665544")
+                textStyle.color: bookManager.theme == "dark" ? Color.create("#9C9488") : Color.create("#5C554C")
             }
 
             Label {
@@ -910,30 +1723,338 @@ Page {
                 verticalAlignment: VerticalAlignment.Center
                 text: bookManager.currentTime
                 textStyle.base: SystemDefaults.TextStyles.SmallText
-                textStyle.color: bookManager.theme == "dark" ? Color.create("#888888") : Color.create("#665544")
+                textStyle.color: bookManager.theme == "dark" ? Color.create("#9C9488") : Color.create("#5C554C")
             }
         }
+
+        // =====================================================================
+        // QUICK Aa APPEARANCE HUD DRAWER (Text / Reflow & Native PDF)
+        // =====================================================================
+        Container {
+            id: quickDisplayHud
+            visible: !readerPage.fullscreenMode && readerPage.showDisplayHud && !ttsManager.active
+            horizontalAlignment: HorizontalAlignment.Fill
+            background: Color.create(bookManager.uiAccent)
+            topPadding: bookManager.dp(2)
+
+            Container {
+                horizontalAlignment: HorizontalAlignment.Fill
+                background: Color.create(bookManager.uiCard)
+                topPadding: bookManager.dp(8)
+                bottomPadding: bookManager.dp(8)
+                leftPadding: bookManager.dp(10)
+                rightPadding: bookManager.dp(10)
+                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                // 1. Text / EPUB / PDF Reflow HUD (Single Sleek Row of Native Buttons)
+                Container {
+                    visible: !bookManager.isPdf || bookManager.isPdfReflow
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                    // 1. Unified 3-Mode Theme Popup Trigger Button
+                    Button {
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        preferredHeight: bookManager.dp(44)
+                        appearance: readerPage.showThemePopup ? ControlAppearance.Primary : ControlAppearance.Default
+                        imageSource: (readerPage.showThemePopup || bookManager.appTheme === "light") ?
+                                     "asset:///icons/ic_palette_dark.png" : "asset:///icons/ic_palette.png"
+                        onClicked: {
+                            readerPage.showFontPopup = false;
+                            readerPage.showLayoutPopup = false;
+                            readerPage.showThemePopup = !readerPage.showThemePopup;
+                        }
+                    }
+
+                    // 2. Typography Popup Trigger (font family + size)
+                    Button {
+                        leftMargin: bookManager.dp(6)
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        preferredHeight: bookManager.dp(44)
+                        appearance: readerPage.showFontPopup ? ControlAppearance.Primary : ControlAppearance.Default
+                        imageSource: (readerPage.showFontPopup || bookManager.appTheme === "light") ?
+                                     "asset:///icons/ic_typo_dark.png" : "asset:///icons/ic_typo.png"
+                        onClicked: {
+                            readerPage.showThemePopup = false;
+                            readerPage.showLayoutPopup = false;
+                            readerPage.showFontPopup = !readerPage.showFontPopup;
+                        }
+                    }
+
+                    // 3. Reading Layout Popup Trigger (mode / columns / line spacing)
+                    Button {
+                        leftMargin: bookManager.dp(6)
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        preferredHeight: bookManager.dp(44)
+                        appearance: readerPage.showLayoutPopup ? ControlAppearance.Primary : ControlAppearance.Default
+                        imageSource: (readerPage.showLayoutPopup || bookManager.appTheme === "light") ?
+                                     "asset:///icons/ic_layout_dark.png" : "asset:///icons/ic_layout.png"
+                        onClicked: {
+                            readerPage.showThemePopup = false;
+                            readerPage.showFontPopup = false;
+                            readerPage.showLayoutPopup = !readerPage.showLayoutPopup;
+                        }
+                    }
+
+                    // 4. Warm Night Filter Icon
+                    Button {
+                        leftMargin: bookManager.dp(6)
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        preferredHeight: bookManager.dp(44)
+                        appearance: bookManager.warmFilterEnabled ? ControlAppearance.Primary : ControlAppearance.Default
+                        imageSource: (bookManager.warmFilterEnabled || bookManager.appTheme === "light") ?
+                                     "asset:///icons/ic_warm_sun_dark.png" : "asset:///icons/ic_warm_sun.png"
+                        onClicked: { bookManager.toggleWarmFilter(); }
+                    }
+
+                    // 5. Full Settings Icon
+                    Button {
+                        leftMargin: bookManager.dp(6)
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        preferredHeight: bookManager.dp(44)
+                        imageSource: bookManager.appTheme === "dark" ?
+                                     "asset:///icons/ic_settings.png" : "asset:///icons/ic_settings_dark.png"
+                        onClicked: {
+                            readerPage.showDisplayHud = false;
+                            settingsSheet.open();
+                        }
+                    }
+                }
+
+                // 2. Native PDF HUD Controls (Single Compact Row of Native Icon Buttons)
+                Container {
+                    visible: bookManager.isPdf && !bookManager.isPdfReflow
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                    Button {
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        preferredHeight: bookManager.dp(44)
+                        appearance: bookManager.isPdfInverted ? ControlAppearance.Primary : ControlAppearance.Default
+                        imageSource: (bookManager.isPdfInverted || bookManager.appTheme === "light") ?
+                                     "asset:///icons/ic_theme_dark.png" : "asset:///icons/ic_theme.png"
+                        onClicked: { bookManager.togglePdfInvert(); }
+                    }
+
+                    Button {
+                        leftMargin: bookManager.dp(6)
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        preferredHeight: bookManager.dp(44)
+                        appearance: bookManager.isPdfAutoCrop ? ControlAppearance.Primary : ControlAppearance.Default
+                        imageSource: (bookManager.isPdfAutoCrop || bookManager.appTheme === "light") ?
+                                     "asset:///icons/ic_crop_dark.png" : "asset:///icons/ic_crop.png"
+                        onClicked: {
+                            bookManager.togglePdfAutoCrop();
+                            readerToast.body = bookManager.isPdfAutoCrop ?
+                                               (qsTr("Đã bật cắt lề trắng PDF") + Retranslate.onLanguageChanged) :
+                                               (qsTr("Đã tắt cắt lề trắng PDF") + Retranslate.onLanguageChanged);
+                            readerToast.show();
+                        }
+                    }
+
+                    Button {
+                        leftMargin: bookManager.dp(6)
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        preferredHeight: bookManager.dp(44)
+                        imageSource: bookManager.appTheme === "dark" ?
+                                     "asset:///icons/ic_rotate.png" : "asset:///icons/ic_rotate_dark.png"
+                        onClicked: { bookManager.rotatePdf(); }
+                    }
+
+                    Button {
+                        leftMargin: bookManager.dp(6)
+                        visible: bookManager.hasPdfText
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        preferredHeight: bookManager.dp(44)
+                        imageSource: bookManager.appTheme === "dark" ?
+                                     "asset:///icons/ic_text_mode.png" : "asset:///icons/ic_text_mode_dark.png"
+                        onClicked: {
+                            readerPage.showDisplayHud = false;
+                            bookManager.togglePdfReflow();
+                        }
+                    }
+
+                    Button {
+                        leftMargin: bookManager.dp(6)
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        preferredHeight: bookManager.dp(44)
+                        appearance: bookManager.warmFilterEnabled ? ControlAppearance.Primary : ControlAppearance.Default
+                        imageSource: (bookManager.warmFilterEnabled || bookManager.appTheme === "light") ?
+                                     "asset:///icons/ic_warm_sun_dark.png" : "asset:///icons/ic_warm_sun.png"
+                        onClicked: { bookManager.toggleWarmFilter(); }
+                    }
+
+                    Button {
+                        leftMargin: bookManager.dp(6)
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        preferredHeight: bookManager.dp(44)
+                        imageSource: bookManager.appTheme === "dark" ?
+                                     "asset:///icons/ic_settings.png" : "asset:///icons/ic_settings_dark.png"
+                        onClicked: {
+                            readerPage.showDisplayHud = false;
+                            settingsSheet.open();
+                        }
+                    }
+                }
+            }
+        }
+
+        // =====================================================================
+        // HANDS-FREE AUTO-SCROLL TELEPROMPTER CONTROL BAR
+        // =====================================================================
+        Container {
+            id: autoScrollControlPanel
+            visible: readerPage.autoScrollActive && !ttsManager.active
+            horizontalAlignment: HorizontalAlignment.Fill
+            background: Color.create(bookManager.uiAccent)
+            topPadding: bookManager.dp(2)
+
+            Container {
+                horizontalAlignment: HorizontalAlignment.Fill
+                background: bookManager.theme === "dark" ? Color.create("#181512") :
+                            (bookManager.theme === "sepia" ? Color.create("#EADEC3") : Color.create("#F4EFE6"))
+                topPadding: bookManager.dp(6)
+                bottomPadding: bookManager.dp(6)
+                leftPadding: bookManager.dp(12)
+                rightPadding: bookManager.dp(12)
+                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                Label {
+                    verticalAlignment: VerticalAlignment.Center
+                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                    text: (qsTr("Tự cuộn") + " • " + readerPage.autoScrollSpeed + "x") + Retranslate.onLanguageChanged
+                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                    textStyle.fontWeight: FontWeight.W500
+                    textStyle.color: bookManager.theme === "dark" ? Color.create("#D9AB60") :
+                                     (bookManager.theme === "sepia" ? Color.create("#3E2D1D") : Color.create("#1C1916"))
+                }
+
+                Button {
+                    text: "−"
+                    preferredWidth: bookManager.dp(44)
+                    preferredHeight: bookManager.dp(38)
+                    verticalAlignment: VerticalAlignment.Center
+                    enabled: readerPage.autoScrollSpeed > 1
+                    onClicked: {
+                        readerPage.autoScrollSpeed = Math.max(1, readerPage.autoScrollSpeed - 1);
+                    }
+                }
+
+                Button {
+                    leftMargin: bookManager.dp(6)
+                    text: "+"
+                    preferredWidth: bookManager.dp(44)
+                    preferredHeight: bookManager.dp(38)
+                    verticalAlignment: VerticalAlignment.Center
+                    enabled: readerPage.autoScrollSpeed < 5
+                    onClicked: {
+                        readerPage.autoScrollSpeed = Math.min(5, readerPage.autoScrollSpeed + 1);
+                    }
+                }
+
+                Button {
+                    leftMargin: bookManager.dp(8)
+                    text: qsTr("Dừng") + Retranslate.onLanguageChanged
+                    preferredHeight: bookManager.dp(38)
+                    verticalAlignment: VerticalAlignment.Center
+                    onClicked: {
+                        readerPage.autoScrollActive = false;
+                        autoScrollTimer.stop();
+                    }
+                }
+            }
+        }
+
+        // =====================================================================
+        // COMPACT PAGE / CHAPTER SCRUBBER BAR (Visible with chrome)
+        // =====================================================================
+        Container {
+            id: scrubberBar
+            visible: !readerPage.fullscreenMode && !readerPage.showDisplayHud && !ttsManager.active && searchSheet.inPageTotal === 0
+            horizontalAlignment: HorizontalAlignment.Fill
+            background: bookManager.theme === "dark" ? Color.create("#181512") :
+                        (bookManager.theme === "sepia" ? Color.create("#EADEC3") : Color.create("#F4EFE6"))
+            topPadding: bookManager.dp(4)
+            bottomPadding: bookManager.dp(4)
+            leftPadding: bookManager.dp(10)
+            rightPadding: bookManager.dp(10)
+            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+            ImageButton {
+                verticalAlignment: VerticalAlignment.Center
+                preferredWidth: bookManager.dp(38)
+                preferredHeight: bookManager.dp(38)
+                defaultImageSource: bookManager.theme === "dark" ? "asset:///icons/ic_previous.png" :
+                                    (bookManager.theme === "sepia" ? "asset:///icons/ic_previous_sepia.png" : "asset:///icons/ic_previous_dark.png")
+                pressedImageSource: bookManager.theme === "dark" ? "asset:///icons/ic_previous.png" :
+                                    (bookManager.theme === "sepia" ? "asset:///icons/ic_previous_sepia.png" : "asset:///icons/ic_previous_dark.png")
+                onClicked: { bookManager.prevChapter(); }
+            }
+
+            Slider {
+                id: pageScrubberSlider
+                verticalAlignment: VerticalAlignment.Center
+                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                fromValue: 1
+                toValue: 2
+                value: 1
+                onImmediateValueChanged: {
+                    if (readerPage.isScrubSyncing) return;
+                    var target = Math.max(1, Math.round(immediateValue));
+                    scrubReadoutLabel.text = (bookManager.isPdf && !bookManager.isPdfReflow) ?
+                                             (target + "/" + Math.max(1, bookManager.totalChapters)) :
+                                             (target + "/" + Math.max(1, bookManager.totalPagesInChapter));
+                }
+                onValueChanged: {
+                    if (readerPage.isScrubSyncing) return;
+                    var target = Math.max(1, Math.round(value));
+                    if (bookManager.isPdf && !bookManager.isPdfReflow) {
+                        if (target !== (bookManager.currentChapterIndex + 1)) {
+                            bookManager.goToChapter(target);
+                        }
+                    } else {
+                        var tot = Math.max(1, bookManager.totalPagesInChapter);
+                        var pct = (tot > 1) ? ((target - 1) / (tot - 1)) : 0.0;
+                        webView.evaluateJavaScript("if (typeof readingMode !== 'undefined' && readingMode === 'scroll') { var vp = document.getElementById('reader-viewport'); if (vp) { var maxS = Math.max(0, vp.scrollHeight - vp.clientHeight); vp.scrollTop = Math.round(maxS * " + pct + "); updatePageInfo(); } } else if (typeof goToPage === 'function') { goToPage(" + target + "); }");
+                    }
+                }
+            }
+
+            Label {
+                id: scrubReadoutLabel
+                leftMargin: bookManager.dp(6)
+                rightMargin: bookManager.dp(6)
+                verticalAlignment: VerticalAlignment.Center
+                text: (bookManager.isPdf && !bookManager.isPdfReflow) ?
+                      ((bookManager.currentChapterIndex + 1) + "/" + Math.max(1, bookManager.totalChapters)) :
+                      (bookManager.currentPageInChapter + "/" + Math.max(1, bookManager.totalPagesInChapter))
+                textStyle.base: SystemDefaults.TextStyles.SmallText
+                textStyle.fontWeight: FontWeight.W500
+                textStyle.color: bookManager.theme === "dark" ? Color.create("#D9AB60") :
+                                 (bookManager.theme === "sepia" ? Color.create("#3E2D1D") : Color.create("#1C1916"))
+            }
+
+            ImageButton {
+                verticalAlignment: VerticalAlignment.Center
+                preferredWidth: bookManager.dp(38)
+                preferredHeight: bookManager.dp(38)
+                defaultImageSource: bookManager.theme === "dark" ? "asset:///icons/ic_next.png" :
+                                    (bookManager.theme === "sepia" ? "asset:///icons/ic_next_sepia.png" : "asset:///icons/ic_next_dark.png")
+                pressedImageSource: bookManager.theme === "dark" ? "asset:///icons/ic_next.png" :
+                                    (bookManager.theme === "sepia" ? "asset:///icons/ic_next_sepia.png" : "asset:///icons/ic_next_dark.png")
+                onClicked: { bookManager.nextChapter(); }
+            }
+        }
+
     }
 
     function applyStyleLive() {
-        if (bookManager.isPdf) return;
+        if (bookManager.isPdf && !bookManager.isPdfReflow) return;
         var bg = bookManager.theme === "dark" ? "#000000" : (bookManager.theme === "sepia" ? "#F4ECD8" : "#FFFFFF");
         var fg = bookManager.theme === "dark" ? "#DDDDDD" : (bookManager.theme === "sepia" ? "#3E2D1D" : "#111111");
         var fs = bookManager.fontSize;
-        var fontCss = "";
-        if (bookManager.fontFamily === "serif") {
-            fontCss = "font-family: Georgia, 'Times New Roman', serif !important; ";
-        } else if (bookManager.fontFamily === "times") {
-            fontCss = "font-family: 'Times New Roman', Times, serif !important; ";
-        } else if (bookManager.fontFamily === "garamond") {
-            fontCss = "font-family: Garamond, 'EB Garamond', serif !important; ";
-        } else if (bookManager.fontFamily === "monospace") {
-            fontCss = "font-family: 'Courier New', Courier, monospace !important; ";
-        } else if (bookManager.fontFamily === "original") {
-            fontCss = "";
-        } else {
-            fontCss = "font-family: 'Slate Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif !important; ";
-        }
+        var fontFaceCss = bookManager.currentFontFaceCss();
+        var fontCss = bookManager.currentFontCss();
         var extra = "";
         if (bookManager.theme === "dark") {
             extra = ".banner, div[class*='box'], div[class*='frame'], div[class*='card'], blockquote { background-color: #1A1A1A !important; border: 1px solid #444 !important; border-radius: 10px; color: #DDD !important; } " +
@@ -945,6 +2066,7 @@ Page {
                     ".banner *, div[class*='box'] * { color: inherit; } " +
                     "font[color='#000000'], font[color='black'] { color: inherit !important; } ";
         }
+        var lh = bookManager.lineSpacing === "tight" ? 1.35 : (bookManager.lineSpacing === "loose" ? 2.0 : 1.65);
         var pTop = bookManager.marginTop;
         var pBottom = bookManager.marginBottom;
         var pLeft = bookManager.marginLeft;
@@ -956,23 +2078,32 @@ Page {
                  "    styleEl.id = 'dynamic-theme-style'; " +
                  "    document.head.appendChild(styleEl); " +
                  "  } " +
-                 "  styleEl.innerHTML = 'body { background-color: " + bg + " !important; color: " + fg + " !important; font-size: " + fs + "px; " + fontCss + "} " +
+                 "  styleEl.innerHTML = " + JSON.stringify(fontFaceCss) + " + 'body { background-color: " + bg + " !important; color: " + fg + " !important; font-size: " + fs + "px; line-height: " + lh + "; " + fontCss + "} " +
                  "p:not([class]) { text-indent: 1.5em; margin: 0.5em 0; } ' + " +
                  JSON.stringify(extra) + "; " +
                  "  var vp = document.getElementById('reader-viewport'); " +
                  "  if (vp) { " +
                  "    vp.style.padding = '" + pTop + "px " + pRight + "px " + pBottom + "px " + pLeft + "px'; " +
-                 "    var w = window.innerWidth || document.documentElement.clientWidth || (vp ? vp.clientWidth : 0) || 720; " +
-                 "    var gap = " + (pLeft + pRight) + "; " +
-                 "    var colW = Math.max(100, w - gap); " +
-                 "    vp.style.webkitColumnWidth = colW + 'px'; " +
-                 "    vp.style.columnWidth = colW + 'px'; " +
-                 "    vp.style.webkitColumnGap = gap + 'px'; " +
-                 "    vp.style.columnGap = gap + 'px'; " +
+                 "    if (typeof readingMode === 'undefined' || readingMode === 'paged') { " +
+                 "      var w = window.innerWidth || document.documentElement.clientWidth || (vp ? vp.clientWidth : 0) || 720; " +
+                 "      var gap = " + (pLeft + pRight) + "; " +
+                 "      var twoCol = (typeof isTwoColMode !== 'undefined' && isTwoColMode); " +
+                 "      var colW = twoCol ? Math.max(100, Math.floor((w - gap - gap) / 2)) : Math.max(100, w - gap); " +
+                 "      vp.style.webkitColumnWidth = colW + 'px'; " +
+                 "      vp.style.columnWidth = colW + 'px'; " +
+                 "      vp.style.webkitColumnGap = gap + 'px'; " +
+                 "      vp.style.columnGap = gap + 'px'; " +
+                 "      vp.dataset.colConfigured = '1'; " +
+                 "      vp.dataset.lastWidth = w; " +
+                 "    } " +
                  "  } " +
                  "  if (typeof updatePageInfo === 'function') updatePageInfo(); " +
                  "})();";
         webView.evaluateJavaScript(js);
+    }
+
+    function isMangaRtlPaged() {
+        return bookManager.currentFormat === "cbz" && bookManager.mangaRtlMode;
     }
 
     function initFocus() {
@@ -1061,13 +2192,14 @@ Page {
                 var totalDeltaX = curX - readerRootContainer.kbdTouchStartX;
 
                 if (!readerRootContainer.kbdPageTurnedInGesture && (now - readerRootContainer.lastPageTurnTime > 260)) {
+                    var rtl = isMangaRtlPaged();
                     // Ngang: vuốt nhẹ 25% chiều rộng bàn phím để sang trang mượt mà
                     if (totalDeltaX <= -horizReq || readerRootContainer.kbdTouchAccumX <= -horizReq) {
-                        turnNext();
+                        if (rtl) turnPrev(); else turnNext();
                         readerRootContainer.lastPageTurnTime = now;
                         readerRootContainer.kbdPageTurnedInGesture = true;
                     } else if (totalDeltaX >= horizReq || readerRootContainer.kbdTouchAccumX >= horizReq) {
-                        turnPrev();
+                        if (rtl) turnNext(); else turnPrev();
                         readerRootContainer.lastPageTurnTime = now;
                         readerRootContainer.kbdPageTurnedInGesture = true;
                     // Dọc: giảm nhạy (phải vuốt dứt khoát >= 220px)
@@ -1136,15 +2268,18 @@ Page {
 
                 // Calibrated threshold for Classic trackpad navigation
                 if (!readerRootContainer.tpPageTurned && (now - readerRootContainer.lastPageTurnTime > 260)) {
-                    // Swiping UP (dy < 0) or LEFT (dx < 0) = Next page
-                    if (readerRootContainer.tpAccumY < -15 || readerRootContainer.tpAccumX < -18) {
+                    var rtlTp = isMangaRtlPaged();
+                    var tpNextX = rtlTp ? (readerRootContainer.tpAccumX > 18) : (readerRootContainer.tpAccumX < -18);
+                    var tpPrevX = rtlTp ? (readerRootContainer.tpAccumX < -18) : (readerRootContainer.tpAccumX > 18);
+                    // Swiping UP (dy < 0) or forward horizontal = Next page
+                    if (readerRootContainer.tpAccumY < -15 || tpNextX) {
                         turnNext();
                         readerRootContainer.lastPageTurnTime = now;
                         readerRootContainer.tpAccumY = 0;
                         readerRootContainer.tpAccumX = 0;
                         readerRootContainer.tpPageTurned = true;
-                    // Swiping DOWN (dy > 0) or RIGHT (dx > 0) = Prev page
-                    } else if (readerRootContainer.tpAccumY > 15 || readerRootContainer.tpAccumX > 18) {
+                    // Swiping DOWN (dy > 0) or backward horizontal = Prev page
+                    } else if (readerRootContainer.tpAccumY > 15 || tpPrevX) {
                         turnPrev();
                         readerRootContainer.lastPageTurnTime = now;
                         readerRootContainer.tpAccumY = 0;
@@ -1182,10 +2317,12 @@ Page {
                 accumulateScroll(-75 * mult);
             }
         } else {
-            // Up (2) or Left (0) = Next page; Down (3) or Right (1) = Prev page
-            if (t === 2 || t === 0) {
+            var rtlNav = isMangaRtlPaged();
+            var navNext = (t === 2) || (rtlNav ? (t === 1) : (t === 0));
+            var navPrev = (t === 3) || (rtlNav ? (t === 0) : (t === 1));
+            if (navNext) {
                 turnNext();
-            } else if (t === 3 || t === 1) {
+            } else if (navPrev) {
                 turnPrev();
             }
         }
@@ -1195,7 +2332,7 @@ Page {
         var k = event.key;
         var u = ("" + event.unicode).toLowerCase();
 
-        // Space or Shift+Space (supports TTS play/pause)
+        // 1. Space or Shift+Space (supports TTS play/pause)
         if (k === 32 || u === " ") {
             if (ttsManager.active) {
                 ttsManager.togglePlayPause();
@@ -1209,8 +2346,22 @@ Page {
             return;
         }
 
-        // Hardware PageDown / Down arrow / Right arrow
-        if (k === 61271 || k === 61269 || k === 61479 || k === 61481 || k === 61273 || k === 61483) {
+        // 2. Left / Right arrows (respect Manga RTL direction)
+        var isRightArrow = (k === 61269 || k === 61479);
+        var isLeftArrow = (k === 61268 || k === 61478);
+        if (isRightArrow || isLeftArrow) {
+            if (bookManager.readingMode === "scroll" || (bookManager.isPdf && !bookManager.isPdfReflow)) {
+                if (isRightArrow) scrollLineDown(); else scrollLineUp();
+            } else {
+                var rtlKey = isMangaRtlPaged();
+                var goNextKey = rtlKey ? isLeftArrow : isRightArrow;
+                if (goNextKey) turnNext(); else turnPrev();
+            }
+            return;
+        }
+
+        // 3. Hardware PageDown / Down arrow
+        if (k === 61271 || k === 61481 || k === 61273 || k === 61483) {
             if (bookManager.readingMode === "scroll" || (bookManager.isPdf && !bookManager.isPdfReflow)) {
                 scrollLineDown();
             } else {
@@ -1219,12 +2370,191 @@ Page {
             return;
         }
 
-        // Hardware PageUp / Up arrow / Left arrow / Backspace
-        if (k === 8 || k === 61270 || k === 61268 || k === 61478 || k === 61480 || k === 61272 || k === 61482) {
+        // 4. Hardware PageUp / Up arrow / Backspace
+        if (k === 8 || k === 61270 || k === 61480 || k === 61272 || k === 61482) {
             if (bookManager.readingMode === "scroll" || (bookManager.isPdf && !bookManager.isPdfReflow)) {
                 scrollLineUp();
             } else {
                 turnPrev();
+            }
+            return;
+        }
+
+        // 4. Return / Enter: Toggle Fullscreen
+        if (k === 13 || k === 61453 || u === "\r" || u === "\n") {
+            toggleFullscreen();
+            return;
+        }
+
+        // 5. N: Next Chapter / Next Page
+        if (u === "n" || k === 78 || k === 110) {
+            if (bookManager.isPdf && !bookManager.isPdfReflow) {
+                bookManager.nextChapter();
+            } else {
+                turnNext();
+            }
+            return;
+        }
+
+        // 6. P: Prev Chapter / Prev Page
+        if (u === "p" || k === 80 || k === 112) {
+            if (bookManager.isPdf && !bookManager.isPdfReflow) {
+                bookManager.prevChapter();
+            } else {
+                turnPrev();
+            }
+            return;
+        }
+
+        // 7. J / K: Line Down / Line Up in scroll mode or turn in paged mode
+        if (u === "j" || k === 74 || k === 106) {
+            scrollLineDown();
+            return;
+        }
+        if (u === "k" || k === 75 || k === 107) {
+            scrollLineUp();
+            return;
+        }
+
+        // 8. T: Jump to Top (First Chapter / Page 1)
+        if (u === "t" || k === 84 || k === 116) {
+            if (bookManager.isPdf && !bookManager.isPdfReflow) {
+                bookManager.goToChapter(1);
+            } else if (bookManager.readingMode === "paged") {
+                webView.evaluateJavaScript("if (typeof goToPage === 'function') goToPage(1);");
+            } else {
+                webView.evaluateJavaScript("var vp = document.getElementById('reader-viewport'); if (vp) { vp.scrollTop = 0; updatePageInfo(); }");
+            }
+            return;
+        }
+
+        // 9. B: Jump to Bottom (Last Chapter / Last Page)
+        if (u === "b" || k === 66 || k === 98) {
+            if (bookManager.isPdf && !bookManager.isPdfReflow) {
+                bookManager.goToChapter(bookManager.totalChapters);
+            } else if (bookManager.readingMode === "paged") {
+                webView.evaluateJavaScript("if (typeof goToPage === 'function' && typeof totalPages !== 'undefined') goToPage(totalPages);");
+            } else {
+                webView.evaluateJavaScript("var vp = document.getElementById('reader-viewport'); if (vp) { vp.scrollTop = vp.scrollHeight; updatePageInfo(); }");
+            }
+            return;
+        }
+
+        // 10. M / H: Toggle Bookmark at current position
+        if (u === "m" || u === "h" || k === 77 || k === 109 || k === 72 || k === 104) {
+            var isBmAdded = bookManager.toggleBookmarkCurrentPosition();
+            readerToast.body = isBmAdded ? (qsTr("Đã đánh dấu trang: ") + bookManager.currentChapterTitle) : (qsTr("Đã bỏ dấu trang"));
+            readerToast.show();
+            return;
+        }
+
+        // 11. F or /: Open Search
+        if (u === "f" || u === "/" || k === 70 || k === 102 || k === 47) {
+            searchSheet.open();
+            return;
+        }
+
+        // 12. D: Cycle Reading Theme (Dark -> Sepia -> Light -> Dark)
+        if (u === "d" || k === 68 || k === 100) {
+            var curTheme = bookManager.theme;
+            var nextTheme = "dark";
+            if (curTheme === "dark") nextTheme = "sepia";
+            else if (curTheme === "sepia") nextTheme = "light";
+            else nextTheme = "dark";
+            bookManager.setTheme(nextTheme);
+            readerToast.body = nextTheme === "dark" ? qsTr("Giao diện: Tối (AMOLED)") :
+                              (nextTheme === "sepia" ? qsTr("Giao diện: Vàng dịu (Sepia)") : qsTr("Giao diện: Sáng"));
+            readerToast.show();
+            return;
+        }
+
+        // 13. A: Toggle Text-to-Speech (TTS)
+        if (u === "a" || k === 65 || k === 97) {
+            if (!bookManager.isPdf || bookManager.isPdfReflow) {
+                bookManager.toggleTts();
+            }
+            return;
+        }
+
+        // 14. C: Toggle Reading Mode (Paged <-> Scroll)
+        if (u === "c" || k === 67 || k === 99) {
+            if (!bookManager.isPdf || bookManager.isPdfReflow) {
+                var nextMode = bookManager.readingMode === "scroll" ? "paged" : "scroll";
+                bookManager.setReadingMode(nextMode);
+                readerToast.body = nextMode === "scroll" ?
+                                   (qsTr("Đã chuyển sang chế độ Cuộn liên tục") + Retranslate.onLanguageChanged) :
+                                   (qsTr("Đã chuyển sang chế độ Vuốt lật trang") + Retranslate.onLanguageChanged);
+                readerToast.show();
+            }
+            return;
+        }
+
+        // 15. Z, +, =: Increase font size
+        if (u === "z" || u === "+" || u === "=" || k === 90 || k === 122 || k === 43 || k === 61) {
+            var newFsUp = Math.min(36, bookManager.fontSize + 1);
+            bookManager.setFontSize(newFsUp);
+            readerToast.body = qsTr("Cỡ chữ: ") + newFsUp + " px";
+            readerToast.show();
+            return;
+        }
+
+        // 16. W, -: Decrease font size
+        if (u === "w" || u === "-" || u === "_" || k === 87 || k === 119 || k === 45) {
+            var newFsDown = Math.max(10, bookManager.fontSize - 1);
+            bookManager.setFontSize(newFsDown);
+            readerToast.body = qsTr("Cỡ chữ: ") + newFsDown + " px";
+            readerToast.show();
+            return;
+        }
+
+        // 17. S: Open Settings
+        if (u === "s" || k === 83 || k === 115) {
+            settingsSheet.open();
+            return;
+        }
+
+        // 18. G: Open Table of Contents (TOC)
+        if (u === "g" || k === 71 || k === 103) {
+            tocSheet.open();
+            return;
+        }
+
+        // 19. L: Open Dictionary
+        if (u === "l" || k === 76 || k === 108) {
+            dictSheet.open();
+            return;
+        }
+
+        // 20. I: Book Info
+        if (u === "i" || k === 73 || k === 105) {
+            bookDetailSheet.open();
+            return;
+        }
+
+        // 21. R: Rotate PDF (if PDF)
+        if (u === "r" || k === 82 || k === 114) {
+            if (bookManager.isPdf) bookManager.rotatePdf();
+            return;
+        }
+
+        // 22. X: Toggle PDF Reflow (if PDF)
+        if (u === "x" || k === 88 || k === 120) {
+            if (bookManager.isPdf) bookManager.togglePdfReflow();
+            return;
+        }
+
+        // 23. Number keys 1-9: Jump to percentage (10% - 90%)
+        if (k >= 49 && k <= 57) {
+            var pctVal = (k - 48) * 0.10;
+            if (bookManager.isPdf && !bookManager.isPdfReflow) {
+                var targetPg = Math.max(1, Math.min(bookManager.totalChapters, Math.round(bookManager.totalChapters * pctVal)));
+                bookManager.goToChapter(targetPg);
+                readerToast.body = qsTr("Chuyển đến trang ") + targetPg + "/" + bookManager.totalChapters;
+                readerToast.show();
+            } else if (bookManager.readingMode === "paged") {
+                webView.evaluateJavaScript("if (typeof totalPages !== 'undefined' && totalPages > 1 && typeof goToPage === 'function') { var targetP = Math.max(1, Math.min(totalPages, Math.round(totalPages * " + pctVal + "))); goToPage(targetP); }");
+            } else {
+                webView.evaluateJavaScript("var vp = document.getElementById('reader-viewport'); if (vp) { var maxS = Math.max(0, vp.scrollHeight - vp.clientHeight); vp.scrollTop = Math.round(maxS * " + pctVal + "); updatePageInfo(); }");
             }
             return;
         }
@@ -1243,12 +2573,24 @@ Page {
 
     function handleRequestScrollToAnchor(anchor) {
         if (anchor && anchor !== "") {
-            webView.evaluateJavaScript("if (typeof scrollToAnchor === 'function') scrollToAnchor('" + anchor + "');");
+            var escAnc = anchor.replace(/\\/g, "\\\\").replace(new RegExp("\x27", "g"), "\\\x27");
+            webView.evaluateJavaScript("if (typeof scrollToAnchor === 'function') scrollToAnchor('" + escAnc + "');");
+        }
+    }
+
+    function handleShowFootnotePopup(fnTitle, fnBody) {
+        if (fnBody && fnBody !== "") {
+            footnoteOverlayContainer.footnoteTitle = (fnTitle && fnTitle !== "") ? fnTitle : qsTr("Chú thích");
+            footnoteOverlayContainer.footnoteBody = fnBody;
+            footnoteOverlayContainer.visible = true;
         }
     }
 
     function handleCurrentChapterChanged() {
-        if (!bookManager.isPdf) {
+        if (footnoteOverlayContainer.visible) {
+            footnoteOverlayContainer.visible = false;
+        }
+        if (!bookManager.isPdf || bookManager.isPdfReflow) {
             readerPage.isRendering = true;
             bookManager.startWatchdog(1200);
             webView.html = bookManager.currentContent;
@@ -1256,17 +2598,31 @@ Page {
     }
 
     function handleReadingModeChanged() {
-        if (bookManager.isPdf) {
+        if (bookManager.readingMode !== "scroll" && readerPage.autoScrollActive) {
+            readerPage.autoScrollActive = false;
+            autoScrollTimer.stop();
+        }
+        if (!bookManager.isPdf || bookManager.isPdfReflow) {
             readerPage.isRendering = true;
             bookManager.startWatchdog(1200);
+            webView.html = bookManager.currentContent;
         }
-        webView.html = bookManager.currentContent;
     }
 
     function handleCurrentPdfImageChanged() {
         readerPage.isRendering = false;
         bookManager.stopWatchdog();
         bookManager.setIsLoadingBook(false);
+    }
+
+    function handlePdfOpenError(message) {
+        readerPage.isRendering = false;
+        bookManager.stopWatchdog();
+        bookManager.setIsLoadingBook(false);
+        if (message && message !== "") {
+            readerToast.body = message;
+            readerToast.show();
+        }
     }
 
     function handleTtsCurrentSentenceChanged(index, text) {
@@ -1276,7 +2632,10 @@ Page {
     }
 
     function handleTtsActiveChanged(active) {
-        if (!active) {
+        if (active) {
+            readerPage.autoScrollActive = false;
+            autoScrollTimer.stop();
+        } else {
             webView.evaluateJavaScript("if (typeof clearTtsHighlight === 'function') clearTtsHighlight();");
         }
     }
@@ -1289,18 +2648,41 @@ Page {
     }
 
     function cleanup() {
+        if (pdfTapTimer) {
+            pdfTapTimer.stop();
+        }
+        if (inertiaTimer) {
+            inertiaTimer.stop();
+        }
+        if (initialFocusTimer) {
+            initialFocusTimer.stop();
+        }
+        readerPage.autoScrollActive = false;
+        if (autoScrollTimer) {
+            autoScrollTimer.stop();
+        }
+        if (footnoteOverlayContainer.visible) {
+            footnoteOverlayContainer.visible = false;
+        }
         try {
             if (typeof bookManager !== "undefined" && bookManager) {
                 bookManager.themeChanged.disconnect(readerPage.handleThemeChanged);
+                bookManager.focusModeChanged.disconnect(readerPage.handleFocusModeChanged);
                 bookManager.fontSizeChanged.disconnect(readerPage.handleFontSizeChanged);
                 bookManager.fontFamilyChanged.disconnect(readerPage.handleFontFamilyChanged);
                 bookManager.marginsChanged.disconnect(readerPage.handleMarginsChanged);
                 bookManager.lineSpacingChanged.disconnect(readerPage.handleLineSpacingChanged);
                 bookManager.pageRenderTimeout.disconnect(readerPage.handlePageRenderTimeout);
                 bookManager.requestScrollToAnchor.disconnect(readerPage.handleRequestScrollToAnchor);
+                bookManager.showFootnotePopup.disconnect(readerPage.handleShowFootnotePopup);
                 bookManager.currentChapterChanged.disconnect(readerPage.handleCurrentChapterChanged);
                 bookManager.readingModeChanged.disconnect(readerPage.handleReadingModeChanged);
+                bookManager.columnLayoutChanged.disconnect(readerPage.handleReadingModeChanged);
                 bookManager.currentPdfImageChanged.disconnect(readerPage.handleCurrentPdfImageChanged);
+                bookManager.pdfOpenError.disconnect(readerPage.handlePdfOpenError);
+                bookManager.pagePositionChanged.disconnect(readerPage.syncScrubberFromBookManager);
+                bookManager.volumePageNextRequested.disconnect(readerPage.turnNext);
+                bookManager.volumePagePrevRequested.disconnect(readerPage.turnPrev);
             }
         } catch (e) {}
         try {
@@ -1315,6 +2697,22 @@ Page {
                 searchSheet.cleanup();
             }
         } catch (e) {}
+        try {
+            if (dictSheet && typeof dictSheet.cleanup === "function") {
+                dictSheet.cleanup();
+            }
+        } catch (e) {}
+        try {
+            if (highlightSheet && typeof highlightSheet.cleanup === "function") {
+                highlightSheet.cleanup();
+            }
+        } catch (e) {}
+    }
+
+    function handleFocusModeChanged() {
+        if (!bookManager.isPdf || bookManager.isPdfReflow) {
+            webView.evaluateJavaScript("if (window.setLibrisFocusMode) window.setLibrisFocusMode(" + (bookManager.focusModeEnabled ? "true" : "false") + ");");
+        }
     }
 
     onCreationCompleted: {
@@ -1334,15 +2732,31 @@ Page {
         var bm = bookManager;
         var rp = readerPage;
         bm.themeChanged.connect(rp.handleThemeChanged);
+        bm.focusModeChanged.connect(rp.handleFocusModeChanged);
         bm.fontSizeChanged.connect(rp.handleFontSizeChanged);
         bm.fontFamilyChanged.connect(rp.handleFontFamilyChanged);
         bm.marginsChanged.connect(rp.handleMarginsChanged);
         bm.lineSpacingChanged.connect(rp.handleLineSpacingChanged);
         bm.pageRenderTimeout.connect(rp.handlePageRenderTimeout);
         bm.requestScrollToAnchor.connect(rp.handleRequestScrollToAnchor);
+        bm.showFootnotePopup.connect(rp.handleShowFootnotePopup);
         bm.currentChapterChanged.connect(rp.handleCurrentChapterChanged);
         bm.readingModeChanged.connect(rp.handleReadingModeChanged);
+        bm.columnLayoutChanged.connect(rp.handleReadingModeChanged);
         bm.currentPdfImageChanged.connect(rp.handleCurrentPdfImageChanged);
+        bm.pdfOpenError.connect(rp.handlePdfOpenError);
+        bm.pagePositionChanged.connect(rp.syncScrubberFromBookManager);
+        bm.volumePageNextRequested.connect(rp.turnNext);
+        bm.volumePagePrevRequested.connect(rp.turnPrev);
+        rp.syncScrubberFromBookManager();
+
+        if (bm.isPdf) {
+            readerPage.addAction(pdfCropAction, ActionBarPlacement.InOverflow);
+            readerPage.addAction(pdfReflowAction, ActionBarPlacement.InOverflow);
+        }
+        if (bm.currentFormat === "cbz") {
+            readerPage.addAction(mangaModeActionItem, ActionBarPlacement.InOverflow);
+        }
 
         ttsManager.currentSentenceChanged.connect(rp.handleTtsCurrentSentenceChanged);
         ttsManager.activeChanged.connect(rp.handleTtsActiveChanged);
@@ -1350,6 +2764,9 @@ Page {
     }
 
     function turnNext() {
+        if (footnoteOverlayContainer.visible) {
+            footnoteOverlayContainer.visible = false;
+        }
         if (bookManager.isPdf && !bookManager.isPdfReflow) {
             pdfScrollView.scrollPdfToBottomOnLoad = false;
             bookManager.nextChapter();
@@ -1361,6 +2778,9 @@ Page {
     }
 
     function turnPrev() {
+        if (footnoteOverlayContainer.visible) {
+            footnoteOverlayContainer.visible = false;
+        }
         if (bookManager.isPdf && !bookManager.isPdfReflow) {
             pdfScrollView.scrollPdfToBottomOnLoad = true;
             bookManager.prevChapter();
@@ -1410,7 +2830,7 @@ Page {
     }
 
     function scrollLineDown() {
-        if (bookManager.isPdf) {
+        if (bookManager.isPdf && !bookManager.isPdfReflow) {
             bookManager.nextChapter();
         } else {
             webView.evaluateJavaScript("if (typeof scrollDown === 'function') scrollDown(); else window.scrollBy(0, 80);");
@@ -1418,7 +2838,7 @@ Page {
     }
 
     function scrollLineUp() {
-        if (bookManager.isPdf) {
+        if (bookManager.isPdf && !bookManager.isPdfReflow) {
             bookManager.prevChapter();
         } else {
             webView.evaluateJavaScript("if (typeof scrollUp === 'function') scrollUp(); else window.scrollBy(0, -80);");
@@ -1453,12 +2873,16 @@ Page {
     }
 
     attachedObjects: [
+        ArrayDataModel {
+            id: fontListModel
+        },
         SettingsSheet {
             id: settingsSheet
             onClosed: { readerRootContainer.requestFocus(); }
         },
         BookDetailSheet {
             id: bookDetailSheet
+            hideReadButton: true
             onClosed: { readerRootContainer.requestFocus(); }
         },
         TocSheet {
@@ -1469,18 +2893,18 @@ Page {
             id: searchSheet
             onClosed: {
                 readerRootContainer.requestFocus();
-                if (!searchSheet.jumpedFromSearch) {
-                    webView.evaluateJavaScript("if (typeof clearInPageSearch === 'function') clearInPageSearch();");
-                    searchSheet.inPageTotal = 0;
-                    searchSheet.inPageCurrent = 0;
-                }
+            }
+            onNavigateToSearchResult: {
+                readerPage.pendingSearchQuery = query;
+                readerPage.pendingSearchMatchIndex = matchIndex;
+                bookManager.goToChapter(chapterIndex);
             }
             onPerformInPageSearch: {
                 var escQuery = query.replace(/\\/g, "\\\\").replace(new RegExp("\x27", "g"), "\\\x27");
-                webView.evaluateJavaScript("if (typeof searchInPage === 'function') searchInPage('" + escQuery + "', false);");
+                webView.evaluateJavaScript("if (typeof searchInPage === 'function') { searchInPage('" + escQuery + "', false); } else { setTimeout(function() { if (typeof searchInPage === 'function') searchInPage('" + escQuery + "', false); }, 180); }");
             }
             onJumpToMatch: {
-                webView.evaluateJavaScript("if (typeof jumpToMatch === 'function') jumpToMatch(" + matchIndex + ");");
+                webView.evaluateJavaScript("if (typeof jumpToMatch === 'function' && typeof totalMatches !== 'undefined' && totalMatches > 0) { jumpToMatch(" + matchIndex + "); } else { setTimeout(function() { if (typeof jumpToMatch === 'function') jumpToMatch(" + matchIndex + "); }, 220); }");
             }
             onInPageNext: {
                 webView.evaluateJavaScript("if (typeof searchNext === 'function') searchNext();");
@@ -1489,6 +2913,8 @@ Page {
                 webView.evaluateJavaScript("if (typeof searchPrev === 'function') searchPrev();");
             }
             onInPageClear: {
+                readerPage.pendingSearchQuery = "";
+                readerPage.pendingSearchMatchIndex = -1;
                 webView.evaluateJavaScript("if (typeof clearInPageSearch === 'function') clearInPageSearch();");
                 searchSheet.inPageTotal = 0;
                 searchSheet.inPageCurrent = 0;
@@ -1509,10 +2935,42 @@ Page {
             id: highlightNoteSheet
             onClosed: { readerRootContainer.requestFocus(); }
             onSavedCallback: {
-                webView.evaluateJavaScript("var el = document.querySelector('mark[data-hl-id=\"" + highlightId + "\"]'); if (el) { el.className = 'berry-highlight berry-hl-' + " + JSON.stringify(currentColor) + "; el.setAttribute('data-hl-note', " + JSON.stringify(currentNote) + "); }");
+                webView.evaluateJavaScript("var el = document.querySelector('mark[data-hl-id=\"" + highlightId + "\"]'); if (el) { el.className = 'libris-highlight libris-hl-' + " + JSON.stringify(color) + "; el.setAttribute('data-hl-note', " + JSON.stringify(note) + "); }");
             }
             onDeletedCallback: {
                 webView.evaluateJavaScript("if (typeof removeHighlightFromDom === 'function') removeHighlightFromDom('" + highlightId + "');");
+            }
+        },
+        ActionItem {
+            id: pdfCropAction
+            title: (bookManager.isPdfAutoCrop ? qsTr("Cắt lề PDF") + " ✓" : qsTr("Cắt lề PDF")) + Retranslate.onLanguageChanged
+            imageSource: "asset:///icons/ic_crop.png"
+            onTriggered: {
+                bookManager.togglePdfAutoCrop();
+                readerToast.body = bookManager.isPdfAutoCrop ?
+                                   (qsTr("Đã bật cắt lề trắng PDF") + Retranslate.onLanguageChanged) :
+                                   (qsTr("Đã tắt cắt lề trắng PDF") + Retranslate.onLanguageChanged);
+                readerToast.show();
+            }
+        },
+        ActionItem {
+            id: pdfReflowAction
+            title: (bookManager.isPdfReflow ? qsTr("PDF gốc") : qsTr("Dàn chữ (OCR)")) + Retranslate.onLanguageChanged
+            imageSource: "asset:///icons/ic_text_mode.png"
+            enabled: bookManager.hasPdfText || bookManager.isPdfReflow
+            onTriggered: {
+                bookManager.togglePdfReflow();
+            }
+        },
+        ActionItem {
+            id: mangaModeActionItem
+            title: (bookManager.mangaRtlMode ? qsTr("Manga RTL (Đang bật)") : qsTr("Manga RTL (Đang tắt)")) + Retranslate.onLanguageChanged
+            imageSource: "asset:///icons/ic_page.png"
+            onTriggered: {
+                bookManager.mangaRtlMode = !bookManager.mangaRtlMode;
+                bookManager.renderCurrentChapter();
+                readerToast.body = bookManager.mangaRtlMode ? qsTr("Đã bật chế độ Manga (Phải qua Trái)") : qsTr("Đã tắt chế độ Manga (Trái qua Phải)");
+                readerToast.show();
             }
         },
         SystemToast {
@@ -1527,7 +2985,7 @@ Page {
 
     actions: [
         // =====================================================================
-        // ON-BAR ACTIONS (Bottom Action Bar: Mục lục, Tìm kiếm, Mode đọc)
+        // ON-BAR ACTIONS (3 Essential Slots: Mục lục | Hiển thị Aa | Đánh dấu)
         // =====================================================================
         ActionItem {
             title: qsTr("Mục lục") + Retranslate.onLanguageChanged
@@ -1538,89 +2996,41 @@ Page {
             }
         },
         ActionItem {
-            title: qsTr("Tìm kiếm") + Retranslate.onLanguageChanged
+            title: qsTr("Hiển thị") + Retranslate.onLanguageChanged
             ActionBar.placement: ActionBarPlacement.OnBar
-            imageSource: "asset:///icons/ic_search.png"
+            imageSource: "asset:///icons/ic_display_panel.png"
             onTriggered: {
-                searchSheet.open();
-            }
-        },
-        ActionItem {
-            title: bookManager.theme === "dark" ? (qsTr("Tối") + Retranslate.onLanguageChanged) :
-                   (bookManager.theme === "sepia" ? (qsTr("Sepia") + Retranslate.onLanguageChanged) :
-                   (qsTr("Sáng") + Retranslate.onLanguageChanged))
-            ActionBar.placement: ActionBarPlacement.OnBar
-            imageSource: bookManager.theme === "dark" ? "asset:///icons/ic_mode_dark.png" :
-                         (bookManager.theme === "sepia" ? "asset:///icons/ic_mode_sepia.png" :
-                         "asset:///icons/ic_mode_light.png")
-            onTriggered: {
-                if (bookManager.theme === "light") {
-                    bookManager.setTheme("sepia");
-                } else if (bookManager.theme === "sepia") {
-                    bookManager.setTheme("dark");
-                } else {
-                    bookManager.setTheme("light");
-                }
-            }
-        },
-
-        // =====================================================================
-        // IN-OVERFLOW ACTIONS (Right Menu: Clean & Minimal)
-        // =====================================================================
-        ActionItem {
-            title: qsTr("Dấu trang & Ghi chú") + Retranslate.onLanguageChanged
-            ActionBar.placement: ActionBarPlacement.InOverflow
-            imageSource: "asset:///icons/ic_bookmarks.png"
-            onTriggered: {
-                highlightSheet.open();
-            }
-        },
-        ActionItem {
-            title: bookManager.readingMode === "scroll" ?
-                   (qsTr("Chế độ Vuốt trang (Swipe)") + Retranslate.onLanguageChanged) :
-                   (qsTr("Chế độ Cuộn (Scroll)") + Retranslate.onLanguageChanged)
-            ActionBar.placement: ActionBarPlacement.InOverflow
-            imageSource: bookManager.readingMode === "scroll" ? "asset:///icons/ic_page.png" : "asset:///icons/ic_scroll.png"
-            enabled: !bookManager.isPdf || bookManager.isPdfReflow
-            onTriggered: {
-                var nextMode = bookManager.readingMode === "scroll" ? "paged" : "scroll";
-                bookManager.setReadingMode(nextMode);
-                readerToast.body = nextMode === "scroll" ?
-                                   (qsTr("Đã chuyển sang chế độ Cuộn liên tục") + Retranslate.onLanguageChanged) :
-                                   (qsTr("Đã chuyển sang chế độ Vuốt lật trang") + Retranslate.onLanguageChanged);
-                readerToast.show();
+                readerPage.showDisplayHud = !readerPage.showDisplayHud;
             }
         },
         ActionItem {
             title: (bookManager.isCurrentChapterBookmarked ? qsTr("Bỏ dấu trang") : qsTr("Đánh dấu trang")) + Retranslate.onLanguageChanged
-            ActionBar.placement: ActionBarPlacement.InOverflow
-            imageSource: bookManager.isCurrentChapterBookmarked ? "asset:///icons/ic_bookmarks.png" : "asset:///icons/ic_bookmark_add.png"
+            ActionBar.placement: ActionBarPlacement.OnBar
+            imageSource: bookManager.isCurrentChapterBookmarked ? "asset:///icons/ic_bookmark_filled.png" : "asset:///icons/ic_bookmark_add.png"
             onTriggered: {
                 var isAdded = bookManager.toggleBookmarkCurrentPosition();
                 readerToast.body = isAdded ? (qsTr("Đã đánh dấu trang: ") + bookManager.currentChapterTitle) : (qsTr("Đã bỏ dấu trang"));
                 readerToast.show();
             }
         },
+
+        // =====================================================================
+        // IN-OVERFLOW ACTIONS (Clean & Contextual — PDF/Manga added only when applicable)
+        // =====================================================================
         ActionItem {
-            id: favActionItem
-            title: (bookManager.isFavorite(bookManager.currentFilePath) ? qsTr("Bỏ yêu thích") : qsTr("Yêu thích")) + Retranslate.onLanguageChanged
+            title: qsTr("Tìm kiếm") + Retranslate.onLanguageChanged
             ActionBar.placement: ActionBarPlacement.InOverflow
-            imageSource: bookManager.isFavorite(bookManager.currentFilePath) ? "asset:///icons/ic_star_filled.png" : "asset:///icons/ic_star.png"
+            imageSource: "asset:///icons/ic_search.png"
             onTriggered: {
-                var isFav = bookManager.toggleFavorite(bookManager.currentFilePath);
-                favActionItem.imageSource = isFav ? "asset:///icons/ic_star_filled.png" : "asset:///icons/ic_star.png";
-                favActionItem.title = (isFav ? qsTr("Bỏ yêu thích") : qsTr("Yêu thích")) + Retranslate.onLanguageChanged;
-                readerToast.body = isFav ? (qsTr("Đã thêm vào yêu thích: ") + bookManager.currentBookTitle) : (qsTr("Đã bỏ yêu thích"));
-                readerToast.show();
+                searchSheet.open();
             }
         },
         ActionItem {
-            title: (bookManager.isPdfReflow ? qsTr("PDF gốc") : qsTr("Dàn chữ (OCR)")) + Retranslate.onLanguageChanged
+            title: qsTr("Dấu trang & Ghi chú") + Retranslate.onLanguageChanged
             ActionBar.placement: ActionBarPlacement.InOverflow
-            imageSource: "asset:///icons/ic_text_mode.png"
-            enabled: bookManager.isPdf && (bookManager.hasPdfText || bookManager.isPdfReflow)
+            imageSource: "asset:///icons/ic_bookmarks.png"
             onTriggered: {
-                bookManager.togglePdfReflow();
+                highlightSheet.open();
             }
         },
         ActionItem {
@@ -1633,6 +3043,15 @@ Page {
             }
         },
         ActionItem {
+            title: (readerPage.autoScrollActive ? qsTr("Dừng") + " " + qsTr("Tự cuộn") : qsTr("Tự cuộn")) + Retranslate.onLanguageChanged
+            ActionBar.placement: ActionBarPlacement.InOverflow
+            imageSource: "asset:///icons/ic_scroll.png"
+            enabled: (!bookManager.isPdf || bookManager.isPdfReflow) && bookManager.readingMode === "scroll"
+            onTriggered: {
+                readerPage.toggleAutoScroll();
+            }
+        },
+        ActionItem {
             title: qsTr("Từ điển") + Retranslate.onLanguageChanged
             ActionBar.placement: ActionBarPlacement.InOverflow
             imageSource: "asset:///icons/ic_translate.png"
@@ -1641,191 +3060,50 @@ Page {
             }
         },
         ActionItem {
+            id: favActionItem
+            property bool isBookFavorite: bookManager.isFavorite(bookManager.currentFilePath)
+            title: (isBookFavorite ? qsTr("Bỏ yêu thích") : qsTr("Yêu thích")) + Retranslate.onLanguageChanged
+            ActionBar.placement: ActionBarPlacement.InOverflow
+            imageSource: isBookFavorite ? "asset:///icons/ic_star_filled.png" : "asset:///icons/ic_star.png"
+            onTriggered: {
+                var isFav = bookManager.toggleFavorite(bookManager.currentFilePath);
+                favActionItem.isBookFavorite = isFav;
+                readerToast.body = isFav ? (qsTr("Đã thêm vào yêu thích: ") + bookManager.currentBookTitle) : (qsTr("Đã bỏ yêu thích"));
+                readerToast.show();
+            }
+        },
+        ActionItem {
+            id: focusModeActionItem
+            title: (bookManager.focusModeEnabled ? qsTr("Chế độ Tập trung (Đang bật)") : qsTr("Chế độ Tập trung")) + Retranslate.onLanguageChanged
+            ActionBar.placement: ActionBarPlacement.InOverflow
+            imageSource: "asset:///icons/ic_display_aa.png"
+            enabled: !bookManager.isPdf || bookManager.isPdfReflow
+            onTriggered: {
+                bookManager.toggleFocusMode();
+                readerToast.body = (bookManager.focusModeEnabled ? qsTr("Đã bật Chế độ Tập trung") : qsTr("Đã tắt Chế độ Tập trung")) + Retranslate.onLanguageChanged;
+                readerToast.show();
+            }
+        },
+        ActionItem {
+            id: nextSeriesActionItem
+            property variant nextBook: (bookManager.bookCount >= 0 && bookManager.totalScannedBooks >= 0) ? bookManager.nextSeriesBook(bookManager.currentFilePath) : ({})
+            title: qsTr("Đọc tiếp tập kế") + Retranslate.onLanguageChanged
+            ActionBar.placement: ActionBarPlacement.InOverflow
+            imageSource: "asset:///icons/ic_next.png"
+            enabled: nextBook && nextBook.filePath !== undefined && nextBook.filePath !== ""
+            onTriggered: {
+                var nb = bookManager.nextSeriesBook(bookManager.currentFilePath);
+                if (nb && nb.filePath) {
+                    bookManager.openBook(nb.filePath);
+                }
+            }
+        },
+        ActionItem {
             title: qsTr("Thông tin") + Retranslate.onLanguageChanged
             ActionBar.placement: ActionBarPlacement.InOverflow
             imageSource: "asset:///icons/ic_info.png"
             onTriggered: {
                 bookDetailSheet.open();
-            }
-        },
-        ActionItem {
-            title: qsTr("Thoát") + Retranslate.onLanguageChanged
-            ActionBar.placement: ActionBarPlacement.InOverflow
-            imageSource: "asset:///icons/ic_exit.png"
-            shortcuts: [
-                Shortcut { key: "Q" }
-            ]
-            onTriggered: {
-                app.promptExit();
-            }
-        }
-    ]
-
-    // Hardware Keyboard shortcuts (Q10, Classic, Passport)
-    shortcuts: [
-        Shortcut {
-            key: "Space"
-            onTriggered: {
-                if (ttsManager.active) {
-                    ttsManager.togglePlayPause();
-                } else if (bookManager.readingMode === "scroll" || (bookManager.isPdf && !bookManager.isPdfReflow)) {
-                    scrollLineDown();
-                } else {
-                    turnNext();
-                }
-            }
-        },
-        Shortcut {
-            key: "m"
-            onTriggered: {
-                tocSheet.open();
-            }
-        },
-        Shortcut {
-            key: "g"
-            onTriggered: {
-                tocSheet.open();
-            }
-        },
-        Shortcut {
-            key: "h"
-            onTriggered: {
-                var isBmAdded = bookManager.toggleBookmarkCurrentPosition();
-                readerToast.body = isBmAdded ? (qsTr("Đã đánh dấu trang: ") + bookManager.currentChapterTitle) : (qsTr("Đã bỏ dấu trang"));
-                readerToast.show();
-            }
-        },
-        Shortcut {
-            key: "s"
-            onTriggered: {
-                settingsSheet.open();
-            }
-        },
-        Shortcut {
-            key: "l"
-            onTriggered: {
-                dictSheet.open();
-            }
-        },
-        Shortcut {
-            key: "d"
-            onTriggered: {
-                dictSheet.open();
-            }
-        },
-        Shortcut {
-            key: "o"
-            onTriggered: {
-                app.openFilePicker();
-            }
-        },
-        Shortcut {
-            key: "v"
-            onTriggered: {
-                if (bookManager.isPdf && !bookManager.isPdfReflow) {
-                    bookManager.togglePdfInvert();
-                } else {
-                    bookManager.setTheme(bookManager.theme === "dark" ? "light" : "dark");
-                }
-            }
-        },
-        Shortcut {
-            key: "x"
-            onTriggered: {
-                if (bookManager.isPdf) {
-                    bookManager.togglePdfReflow();
-                }
-            }
-        },
-        Shortcut {
-            key: "a"
-            onTriggered: {
-                if (!bookManager.isPdf || bookManager.isPdfReflow) bookManager.toggleTts();
-            }
-        },
-        Shortcut {
-            key: "t"
-            onTriggered: {
-                if (bookManager.isPdf) bookManager.goToChapter(1);
-                else bookManager.goToChapter(0);
-            }
-        },
-        Shortcut {
-            key: "u"
-            onTriggered: turnPrev()
-        },
-        Shortcut {
-            key: "j"
-            onTriggered: scrollLineDown()
-        },
-        Shortcut {
-            key: "k"
-            onTriggered: scrollLineUp()
-        },
-        Shortcut {
-            key: "n"
-            onTriggered: turnNext()
-        },
-        Shortcut {
-            key: "p"
-            onTriggered: turnPrev()
-        },
-        Shortcut {
-            key: "f"
-            onTriggered: {
-                searchSheet.open();
-            }
-        },
-        Shortcut {
-            key: "Return"
-            onTriggered: toggleFullscreen()
-        },
-        Shortcut {
-            key: "Enter"
-            onTriggered: toggleFullscreen()
-        },
-        Shortcut {
-            key: "r"
-            onTriggered: {
-                if (bookManager.isPdf) bookManager.rotatePdf();
-            }
-        },
-        Shortcut {
-            key: "i"
-            onTriggered: {
-                bookDetailSheet.open();
-            }
-        },
-        Shortcut {
-            key: "z"
-            onTriggered: {
-                bookManager.setFontSize(Math.min(36, bookManager.fontSize + 1));
-            }
-        },
-        Shortcut {
-            key: "w"
-            onTriggered: {
-                bookManager.setFontSize(Math.max(12, bookManager.fontSize - 1));
-            }
-        },
-        Shortcut {
-            key: "c"
-            onTriggered: {
-                if (!bookManager.isPdf || bookManager.isPdfReflow) {
-                    var nextMode = bookManager.readingMode === "scroll" ? "paged" : "scroll";
-                    bookManager.setReadingMode(nextMode);
-                    readerToast.body = nextMode === "scroll" ?
-                                       (qsTr("Đã chuyển sang chế độ Cuộn liên tục") + Retranslate.onLanguageChanged) :
-                                       (qsTr("Đã chuyển sang chế độ Vuốt lật trang") + Retranslate.onLanguageChanged);
-                    readerToast.show();
-                }
-            }
-        },
-        Shortcut {
-            key: "b"
-            onTriggered: {
-                if (bookManager.isPdf) bookManager.goToChapter(bookManager.totalChapters);
-                else bookManager.goToChapter(bookManager.totalChapters - 1);
             }
         }
     ]

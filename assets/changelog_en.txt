@@ -1,0 +1,46 @@
+Version 2.0.0 (Build 210) - 2026-11-23:
+- Simplified text-selection bar to monochrome icon-only (#E8ECF2) matching native BlackBerry 10 chrome, removing text labels and centering icons on a single 36px row.
+
+Version 2.0.0 (Build 209) - 2026-11-23:
+- Fixed text-selection bar wrapping Dict/Translate labels onto a second clipped row leaving empty bottom space and translucent bleed-through; switched to a crisp single-row 36px CSS table layout placed after book styles.
+
+Version 2.0.0 (Build 208) - 2026-11-23:
+- Refined the floating text-selection bar (#libris-selection-bubble) to look more native to BlackBerry 10: subtle 4px corners, rectangular flush action segments with crisp hairlines, dark Slate finish, and BB10 blue active press highlight.
+- Added Debug-only in-app window capture via bb::system::Screenshot::captureWindow and scripts/capture_screen.sh to take UI screenshots over USB when inspecting layouts.
+
+Version 2.0.0 (Build 207) - 2026-11-23:
+- Fixed chained QString::arg() corruption rewriting %2F/%2C into <seconds>F/<seconds>C in statsDailyBooks and added automatic migration for previously corrupted entries on device.
+- Added Unicode NFC/NFD normalization when matching book paths and filenames on SD cards so Reading Statistics always displays real book titles.
+
+Version 2.0.0 (Build 206) - 2026-11-23:
+- Fixed Reading Statistics displaying raw encoded paths or garbled strings instead of real book titles (normalized stats/bookSeconds and statsDailyBooks keys with shared metadata lookup).
+- Fixed Qt QSettings comma-list parsing dropping multi-book daily stats and preserved cached meta/title entries on backup restore.
+
+Version 2.0.0 (Build 205) - 2026-11-23:
+- Optically re-centered the Libris logo across candybar portrait splash screens (720x1280, 768x1280) and square splash screens (720x720, 1440x1440).
+
+Version 2.0.0 (Build 204) - 2026-11-23:
+- Increased Detailed View book card minimum height and removed the hard maxHeight cap in LibraryPage so Series labels and progress bars no longer clip at the bottom on 1440x1440 Passport and 720x720 screens.
+
+Version 2.0.0 (Build 203) - 2026-11-23:
+- Refactored ReadingStatsSheet (eliminating 2000+ lines of duplicated slot code), removed hardcoded 5-6 book caps, and fixed responsive scaling for 1:1 square screens (720x720 Q10/Classic and 1440x1440 Passport).
+- Fixed Light Mode selection contrast in CalendarWeekDayItem, QUrl default cover check in ReadingBookSlotItem, button clipping at 453 DPI, and Book/Day/Format stats accuracy bugs.
+
+Version 2.0.0 (Build 202) - 2026-11-23:
+- Removed the frozen static spinner ring from all BlackBerry 10 splash screen PNGs and centered the Libris logo.
+- Triggered ActivityIndicator.start() on ReaderPage creation so the page-render spinner animates immediately.
+
+Version 2.0.0 (Build 201) - 2026-11-23:
+- Verified and fixed cover image rendering across all formats (EPUB, MOBI/AZW3, FB2, CBZ, PDF, DJVU, TXT) in Library, Recent, and Reader views.
+- Bundled 7 lightweight sample books (one per supported format) into /accounts/1000/shared/books/Libris_Samples for quick testing.
+- Displayed Build number directly in the About tab and automatically updated Changelogs on every build increment.
+
+Version 2.0.0 (Build 200):
+- Fixed 404 error when tapping * footnote markers; added cross-chapter footnote popup and anchor jump for EPUB, MOBI/AZW3, and FB2.
+- Embedded inline Data URIs for reader images and book covers so WebView renders them reliably on BlackBerry 10.
+- Fixed dictionary/translation, Gemini TTS, OPDS OpenSearch, Wi-Fi Drop, backup/restore, and format statistics bugs.
+
+Version 2.0.0 (Previous Builds):
+- Native 5-tab Navigation Drawer: Reading, Recent, TOC, Library, Files.
+- Automatic Vietnamese charset detection (TCVN3, Windows-1258, VNI, UTF-8).
+- Persistent sync of reading history and settings to safe storage.

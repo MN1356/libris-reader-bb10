@@ -16,8 +16,7 @@ Sheet {
                 }
             }
             acceptAction: ActionItem {
-                title: ""
-                imageSource: "asset:///icons/ic_search.png"
+                title: (readerHighlightView.isSearching ? qsTr("Đóng") : qsTr("Tìm")) + Retranslate.onLanguageChanged
                 onTriggered: {
                     readerHighlightView.toggleSearch();
                 }
@@ -38,6 +37,12 @@ Sheet {
                 highlightSheet.close();
                 bookManager.jumpToBookmark(bookmarkId);
             }
+        }
+    }
+
+    function cleanup() {
+        if (readerHighlightView && typeof readerHighlightView.cleanup === "function") {
+            readerHighlightView.cleanup();
         }
     }
 

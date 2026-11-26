@@ -1,14 +1,14 @@
-#ifndef __NSRRENDERTHREAD_H__
-#define __NSRRENDERTHREAD_H__
+#ifndef __PDFRENDERTHREAD_H__
+#define __PDFRENDERTHREAD_H__
 
 /**
- * @file nsrrenderthread.h
- * @author Alexander Saprykin
+ * @file pdfrenderthread.h
+ * @author Libris Team
  * @brief Render thread
  */
 
-#include "nsrrenderedpage.h"
-#include "nsrabstractdocument.h"
+#include "pdfrenderedpage.h"
+#include "pdfabstractdocument.h"
 
 #include <QThread>
 #include <QList>
@@ -17,7 +17,7 @@
 #include <QAtomicInt>
 
 /**
- * @class NSRRenderThread nsrrenderthread.h
+ * @class NSRRenderThread pdfrenderthread.h
  * @brief Class for render thread
  */
 class NSRRenderThread : public QThread
@@ -158,4 +158,4 @@ private:
 	QAtomicInt			_renderCanceled;	/**< Render cancel flag		*/
 };
 
-#endif /* __NSRRENDERTHREAD_H__ */
+#endif /* __PDFRENDERTHREAD_H__ */

@@ -4,9 +4,12 @@ Container {
     id: dayCell
     layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
     horizontalAlignment: HorizontalAlignment.Fill
-    preferredHeight: 96
-    minHeight: 88
+    verticalAlignment: VerticalAlignment.Fill
+    preferredHeight: cellHeight
+    minHeight: cellHeight
 
+    property real uiScale: 1.0
+    property int cellHeight: 74
     property string dateStr: ""
     property int dayNumber: 0
     property bool isCurrentMonth: true
@@ -19,132 +22,115 @@ Container {
 
     signal tapped(string date)
 
-    // Outer border (highlighted on selection or today)
-    topPadding: 1
-    bottomPadding: 1
-    leftPadding: 1
-    rightPadding: 1
+    topPadding: isSelected ? bookManager.dp(2) : bookManager.dp(1)
+    bottomPadding: isSelected ? bookManager.dp(2) : bookManager.dp(1)
+    leftPadding: isSelected ? bookManager.dp(2) : bookManager.dp(1)
+    rightPadding: isSelected ? bookManager.dp(2) : bookManager.dp(1)
     background: isSelected ?
-                Color.create("#10B981") :
-                (isToday ? Color.create("#059669") :
-                (appTheme === "dark" ? Color.create("#222222") : Color.create("#E5E5E5")))
+                Color.create(bookManager.uiAccent) :
+                (isToday ? (appTheme === "dark" ? Color.create("#8C672E") : Color.create("#B8893D")) :
+                Color.create(bookManager.uiBg))
 
     layout: DockLayout {}
 
-    // Inner cell area
     Container {
         horizontalAlignment: HorizontalAlignment.Fill
         verticalAlignment: VerticalAlignment.Fill
         background: {
             if (isSelected) {
-                return appTheme === "dark" ? Color.create("#064E3B") : Color.create("#D1FAE5");
+                return appTheme === "dark" ? Color.create("#261F15") : Color.create("#EFE4CF");
             }
             if (!isCurrentMonth) {
-                return appTheme === "dark" ? Color.create("#0A0C10") : Color.create("#FAFAFA");
+                return appTheme === "dark" ? Color.create("#0E0C0A") : Color.create("#EFE9DF");
             }
             if (intensityLevel > 0 || readingSeconds > 0) {
                 if (intensityLevel >= 4) {
-                    return appTheme === "dark" ? Color.create("#134E35") : Color.create("#A7F3D0");
+                    return appTheme === "dark" ? Color.create("#855E24") : Color.create("#D9AB60");
                 } else if (intensityLevel >= 3) {
-                    return appTheme === "dark" ? Color.create("#0F3F2A") : Color.create("#BBF7D0");
+                    return appTheme === "dark" ? Color.create("#5C431C") : Color.create("#E6C58D");
                 } else if (intensityLevel >= 2) {
-                    return appTheme === "dark" ? Color.create("#0B3020") : Color.create("#D1FAE5");
+                    return appTheme === "dark" ? Color.create("#3B2C16") : Color.create("#F2DFBA");
                 } else {
-                    return appTheme === "dark" ? Color.create("#082216") : Color.create("#ECFDF5");
+                    return appTheme === "dark" ? Color.create("#231C11") : Color.create("#FAF2E1");
                 }
             }
-            return appTheme === "dark" ? Color.create("#12141A") : Color.create("#FFFFFF");
+            return Color.create(bookManager.uiCard);
         }
 
-        layout: StackLayout {
-            orientation: LayoutOrientation.TopToBottom
-        }
+        layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
-        topPadding: 6
-        bottomPadding: 6
-        leftPadding: 2
-        rightPadding: 2
+        topPadding: bookManager.dp(5)
+        bottomPadding: bookManager.dp(4)
+        leftPadding: bookManager.dp(2)
+        rightPadding: bookManager.dp(2)
 
-        // Top: Day Number Container (Today badge circle or plain text)
+        // Day Number Slot
         Container {
             horizontalAlignment: HorizontalAlignment.Center
-            preferredHeight: 30
-            minHeight: 30
+            layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
             layout: DockLayout {}
 
-            // 1A. Today indicator badge (Pill/Circle around day number)
+            // Today Accent Badge
             Container {
                 visible: isToday && dayNumber > 0
                 horizontalAlignment: HorizontalAlignment.Center
                 verticalAlignment: VerticalAlignment.Center
-                preferredWidth: 38
-                preferredHeight: 26
-                minWidth: 34
-                minHeight: 24
-                background: Color.create("#10B981")
+                topPadding: bookManager.dp(1)
+                bottomPadding: bookManager.dp(1)
+                leftPadding: bookManager.dp(6)
+                rightPadding: bookManager.dp(6)
+                minWidth: bookManager.dp(24)
+                background: Color.create(bookManager.uiAccent)
                 layout: DockLayout {}
 
                 Label {
                     horizontalAlignment: HorizontalAlignment.Center
                     verticalAlignment: VerticalAlignment.Center
                     text: dayNumber > 0 ? ("" + dayNumber) : ""
-                    textStyle.fontSize: FontSize.XSmall
+                    textStyle.base: SystemDefaults.TextStyles.SubtitleText
                     textStyle.fontWeight: FontWeight.Bold
                     textStyle.textAlign: TextAlign.Center
-                    textStyle.color: Color.White
+                    textStyle.color: appTheme === "dark" ? Color.create("#0E0C0A") : Color.create("#FFFFFF")
+                    autoSize.maxLineCount: 1
                 }
             }
 
-            // 1B. Standard Day Number (when not today)
+            // Standard Day Number
             Label {
                 visible: !isToday && dayNumber > 0
                 horizontalAlignment: HorizontalAlignment.Center
                 verticalAlignment: VerticalAlignment.Center
                 text: dayNumber > 0 ? ("" + dayNumber) : ""
-                textStyle.fontSize: FontSize.XSmall
+                textStyle.base: SystemDefaults.TextStyles.SubtitleText
                 textStyle.fontWeight: isSelected ? FontWeight.Bold : FontWeight.Normal
                 textStyle.textAlign: TextAlign.Center
+                autoSize.maxLineCount: 1
                 textStyle.color: {
                     if (isSelected) {
-                        return appTheme === "dark" ? Color.White : Color.create("#065F46");
+                        return Color.create(bookManager.uiInk);
                     }
                     if (!isCurrentMonth) {
-                        return appTheme === "dark" ? Color.create("#555555") : Color.create("#AAAAAA");
+                        return Color.create(bookManager.uiMuted);
                     }
-                    if (intensityLevel > 0 || readingSeconds > 0) {
-                        return appTheme === "dark" ? Color.White : Color.create("#065F46");
+                    if (intensityLevel >= 4) {
+                        return appTheme === "dark" ? Color.create("#F5EFE6") : Color.create("#1C1916");
                     }
-                    return appTheme === "dark" ? Color.create("#E5E5E5") : Color.create("#000000");
+                    return Color.create(bookManager.uiInk);
                 }
             }
         }
 
-        // Bottom: Centered Duration Pill
-        Container {
+        // Clean Reading Duration Text (no nested box to prevent clipping)
+        Label {
             visible: durationText !== "" && isCurrentMonth
             horizontalAlignment: HorizontalAlignment.Center
-            topMargin: 4
-            leftPadding: 4
-            rightPadding: 4
-            topPadding: 1
-            bottomPadding: 1
-            preferredHeight: 20
-            minHeight: 20
-            layout: DockLayout {}
-            background: isSelected ?
-                        (appTheme === "dark" ? Color.create("#10B981") : Color.create("#059669")) :
-                        (appTheme === "dark" ? Color.create("#065F46") : Color.create("#10B981"))
-
-            Label {
-                horizontalAlignment: HorizontalAlignment.Center
-                verticalAlignment: VerticalAlignment.Center
-                text: durationText
-                textStyle.fontSize: FontSize.XXSmall
-                textStyle.fontWeight: FontWeight.Bold
-                textStyle.textAlign: TextAlign.Center
-                textStyle.color: Color.White
-                autoSize.maxLineCount: 1
-            }
+            topMargin: bookManager.dp(2)
+            text: durationText
+            textStyle.base: SystemDefaults.TextStyles.SmallText
+            textStyle.fontWeight: FontWeight.W500
+            textStyle.textAlign: TextAlign.Center
+            textStyle.color: Color.create(bookManager.uiAccent)
+            autoSize.maxLineCount: 1
         }
     }
 

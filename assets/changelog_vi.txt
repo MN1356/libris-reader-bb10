@@ -1,0 +1,46 @@
+Phiên bản 2.0.0 (Build 210) - 2026-11-23:
+- Gọn hóa thanh công cụ chọn văn bản về dạng chỉ biểu tượng đơn sắc (#E8ECF2) đồng bộ chuẩn BlackBerry 10, loại bỏ chữ thừa và căn giữa dọc tuyệt đối trên 1 hàng 36px.
+
+Phiên bản 2.0.0 (Build 209) - 2026-11-23:
+- Khắc phục triệt để lỗi thanh chọn văn bản bị xuống dòng chữ Dict/Translate tạo khoảng trống phía dưới và hiển thị trong suốt mờ chữ nền; chuyển sang bố cục display:table một hàng 36px gọn gàng chuẩn BlackBerry 10 và đặt CSS sau style của sách.
+
+Phiên bản 2.0.0 (Build 208) - 2026-11-23:
+- Tinh chỉnh thanh menu nổi khi chọn văn bản (#libris-selection-bubble) theo phong cách BlackBerry 10 bản địa: bo góc nhẹ 4px sắc nét thay vì viên thuốc bo tròn, phân tách ô nút vuông vức cùng nền tối Slate và phản hồi chạm xanh BB10.
+- Tích hợp cơ chế chụp ảnh cửa sổ ứng dụng qua API bb::system::Screenshot (chỉ kích hoạt trong bản Debug) cùng công cụ scripts/capture_screen.sh hỗ trợ chụp màn hình trực tiếp qua cáp USB khi kiểm tra UI.
+
+Phiên bản 2.0.0 (Build 207) - 2026-11-23:
+- Khắc phục tận gốc lỗi QString::arg() nối chuỗi làm biến dạng đường dẫn %2F/%2C thành ký tự lạ (<giây>Faccounts...) trong statsDailyBooks và tự động phục hồi dữ liệu thống kê đã lưu bị lỗi trên thiết bị.
+- Hỗ trợ chuẩn hóa Unicode NFC/NFD khi khớp đường dẫn và tên tệp trên thẻ nhớ SD để Thống kê đọc sách hiển thị đúng tên sách.
+
+Phiên bản 2.0.0 (Build 206) - 2026-11-23:
+- Sửa lỗi Thống kê đọc sách hiển thị sai chuỗi mã hóa hoặc ký tự lạ thay vì tên sách thực (chuẩn hóa khóa stats/bookSeconds, statsDailyBooks và dùng chung logic tra cứu tiêu đề sách).
+- Khắc phục lỗi Qt QSettings tách danh sách dấu phẩy làm mất dữ liệu ngày đọc nhiều sách trong statsDailyBooks và giữ nguyên meta/title khi khôi phục sao lưu.
+
+Phiên bản 2.0.0 (Build 205) - 2026-11-23:
+- Căn lại tâm thị giác cho logo Libris trên ảnh splash screen màn hình thanh (720x1280, 768x1280) và màn hình vuông (720x720, 1440x1440) để không bị lệch xuống dưới.
+
+Phiên bản 2.0.0 (Build 204) - 2026-11-23:
+- Tăng chiều cao tối thiểu và gỡ giới hạn maxHeight cứng cho thẻ sách ở chế độ Detailed View (Tủ sách), khắc phục lỗi tên Series và thanh tiến độ bị cắt đáy trên Passport 1440x1440 và Q10/Classic 720x720.
+
+Phiên bản 2.0.0 (Build 203) - 2026-11-23:
+- Tái cấu trúc hoàn toàn ReadingStatsSheet (giảm >2000 dòng mã trùng lặp), bỏ giới hạn 5-6 cuốn sách và sửa lỗi hiển thị trên màn hình vuông 1:1 (720x720 Q10/Classic và 1440x1440 Passport).
+- Khắc phục triệt để lỗi độ tương phản chữ trắng nền nhạt ở Light Mode (CalendarWeekDayItem), lỗi QUrl cover ở ReadingBookSlotItem, cắt nút Đọc/Hôm nay ở 453 DPI và các sai số thống kê chi tiết/định dạng.
+
+Phiên bản 2.0.0 (Build 202) - 2026-11-23:
+- Xóa vòng tròn tĩnh giả loading bị đứng yên trên ảnh splash screen (720x720, 1440x1440, 720x1280, 768x1280) và căn giữa logo Libris.
+- Bổ sung kích hoạt ActivityIndicator lúc khởi tạo ReaderPage để vòng tải không bị đứng khi mở sách.
+
+Phiên bản 2.0.0 (Build 201) - 2026-11-23:
+- Khắc phục hiển thị ảnh bìa trên mọi định dạng (EPUB, MOBI/AZW3, FB2, CBZ, PDF, DJVU, TXT) tại Thư viện, Gần đây và trong Trình đọc.
+- Ship sẵn 7 sách mẫu siêu nhẹ cho từng định dạng vào /accounts/1000/shared/books/Libris_Samples để thử nghiệm nhanh.
+- Hiển thị số Build trực tiếp trong tab Giới thiệu (About) và tự động cập nhật Nhật ký phiên bản theo mỗi lần tăng build.
+
+Phiên bản 2.0.0 (Build 200):
+- Khắc phục lỗi nhấn vào dấu * chú thích bị báo 404; hỗ trợ popup chú thích và nhảy chương cho EPUB, MOBI/AZW3 và FB2.
+- Chuyển ảnh minh họa và ảnh bìa trong trình đọc WebView sang Data URI để hiển thị ổn định trên BlackBerry 10.
+- Sửa các lỗi từ điển/dịch thuật, TTS Gemini, OpenSearch OPDS, Wi-Fi Drop, đồng bộ/khôi phục và thống kê định dạng.
+
+Phiên bản 2.0.0 (Bản dựng trước):
+- Cấu trúc Navigation Drawer 5 tab Native: Đang đọc, Gần đây, Mục lục, Tủ sách, Duyệt tệp.
+- Tự động nhận diện bảng mã tiếng Việt TCVN3, Windows-1258, VNI, UTF-8.
+- Đồng bộ dữ liệu lịch sử đọc và cấu hình vào bộ nhớ lưu trữ an toàn.

@@ -9,6 +9,7 @@
 #include <QFile>
 #include <QDir>
 #include <QTime>
+#include <QTimer>
 #include <bb/multimedia/MediaPlayer>
 
 class TtsManager : public QObject
@@ -47,8 +48,18 @@ class TtsManager : public QObject
     Q_PROPERTY(QString geminiTestStatus READ geminiTestStatus NOTIFY geminiTestStatusChanged)
     Q_PROPERTY(QString geminiTestState READ geminiTestState NOTIFY geminiTestStateChanged)
     Q_PROPERTY(bool isTestingGemini READ isTestingGemini NOTIFY isTestingGeminiChanged)
+    Q_PROPERTY(QString espeakViRegion READ espeakViRegion WRITE setEspeakViRegion NOTIFY espeakChanged)
+    Q_PROPERTY(QString espeakVariant READ espeakVariant WRITE setEspeakVariant NOTIFY espeakChanged)
+    Q_PROPERTY(bool espeakAvailable READ espeakAvailable NOTIFY espeakChanged)
     Q_PROPERTY(QString bookTitle READ bookTitle NOTIFY bookContextChanged)
     Q_PROPERTY(QString bookAuthor READ bookAuthor NOTIFY bookContextChanged)
+
+    // Sleep Timer properties
+    Q_PROPERTY(bool isSleepTimerActive READ isSleepTimerActive NOTIFY sleepTimerChanged)
+    Q_PROPERTY(int sleepTimerMinutes READ sleepTimerMinutes NOTIFY sleepTimerChanged)
+    Q_PROPERTY(int sleepTimerRemainingSeconds READ sleepTimerRemainingSeconds NOTIFY sleepTimerTick)
+    Q_PROPERTY(QString sleepTimerDisplayStr READ sleepTimerDisplayStr NOTIFY sleepTimerTick)
+    Q_PROPERTY(bool sleepAtChapterEnd READ sleepAtChapterEnd WRITE setSleepAtChapterEnd NOTIFY sleepTimerChanged)
 
 public:
     explicit TtsManager(QObject *parent = 0);
@@ -127,6 +138,12 @@ public:
     Q_INVOKABLE void testGeminiApiKey(const QString &key = QString());
     Q_INVOKABLE void cancelGeminiTest();
 
+    QString espeakViRegion() const { return m_espeakViRegion; }
+    Q_INVOKABLE void setEspeakViRegion(const QString &r);
+    QString espeakVariant() const { return m_espeakVariant; }
+    Q_INVOKABLE void setEspeakVariant(const QString &v);
+    bool espeakAvailable() const;
+
     QString bookTitle() const;
     QString bookAuthor() const;
     Q_INVOKABLE void setBookContext(const QString &title, const QString &author);
@@ -144,6 +161,17 @@ public:
     Q_INVOKABLE void toggleSpeed();
     Q_INVOKABLE void preCacheChapter();
     Q_INVOKABLE void clearCache();
+
+    // Sleep Timer Support
+    bool isSleepTimerActive() const;
+    int sleepTimerMinutes() const;
+    int sleepTimerRemainingSeconds() const;
+    QString sleepTimerDisplayStr() const;
+    bool sleepAtChapterEnd() const;
+    Q_INVOKABLE void setSleepAtChapterEnd(bool enable);
+    Q_INVOKABLE void startSleepTimer(int minutes);
+    Q_INVOKABLE void cancelSleepTimer();
+    Q_INVOKABLE void cycleSleepTimer();
 
 signals:
     void activeChanged(bool active);
@@ -174,11 +202,15 @@ signals:
     void detectedLanguageChanged(const QString &lang);
     void isOfflineChanged(bool offline);
     void ttsModeChanged(const QString &mode);
+    void espeakChanged();
     void cacheProgressChanged(int current, int total);
     void isCachingChanged(bool caching);
     void errorOccurred(const QString &message);
     void sentenceFinished(int index);
     void chapterFinished();
+    void sleepTimerChanged();
+    void sleepTimerTick(int remainingSeconds, const QString &displayStr);
+    void sleepTimerFinished();
 
 private slots:
     void onPlaybackCompleted();
@@ -188,6 +220,9 @@ private slots:
     void onBatchCacheReplyFinished();
     void onDownloadReplyFinished();
     void onGeminiTestReplyFinished();
+    void onSleepTimerTick();
+    void onRateLimitRetryTimeout();
+    void onPrefetchTimerTimeout();
 
 private:
     bb::multimedia::MediaPlayer *m_player;
@@ -197,6 +232,20 @@ private:
     QNetworkReply *m_batchCacheReply;
     QNetworkReply *m_downloadReply;
     QNetworkReply *m_geminiTestReply;
+
+    QTimer *m_rateLimitTimer;
+    QTimer *m_prefetchTimer;
+    int m_rateLimitRetryCount;
+    int m_pendingRetryIndex;
+    QString m_pendingRetryLang;
+    QString m_pendingRetryMode;
+    int m_pendingPrefetchIndex;
+    QString m_currentRawText;
+
+    QTimer *m_sleepTimer;
+    int m_sleepTimerMinutes;
+    int m_sleepTimerRemainingSeconds;
+    bool m_sleepAtChapterEnd;
 
     QString m_cacheDir;
     QStringList m_sentences;
@@ -234,6 +283,11 @@ private:
     bool m_isCaching;
     int m_cachingIndex;
     int m_googleEndpointIndex;
+    QString m_espeakViRegion;
+    QString m_espeakVariant;
+    int m_espeakSlot;
+    QString resolveEspeakVoiceSpec(const QString &effLang) const;
+    bool playSentenceWithEspeak(int index, const QString &effLang);
 
     void parseSentences(const QString &rawText);
     QString detectLanguage(const QString &text) const;
@@ -247,6 +301,7 @@ private:
     void downloadAudioUrl(const QUrl &url, int index, const QString &lang, const QString &mode);
     void playCurrentSentence();
     void prefetchSentence(int index);
+    void schedulePrefetch(int nextIndex);
     void processNextBatchCache();
     void applyPitchToPlayer();
 };

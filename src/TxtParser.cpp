@@ -49,57 +49,6 @@ static bool isSeparatorOrCreditLine(const QString &line)
     return false;
 }
 
-static QString combineChapterTitle(const QString &baseTitle, const QString &subTitle, int chapterNumber = -1)
-{
-    QString b = baseTitle.trimmed();
-    QString s = subTitle.trimmed();
-
-    if (s.isEmpty()) return b;
-
-    while (!s.isEmpty() && (s.startsWith('-') || s.startsWith(QChar(0x2014)) || 
-           s.startsWith(QChar(0x2013)) || s.startsWith(':') || s.startsWith(' ') ||
-           s.startsWith(QChar(0x2022)) || s.startsWith('*'))) {
-        s = s.mid(1).trimmed();
-    }
-    while (s.endsWith('.')) {
-        s = s.left(s.length() - 1).trimmed();
-    }
-    if (s.isEmpty()) return b;
-
-    QRegExp fullChapterRe("^\\s*((?:Chương|Chapter|Hồi|Phần|Quyển|Tập|Mục|Tiết|Bài|Book|Section)\\s+[0-9IVXLCDM]+)\\s*[:\\-–—.]\\s*(.+)$", Qt::CaseInsensitive);
-    if (fullChapterRe.indexIn(s) != -1) {
-        return QString("%1: %2").arg(fullChapterRe.cap(1).trimmed(), fullChapterRe.cap(2).trimmed());
-    }
-
-    if (isGenericTitle(s)) {
-        if (!isGenericTitle(b)) return b;
-        return s.isEmpty() ? b : s;
-    }
-
-    if (b.isEmpty()) {
-        if (chapterNumber > 0) {
-            return QString("Chương %1: %2").arg(chapterNumber).arg(s);
-        }
-        return s;
-    }
-
-    if (!isGenericTitle(b)) {
-        return b;
-    }
-
-    while (!b.isEmpty() && (b.endsWith(':') || b.endsWith('-') || b.endsWith(QChar(0x2014)) || 
-           b.endsWith(QChar(0x2013)) || b.endsWith('.') || b.endsWith(' '))) {
-        b = b.left(b.length() - 1).trimmed();
-    }
-
-    QRegExp justNumRe("^#?\\s*([0-9]+|[IVXLCDM]+)$", Qt::CaseInsensitive);
-    if (justNumRe.exactMatch(b)) {
-        return QString("Chương %1: %2").arg(b, s);
-    }
-
-    return QString("%1: %2").arg(b, s);
-}
-
 TxtParser::TxtParser()
     : m_title("Tài liệu Text")
     , m_author("Văn bản thường")
@@ -131,6 +80,108 @@ QString TxtParser::escapeHtml(const QString &text)
     return escaped;
 }
 
+static ushort mapTcvn3Byte(unsigned char b)
+{
+    switch (b) {
+        case 0xA1: return 0x0102; // Ă
+        case 0xA2: return 0x00C2; // Â
+        case 0xA3: return 0x00CA; // Ê
+        case 0xA4: return 0x00D4; // Ô
+        case 0xA5: return 0x01A0; // Ơ
+        case 0xA6: return 0x01AF; // Ư
+        case 0xA7: return 0x0110; // Đ
+        case 0xA8: return 0x0103; // ă
+        case 0xA9: return 0x00E2; // â
+        case 0xAA: return 0x00EA; // ê
+        case 0xAB: return 0x00F4; // ô
+        case 0xAC: return 0x01A1; // ơ
+        case 0xAD: return 0x01B0; // ư
+        case 0xAE: return 0x0111; // đ
+        case 0xB5: return 0x00E0; // à
+        case 0xB6: return 0x1EA3; // ả
+        case 0xB7: return 0x00E3; // ã
+        case 0xB8: return 0x00E1; // á
+        case 0xB9: return 0x1EA1; // ạ
+        case 0xBB: return 0x1EB1; // ằ
+        case 0xBC: return 0x1EB3; // ẳ
+        case 0xBD: return 0x1EB5; // ẵ
+        case 0xBE: return 0x1EAF; // ắ
+        case 0xC6: return 0x1EB7; // ặ
+        case 0xC7: return 0x1EA7; // ầ
+        case 0xC8: return 0x1EA9; // ẩ
+        case 0xC9: return 0x1EAB; // ẫ
+        case 0xCA: return 0x1EA5; // ấ
+        case 0xCB: return 0x1EAD; // ậ
+        case 0xCC: return 0x00E8; // è
+        case 0xCE: return 0x1EBB; // ẻ
+        case 0xCF: return 0x1EBD; // ẽ
+        case 0xD0: return 0x00E9; // é
+        case 0xD1: return 0x1EB9; // ẹ
+        case 0xD2: return 0x1EC1; // ề
+        case 0xD3: return 0x1EC3; // ể
+        case 0xD4: return 0x1EC5; // ễ
+        case 0xD5: return 0x1EBF; // ế
+        case 0xD6: return 0x1EC7; // ệ
+        case 0xD7: return 0x00EC; // ì
+        case 0xD8: return 0x1EC9; // ỉ
+        case 0xDC: return 0x0129; // ĩ
+        case 0xDD: return 0x00ED; // í
+        case 0xDE: return 0x1ECB; // ị
+        case 0xDF: return 0x00F2; // ò
+        case 0xE1: return 0x1ECF; // ỏ
+        case 0xE2: return 0x00F5; // õ
+        case 0xE3: return 0x00F3; // ó
+        case 0xE4: return 0x1ECD; // ọ
+        case 0xE5: return 0x1ED3; // ồ
+        case 0xE6: return 0x1ED5; // ổ
+        case 0xE7: return 0x1ED7; // ỗ
+        case 0xE8: return 0x1ED1; // ố
+        case 0xE9: return 0x1ED9; // ộ
+        case 0xEA: return 0x1EDD; // ờ
+        case 0xEB: return 0x1EDF; // ở
+        case 0xEC: return 0x1EE1; // ỡ
+        case 0xED: return 0x1EDB; // ớ
+        case 0xEE: return 0x1EE3; // ợ
+        case 0xEF: return 0x00F9; // ù
+        case 0xF1: return 0x1EE7; // ủ
+        case 0xF2: return 0x0169; // ũ
+        case 0xF3: return 0x00FA; // ú
+        case 0xF4: return 0x1EE5; // ụ
+        case 0xF5: return 0x1EEB; // ừ
+        case 0xF6: return 0x1EED; // ử
+        case 0xF7: return 0x1EEF; // ữ
+        case 0xF8: return 0x1EE9; // ứ
+        case 0xF9: return 0x1EF1; // ự
+        case 0xFA: return 0x1EF3; // ỳ
+        case 0xFB: return 0x1EF7; // ỷ
+        case 0xFC: return 0x1EF9; // ỹ
+        case 0xFD: return 0x00FD; // ý
+        case 0xFE: return 0x1EF5; // ỵ
+        default: return b;
+    }
+}
+
+static bool looksLikeTcvn3(const QByteArray &data)
+{
+    int sampleLen = qMin(data.size(), 16384);
+    int tcvnHits = 0;
+    int win1258Combines = 0;
+    const unsigned char *p = reinterpret_cast<const unsigned char*>(data.constData());
+    for (int i = 0; i < sampleLen; ++i) {
+        unsigned char c = p[i];
+        if ((c >= 0xA8 && c <= 0xAE) || c == 0xB8 || c == 0xEA || c == 0xEE || c == 0xF5 || c == 0xF8) {
+            tcvnHits++;
+        }
+        if (i > 0 && (c == 0xCC || c == 0xD2 || c == 0xDE || c == 0xEC || c == 0xF2)) {
+            unsigned char prev = p[i - 1];
+            if ((prev >= 'A' && prev <= 'z') || prev >= 0xC0) {
+                win1258Combines++;
+            }
+        }
+    }
+    return tcvnHits > 4 && tcvnHits > win1258Combines * 2;
+}
+
 QString TxtParser::detectAndDecode(const QByteArray &data)
 {
     if (data.size() >= 3 && (uchar)data[0] == 0xEF && (uchar)data[1] == 0xBB && (uchar)data[2] == 0xBF) {
@@ -154,10 +205,21 @@ QString TxtParser::detectAndDecode(const QByteArray &data)
         return text;
     }
 
-    // Fallback: try Windows-1258 (Vietnamese) or Windows-1252 (Western)
+    // TCVN3 (ABC) legacy Vietnamese encoding
+    if (looksLikeTcvn3(data)) {
+        QString out;
+        out.reserve(data.size());
+        const unsigned char *p = reinterpret_cast<const unsigned char*>(data.constData());
+        for (int i = 0; i < data.size(); ++i) {
+            out.append(QChar(mapTcvn3Byte(p[i])));
+        }
+        return out;
+    }
+
+    // Fallback: try Windows-1258 (Vietnamese) normalized to NFC, or Windows-1252 / Latin1
     QTextCodec *win1258 = QTextCodec::codecForName("Windows-1258");
     if (win1258) {
-        return win1258->toUnicode(data);
+        return win1258->toUnicode(data).normalized(QString::NormalizationForm_C);
     }
 
     QTextCodec *latin1 = QTextCodec::codecForName("ISO-8859-1");
@@ -174,6 +236,10 @@ bool TxtParser::open(const QString &filePath)
     m_filePath = filePath;
 
     QFile file(filePath);
+    if (file.size() > 40 * 1024 * 1024) {
+        qWarning() << "[TxtParser] Text file too large (>40MB):" << filePath << file.size();
+        return false;
+    }
     if (!file.open(QIODevice::ReadOnly)) {
         qWarning() << "[TxtParser] Cannot open file:" << filePath;
         return false;
@@ -202,7 +268,7 @@ bool TxtParser::open(const QString &filePath)
 
     // Regex to match chapter headings:
     // e.g. "Chương 1", "Chapter 5", "Hồi 12", "Phần 3", "Quyển 2", "Tập 1", "1. Mở đầu", etc.
-    QRegExp chapterRe("^\\s*(Chương\\s+[0-9IVXLCDM]+|Chapter\\s+[0-9IVXLCDM]+|Hồi\\s+[0-9IVXLCDM]+|Phần\\s+[0-9IVXLCDM]+|Quyển\\s+[0-9IVXLCDM]+|Tập\\s+[0-9IVXLCDM]+|Mục\\s+[0-9IVXLCDM]+|Bài\\s+[0-9IVXLCDM]+|Tiết\\s+[0-9IVXLCDM]+|Book\\s+[0-9IVXLCDM]+|Section\\s+[0-9IVXLCDM]+|Lời\\s+nói\\s+đầu|Mở\\s+đầu|Vĩ\\s+thanh|Ngoại\\s+truyện|Kết\\s+thúc|Prologue|Epilogue|[0-9]+\\.|I\\.|II\\.|III\\.|IV\\.|V\\.)", Qt::CaseInsensitive);
+    QRegExp chapterRe("^\\s*(Chương\\s+[0-9IVXLCDM]+|Chapter\\s+[0-9IVXLCDM]+|Hồi\\s+[0-9IVXLCDM]+|Phần\\s+[0-9IVXLCDM]+|Quyển\\s+[0-9IVXLCDM]+|Tập\\s+[0-9IVXLCDM]+|Mục\\s+[0-9IVXLCDM]+|Bài\\s+[0-9IVXLCDM]+|Tiết\\s+[0-9IVXLCDM]+|Book\\s+[0-9IVXLCDM]+|Section\\s+[0-9IVXLCDM]+|Lời\\s+nói\\s+đầu|Mở\\s+đầu|Vĩ\\s+thanh|Ngoại\\s+truyện|Kết\\s+thúc|Prologue|Epilogue)", Qt::CaseInsensitive);
 
     typedef QPair<int, QString> FoundChapter;
     QList<FoundChapter> foundChapters;
@@ -343,16 +409,7 @@ QString TxtParser::getChapterContent(int index)
         html += ".cover-card { border: 2px solid rgba(128,128,128,0.3); border-radius: 12px; padding: 36px 24px; max-width: 85%; margin: auto; text-align: center; }";
         html += "</style></head><body><div class=\"cover-container\">";
         if (!m_coverPath.isEmpty() && QFile::exists(m_coverPath)) {
-            QString coverSrc = QString("file://%1").arg(m_coverPath);
-            QFile f(m_coverPath);
-            if (f.open(QIODevice::ReadOnly)) {
-                QByteArray b = f.readAll();
-                f.close();
-                QString ext = QFileInfo(m_coverPath).suffix().toLower();
-                QString mime = (ext == "png") ? "image/png" : "image/jpeg";
-                coverSrc = QString("data:%1;base64,%2").arg(mime).arg(QString::fromLatin1(b.toBase64().constData()));
-            }
-            html += QString("<img class=\"cover-img\" src=\"%1\" alt=\"Cover\"/>").arg(coverSrc);
+            html += QString("<img class=\"cover-img\" src=\"file://%1\" alt=\"Cover\"/>").arg(m_coverPath);
         } else {
             html += "<div class=\"cover-card\">";
             html += QString("<h1 style=\"font-size: 1.8em; margin-bottom: 12px;\">%1</h1>").arg(escapeHtml(m_title));

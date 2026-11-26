@@ -27,6 +27,7 @@ public:
     int chapterCount() const { return m_chapters.size(); }
 
     QString getChapterContent(int index);
+    QString notesHtml() const { return m_notesHtml; }
     QString extractCover(const QString &cacheDir);
 
 private:
@@ -41,13 +42,16 @@ private:
     QString m_coverBinaryId;
     QList<EpubChapter> m_chapters;
     QStringList m_chapterHtmls;
+    QString m_notesHtml;
     QMap<QString, QString> m_binaries; // id -> base64 data
 
     void parseTitleInfo(const pugi::xml_node &titleInfoNode);
     void parseBinaries(const pugi::xml_node &root);
     void parseBody(const pugi::xml_node &body);
+    void parseNotesBody(const pugi::xml_node &body);
     QString renderSectionToHtml(const pugi::xml_node &section, QString &outTitle);
     QString renderNodeChildren(const pugi::xml_node &node);
+    QString renderNode(const pugi::xml_node &node);
     QString escapeHtml(const QString &text);
 };
 

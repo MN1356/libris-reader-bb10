@@ -1,4 +1,6 @@
 #include "EpubParser.hpp"
+#include "RegexUtil.hpp"
+#include "ImageUriUtil.hpp"
 #include "miniz.h"
 #include "pugixml.hpp"
 #include <QFileInfo>
@@ -260,9 +262,9 @@ static QString extractTitleFromHtml(const QString &rawHtml, const QString &bookT
     }
 
     // Strip scripts, styles, comments to prevent matching CSS styles or script code
-    workHtml.remove(QRegExp("<style[^>]*>[\\s\\S]*?<\\/style>", Qt::CaseInsensitive));
-    workHtml.remove(QRegExp("<script[^>]*>[\\s\\S]*?<\\/script>", Qt::CaseInsensitive));
-    workHtml.remove(QRegExp("<!--[\\s\\S]*?-->"));
+    workHtml.remove(minimalRx("<style[^>]*>[\\s\\S]*<\\/style>", Qt::CaseInsensitive));
+    workHtml.remove(minimalRx("<script[^>]*>[\\s\\S]*<\\/script>", Qt::CaseInsensitive));
+    workHtml.remove(minimalRx("<!--[\\s\\S]*-->"));
 
     QString detectedChapterPrefix;
 
@@ -338,7 +340,7 @@ static QString extractTitleFromHtml(const QString &rawHtml, const QString &bookT
     }
 
     // Secondary pass: Check explicit <h1-h4> tags
-    QRegExp hTagRe("<(h[1-4])[^>]*>([\\s\\S]*?)<\\/\\1>", Qt::CaseInsensitive);
+    QRegExp hTagRe = minimalRx("<(h[1-4])[^>]*>([\\s\\S]*)<\\/\\1>", Qt::CaseInsensitive);
     int hPos = 0;
     QString firstHGeneric;
     while ((hPos = hTagRe.indexIn(workHtml, hPos)) != -1) {
@@ -369,7 +371,7 @@ static QString extractTitleFromHtml(const QString &rawHtml, const QString &bookT
     }
 
     // Tertiary pass: Check class="...title..."
-    QRegExp classTitleRe("<(?:div|p|span|h[1-6])[^>]*class=[\"'][^\"']*(?:chapter-title|chap-title|chapter-name|chap_title|book-title|c-title|title)[^\"']*[\"'][^>]*>([\\s\\S]*?)<\\/(?:div|p|span|h[1-6])>", Qt::CaseInsensitive);
+    QRegExp classTitleRe = minimalRx("<(?:div|p|span|h[1-6])[^>]*class=[\"'][^\"']*(?:chapter-title|chap-title|chapter-name|chap_title|book-title|c-title|title)[^\"']*[\"'][^>]*>([\\s\\S]*)<\\/(?:div|p|span|h[1-6])>", Qt::CaseInsensitive);
     if (classTitleRe.indexIn(workHtml) != -1) {
         QString ct = classTitleRe.cap(1);
         ct.replace(QRegExp("<br\\s*\\/?>", Qt::CaseInsensitive), " : ");
@@ -389,7 +391,7 @@ static QString extractTitleFromHtml(const QString &rawHtml, const QString &bookT
     }
 
     // Quaternary pass: Check bold/strong paragraph
-    QRegExp boldPRe("<p[^>]*>\\s*(?:<b[^>]*>|<strong[^>]*>|)(?:<span[^>]*class=[\"'][^\"']*(?:bold|title)[^\"']*[\"'][^>]*>)?([\\s\\S]*?)(?:<\\/span>)?(?:<\\/b>|<\\/strong>|)\\s*<\\/p>", Qt::CaseInsensitive);
+    QRegExp boldPRe = minimalRx("<p[^>]*>\\s*(?:<b[^>]*>|<strong[^>]*>|)(?:<span[^>]*class=[\"'][^\"']*(?:bold|title)[^\"']*[\"'][^>]*>)?([\\s\\S]*)(?:<\\/span>)?(?:<\\/b>|<\\/strong>|)\\s*<\\/p>", Qt::CaseInsensitive);
     if (boldPRe.indexIn(workHtml) != -1) {
         QString bp = boldPRe.cap(1);
         bp.remove(QRegExp("<[^>]*>"));
@@ -408,7 +410,7 @@ static QString extractTitleFromHtml(const QString &rawHtml, const QString &bookT
     }
 
     // Quinary pass: Check <title>...</title> in HTML head
-    QRegExp titleRe("<title[^>]*>([\\s\\S]*?)<\\/title>", Qt::CaseInsensitive);
+    QRegExp titleRe = minimalRx("<title[^>]*>([\\s\\S]*)<\\/title>", Qt::CaseInsensitive);
     if (titleRe.indexIn(workHtml) != -1) {
         QString rawT = titleRe.cap(1);
         rawT.remove(QRegExp("<[^>]*>"));
@@ -662,6 +664,7 @@ bool EpubParser::open(const QString &filePath)
     pugi::xml_document docContainer;
     if (!docContainer.load_buffer(containerData.constData(), containerData.size())) {
         qWarning() << "Failed to parse META-INF/container.xml";
+        close();
         return false;
     }
 
@@ -669,6 +672,7 @@ bool EpubParser::open(const QString &filePath)
     QString opfPath = QString::fromUtf8(rootfileNode.attribute("full-path").value());
     if (opfPath.isEmpty()) {
         qWarning() << "No full-path in rootfile";
+        close();
         return false;
     }
 
@@ -684,12 +688,14 @@ bool EpubParser::open(const QString &filePath)
     QByteArray opfData = readZipEntry(opfPath);
     if (opfData.isEmpty()) {
         qWarning() << "Failed to read OPF file:" << opfPath;
+        close();
         return false;
     }
 
     pugi::xml_document docOpf;
     if (!docOpf.load_buffer(opfData.constData(), opfData.size())) {
         qWarning() << "Failed to parse OPF file";
+        close();
         return false;
     }
 
@@ -731,16 +737,18 @@ bool EpubParser::open(const QString &filePath)
             rawDesc = QString::fromUtf8(descNode.text().get()).trimmed();
         }
 
-        // Convert HTML paragraph & line breaks into real whitespace / newlines
-        rawDesc.replace(QRegExp("<br\\s*/?>", Qt::CaseInsensitive), "\n");
-        rawDesc.replace(QRegExp("</p>", Qt::CaseInsensitive), "\n\n");
-        rawDesc.replace(QRegExp("</div>", Qt::CaseInsensitive), "\n");
-        rawDesc.replace(QRegExp("</li>", Qt::CaseInsensitive), "\n");
-        rawDesc.replace(QRegExp("<li[^>]*>", Qt::CaseInsensitive), "• ");
-        rawDesc.replace(QRegExp("([a-zA-Z0-9:])<p[^>]*>", Qt::CaseInsensitive), "\\1\n\n");
-        rawDesc.remove(QRegExp("<[^>]*>"));
-        rawDesc.replace("&quot;", "\"").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&#39;", "'").replace("&apos;", "'").replace("&nbsp;", " ");
+        // Entities may be escaped markup (&lt;p&gt;): decode first, then strip tags (2 passes)
+        for (int pass = 0; pass < 2; ++pass) {
+            rawDesc.replace("&quot;", "\"").replace("&lt;", "<").replace("&gt;", ">").replace("&#39;", "'").replace("&apos;", "'").replace("&nbsp;", " ").replace("&amp;", "&");
+            rawDesc.replace(QRegExp("<br\\s*/?>", Qt::CaseInsensitive), "\n");
+            rawDesc.replace(QRegExp("</p>", Qt::CaseInsensitive), "\n\n");
+            rawDesc.replace(QRegExp("</div>", Qt::CaseInsensitive), "\n");
+            rawDesc.replace(QRegExp("</li>", Qt::CaseInsensitive), "\n");
+            rawDesc.replace(QRegExp("<li[^>]*>", Qt::CaseInsensitive), QString(QChar(0x2022)) + " ");
+            rawDesc.remove(QRegExp("<[^>]*>"));
+        }
         rawDesc.replace(QRegExp("[ \t\r]+"), " ");
+        rawDesc.replace(QRegExp("\n[ ]+"), "\n");
         rawDesc.replace(QRegExp("\n{3,}"), "\n\n");
         m_description = rawDesc.trimmed();
     }
@@ -777,7 +785,7 @@ bool EpubParser::open(const QString &filePath)
         m_series = QString::fromUtf8(seriesNode.attribute("content").value()).trimmed();
         pugi::xml_node idxNode = docOpf.select_node("//meta[@name='calibre:series_index']").node();
         if (idxNode) {
-            m_seriesIndex = QString::fromUtf8(idxNode.attribute("content").value()).toInt();
+            m_seriesIndex = qRound(QString::fromUtf8(idxNode.attribute("content").value()).toDouble());
         }
     }
     if (m_series.isEmpty()) {
@@ -786,7 +794,7 @@ bool EpubParser::open(const QString &filePath)
             m_series = QString::fromUtf8(collNode.child_value()).trimmed();
             pugi::xml_node posNode = docOpf.select_node("//meta[@property='group-position']").node();
             if (posNode) {
-                m_seriesIndex = QString::fromUtf8(posNode.child_value()).toInt();
+                m_seriesIndex = qRound(QString::fromUtf8(posNode.child_value()).toDouble());
             }
         }
     }
@@ -796,7 +804,7 @@ bool EpubParser::open(const QString &filePath)
             m_series = QString::fromUtf8(sNode.attribute("content").value()).trimmed();
             pugi::xml_node idxNode = docOpf.select_node("//meta[@name='series_index']").node();
             if (idxNode) {
-                m_seriesIndex = QString::fromUtf8(idxNode.attribute("content").value()).toInt();
+                m_seriesIndex = qRound(QString::fromUtf8(idxNode.attribute("content").value()).toDouble());
             }
         }
     }
@@ -822,7 +830,9 @@ bool EpubParser::open(const QString &filePath)
             m_cssFiles.append(m_opfDir + cleanHref);
         }
 
-        if (properties.contains("cover-image") || id.toLower() == "cover" || id.toLower() == "cover-image") {
+        bool isImageItem = mediaType.startsWith("image/", Qt::CaseInsensitive);
+        if (properties.contains("cover-image") ||
+            (isImageItem && (id.toLower() == "cover" || id.toLower() == "cover-image"))) {
             coverId = id;
         }
     }
@@ -908,9 +918,9 @@ bool EpubParser::open(const QString &filePath)
         }
     } else {
         EpubChapter coverCh;
-        coverCh.id = "berry_cover_page";
+        coverCh.id = "libris_cover_page";
         coverCh.title = "Bìa sách";
-        coverCh.href = "berry://cover";
+        coverCh.href = "libris://cover";
         m_chapters.prepend(coverCh);
     }
 
@@ -955,7 +965,7 @@ bool EpubParser::open(const QString &filePath)
     QHash<QString, int> hrefMap;
     QHash<QString, int> baseMap;
     for (int j = 0; j < m_chapters.size(); ++j) {
-        if (m_chapters[j].id == "berry_cover_page") continue;
+        if (m_chapters[j].id == "libris_cover_page") continue;
         hrefMap.insert(m_chapters[j].href, j);
         hrefMap.insert(m_chapters[j].href.toLower(), j);
         if (!m_opfDir.isEmpty() && m_chapters[j].href.startsWith(m_opfDir)) {
@@ -1073,7 +1083,7 @@ bool EpubParser::open(const QString &filePath)
     // For any chapter still missing a title or with a generic "Chương X" title,
     // read the chapter's XHTML/HTML head and extract clean human-readable title.
     for (int i = 0; i < m_chapters.size(); ++i) {
-        if (m_chapters[i].id == "berry_cover_page") continue;
+        if (m_chapters[i].id == "libris_cover_page") continue;
 
         bool needsTitle = isGenericTitle(m_chapters[i].title);
         if (!needsTitle) {
@@ -1158,7 +1168,7 @@ bool EpubParser::open(const QString &filePath)
                 break;
             }
         }
-        if (!hasCoverInToc && (m_chapters[0].title == "Bìa sách" || m_chapters[0].id == "berry_cover_page")) {
+        if (!hasCoverInToc && (m_chapters[0].title == "Bìa sách" || m_chapters[0].id == "libris_cover_page")) {
             EpubTocEntry coverEntry;
             coverEntry.title = "Bìa sách";
             coverEntry.chapterIndex = 0;
@@ -1175,7 +1185,7 @@ bool EpubParser::open(const QString &filePath)
 QString EpubParser::extractChapterTitle(int chapterIndex, const QString &anchor)
 {
     if (chapterIndex < 0 || chapterIndex >= m_chapters.size()) return QString();
-    if (m_chapters[chapterIndex].id == "berry_cover_page") return "Bìa sách";
+    if (m_chapters[chapterIndex].id == "libris_cover_page") return "Bìa sách";
 
     QByteArray chunk = readZipEntry(m_chapters[chapterIndex].href);
     if (chunk.isEmpty()) return QString();
@@ -1205,19 +1215,22 @@ QString EpubParser::getChapterContent(int index, const QString &cacheDir)
         return QString();
     }
 
-    if (m_chapters[index].id == "berry_cover_page") {
+    if (m_chapters[index].id == "libris_cover_page") {
         QString localCover = extractCover(cacheDir);
-        QString coverDataUri;
-        if (!localCover.isEmpty() && QFile::exists(localCover)) {
-            QFile f(localCover);
-            if (f.open(QIODevice::ReadOnly)) {
-                QByteArray b = f.readAll();
-                f.close();
-                QString ext = QFileInfo(localCover).suffix().toLower();
-                QString mime = (ext == "png") ? "image/png" : "image/jpeg";
-                coverDataUri = QString("data:%1;base64,%2").arg(mime).arg(QString::fromLatin1(b.toBase64().constData()));
+        QString coverSrc = fileToDataUri(localCover);
+        if (coverSrc.isEmpty() && !m_coverHref.isEmpty()) {
+            QString cleanCov = QDir::cleanPath(m_coverHref);
+            while (cleanCov.startsWith('/')) cleanCov.remove(0, 1);
+            QByteArray covBytes = readZipEntry(cleanCov);
+            if (covBytes.isEmpty()) covBytes = readZipEntry(m_coverHref);
+            if (!covBytes.isEmpty() && covBytes.size() <= 8 * 1024 * 1024) {
+                coverSrc = bytesToDataUri(covBytes, cleanCov);
             }
         }
+        if (coverSrc.isEmpty() && !localCover.isEmpty() && QFile::exists(localCover)) {
+            coverSrc = QString("file://%1").arg(localCover);
+        }
+
         QString coverHtml;
         coverHtml += "<!DOCTYPE html><html><head><meta charset=\"utf-8\"/>";
         coverHtml += "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\"/>";
@@ -1228,10 +1241,8 @@ QString EpubParser::getChapterContent(int index, const QString &cacheDir)
         coverHtml += ".cover-card { border: 2px solid rgba(128,128,128,0.3); border-radius: 12px; padding: 36px 24px; max-width: 85%; margin: auto; text-align: center; }";
         coverHtml += "</style></head><body>";
         coverHtml += "<div class=\"cover-container\">";
-        if (!coverDataUri.isEmpty()) {
-            coverHtml += QString("<img class=\"cover-img\" src=\"%1\" alt=\"Cover\"/>").arg(coverDataUri);
-        } else if (!localCover.isEmpty() && QFile::exists(localCover)) {
-            coverHtml += QString("<img class=\"cover-img\" src=\"file://%1\" alt=\"Cover\"/>").arg(localCover);
+        if (!coverSrc.isEmpty()) {
+            coverHtml += QString("<img class=\"cover-img\" src=\"%1\" alt=\"Cover\"/>").arg(coverSrc);
         } else {
             coverHtml += "<div class=\"cover-card\">";
             coverHtml += QString("<h1 style=\"font-size: 1.8em; margin-bottom: 12px;\">%1</h1>").arg(m_title);
@@ -1259,15 +1270,15 @@ QString EpubParser::getChapterContent(int index, const QString &cacheDir)
         text = QString::fromLatin1(data.constData(), data.size());
     }
 
-    // Resolve chapter images directly to inlined data URIs to guarantee immediate rendering without security blocks
+    // Resolve chapter images directly to inlined data URIs to guarantee immediate rendering without WebView file:// security blocks
     QString chapterDir = QFileInfo(m_chapters[index].href).path();
     if (chapterDir == ".") chapterDir = "";
     else if (!chapterDir.endsWith('/')) chapterDir += "/";
 
     QStringList patterns;
-    patterns << "<img[^>]+src\\s*=\\s*[\"']([^\"'>\\s]+)[\"']";
-    patterns << "<image[^>]+xlink:href\\s*=\\s*[\"']([^\"'>\\s]+)[\"']";
-    patterns << "<image[^>]+href\\s*=\\s*[\"']([^\"'>\\s]+)[\"']";
+    patterns << "<img[^>]+src\\s*=\\s*[\"']([^\"'>]+)[\"']";
+    patterns << "<(?:[A-Za-z0-9_-]+:)?image[^>]+xlink:href\\s*=\\s*[\"']([^\"'>]+)[\"']";
+    patterns << "<(?:[A-Za-z0-9_-]+:)?image[^>]+href\\s*=\\s*[\"']([^\"'>]+)[\"']";
 
     QSet<QString> rawUrls;
     for (int p = 0; p < patterns.size(); ++p) {
@@ -1275,7 +1286,11 @@ QString EpubParser::getChapterContent(int index, const QString &cacheDir)
         int pos = 0;
         while ((pos = rx.indexIn(text, pos)) != -1) {
             QString src = rx.cap(1).trimmed();
-            if (!src.isEmpty() && !src.startsWith("http:") && !src.startsWith("https:") && !src.startsWith("data:") && !src.startsWith("file:")) {
+            if (!src.isEmpty() &&
+                !src.startsWith("http:", Qt::CaseInsensitive) &&
+                !src.startsWith("https:", Qt::CaseInsensitive) &&
+                !src.startsWith("data:", Qt::CaseInsensitive) &&
+                !src.startsWith("file:", Qt::CaseInsensitive)) {
                 rawUrls.insert(src);
             }
             pos += qMax(1, rx.matchedLength());
@@ -1283,15 +1298,26 @@ QString EpubParser::getChapterContent(int index, const QString &cacheDir)
     }
 
     foreach (const QString &src, rawUrls) {
-        QString decodedSrc = QString::fromUtf8(QUrl::fromPercentEncoding(src.toUtf8()).toUtf8());
+        QString cleanSrc = src;
+        cleanSrc.replace("&amp;", "&");
+        int fragIdx = cleanSrc.indexOf('#');
+        if (fragIdx != -1) cleanSrc = cleanSrc.left(fragIdx);
+        int qIdx = cleanSrc.indexOf('?');
+        if (qIdx != -1) cleanSrc = cleanSrc.left(qIdx);
+
+        QString decodedSrc = QString::fromUtf8(QUrl::fromPercentEncoding(cleanSrc.toUtf8()).toUtf8());
         QString relPath = decodedSrc;
-        if (relPath.startsWith("./")) relPath.remove(0, 2);
+        relPath.replace('\\', '/');
+        while (relPath.startsWith("./")) relPath.remove(0, 2);
         QString fullEntry = QDir::cleanPath(chapterDir + relPath);
         while (fullEntry.startsWith('/')) fullEntry.remove(0, 1);
 
         QByteArray imgBytes = readZipEntry(fullEntry);
         if (imgBytes.isEmpty()) {
             imgBytes = readZipEntry(decodedSrc);
+        }
+        if (imgBytes.isEmpty() && !m_opfDir.isEmpty()) {
+            imgBytes = readZipEntry(QDir::cleanPath(m_opfDir + relPath));
         }
         if (imgBytes.isEmpty()) {
             imgBytes = readZipEntry(QFileInfo(fullEntry).fileName());
@@ -1301,19 +1327,39 @@ QString EpubParser::getChapterContent(int index, const QString &cacheDir)
         }
 
         if (!imgBytes.isEmpty()) {
-            QString ext = QFileInfo(fullEntry).suffix().toLower();
-            QString mime = "image/jpeg";
-            if (ext == "png") mime = "image/png";
-            else if (ext == "gif") mime = "image/gif";
-            else if (ext == "svg") mime = "image/svg+xml";
+            QString resolvedUri;
+            if (imgBytes.size() <= 8 * 1024 * 1024) {
+                resolvedUri = bytesToDataUri(imgBytes, fullEntry);
+            }
 
-            QString dataUri = QString("data:%1;base64,%2").arg(mime).arg(QString::fromLatin1(imgBytes.toBase64().constData()));
+            if (resolvedUri.isEmpty()) {
+                QString ext = QFileInfo(fullEntry).suffix().toLower();
+                if (ext.isEmpty()) ext = "jpg";
+                QString targetDir = cacheDir.isEmpty() ? (QDir::tempPath() + "/libris_epub") : (cacheDir + "/epub");
+                QString hash = QCryptographicHash::hash(m_filePath.toUtf8(), QCryptographicHash::Md5).toHex().left(10);
+                QString imgFileName = QCryptographicHash::hash(fullEntry.toUtf8(), QCryptographicHash::Md5).toHex().left(12) + "." + ext;
+                QString imgPath = targetDir + "/" + hash + "_" + imgFileName;
+                if (QDir().mkpath(targetDir)) {
+                    if (!QFile::exists(imgPath) || QFileInfo(imgPath).size() == 0) {
+                        QFile outFile(imgPath);
+                        if (outFile.open(QIODevice::WriteOnly)) {
+                            outFile.write(imgBytes);
+                            outFile.close();
+                        }
+                    }
+                    if (QFile::exists(imgPath) && QFileInfo(imgPath).size() > 0) {
+                        resolvedUri = "file://" + imgPath;
+                    }
+                }
+            }
 
-            text.replace(QString("\"%1\"").arg(src), QString("\"%1\"").arg(dataUri));
-            text.replace(QString("'%1'").arg(src), QString("'%1'").arg(dataUri));
-            if (src != decodedSrc) {
-                text.replace(QString("\"%1\"").arg(decodedSrc), QString("\"%1\"").arg(dataUri));
-                text.replace(QString("'%1'").arg(decodedSrc), QString("'%1'").arg(dataUri));
+            if (!resolvedUri.isEmpty()) {
+                text.replace(QString("\"%1\"").arg(src), QString("\"%1\"").arg(resolvedUri));
+                text.replace(QString("'%1'").arg(src), QString("'%1'").arg(resolvedUri));
+                if (src != decodedSrc) {
+                    text.replace(QString("\"%1\"").arg(decodedSrc), QString("\"%1\"").arg(resolvedUri));
+                    text.replace(QString("'%1'").arg(decodedSrc), QString("'%1'").arg(resolvedUri));
+                }
             }
         }
     }
@@ -1325,6 +1371,28 @@ QString EpubParser::getChapterContent(int index, const QString &cacheDir)
     }
     m_chapterContentCache.insert(index, text);
     m_chapterCacheLru.append(index);
+    return text;
+}
+
+QString EpubParser::readHtmlByPath(const QString &entryPath)
+{
+    if (!m_zipOpen || entryPath.isEmpty()) return QString();
+
+    QString clean = QString::fromUtf8(QUrl::fromPercentEncoding(entryPath.toUtf8()).toUtf8());
+    clean.replace('\\', '/');
+    while (clean.startsWith('/')) clean.remove(0, 1);
+    while (clean.startsWith("./")) clean.remove(0, 2);
+
+    QByteArray data = readZipEntry(clean);
+    if (data.isEmpty() && !m_opfDir.isEmpty()) {
+        data = readZipEntry(m_opfDir + clean);
+    }
+    if (data.isEmpty()) return QString();
+
+    QString text = QString::fromUtf8(data.constData(), data.size());
+    if (text.isEmpty() && !data.isEmpty()) {
+        text = QString::fromLatin1(data.constData(), data.size());
+    }
     return text;
 }
 
@@ -1419,30 +1487,43 @@ QString EpubParser::bookCss(const QString &cacheDir)
                 QString hash = QString(QCryptographicHash::hash(fullEntry.toUtf8(), QCryptographicHash::Md5).toHex());
                 QString ext = QFileInfo(fullEntry).suffix().toLower();
                 if (ext.isEmpty()) ext = "ttf";
-                QString localPath = cacheDir + "/" + hash + "." + ext;
-
-                if (!QFile::exists(localPath)) {
-                    QByteArray fBytes = readZipEntry(fullEntry);
-                    if (fBytes.isEmpty()) {
-                        fBytes = readZipEntry(QFileInfo(fullEntry).fileName());
+                bool isCssImg = (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "gif" || ext == "svg" || ext == "svgz" || ext == "webp");
+                QString cssResolvedUrl;
+                if (isCssImg) {
+                    QByteArray imgBytes = readZipEntry(fullEntry);
+                    if (imgBytes.isEmpty()) imgBytes = readZipEntry(QFileInfo(fullEntry).fileName());
+                    if (!imgBytes.isEmpty() && imgBytes.size() <= 4 * 1024 * 1024) {
+                        cssResolvedUrl = bytesToDataUri(imgBytes, fullEntry);
                     }
-                    if (!fBytes.isEmpty()) {
-                        QFile f(localPath);
-                        if (f.open(QIODevice::WriteOnly)) {
-                            f.write(fBytes);
-                            f.close();
+                }
+                if (cssResolvedUrl.isEmpty()) {
+                    QString localPath = cacheDir + "/" + hash + "." + ext;
+                    if (!QFile::exists(localPath)) {
+                        QByteArray fBytes = readZipEntry(fullEntry);
+                        if (fBytes.isEmpty()) {
+                            fBytes = readZipEntry(QFileInfo(fullEntry).fileName());
                         }
+                        if (!fBytes.isEmpty()) {
+                            QFile f(localPath);
+                            if (f.open(QIODevice::WriteOnly)) {
+                                f.write(fBytes);
+                                f.close();
+                            }
+                        }
+                    }
+                    if (QFile::exists(localPath)) {
+                        cssResolvedUrl = "file://" + localPath;
                     }
                 }
 
-                if (QFile::exists(localPath)) {
-                    css.replace(QString("url(\"%1\")").arg(u), QString("url('file://%1')").arg(localPath));
-                    css.replace(QString("url('%1')").arg(u), QString("url('file://%1')").arg(localPath));
-                    css.replace(QString("url(%1)").arg(u), QString("url('file://%1')").arg(localPath));
+                if (!cssResolvedUrl.isEmpty()) {
+                    css.replace(QString("url(\"%1\")").arg(u), QString("url('%1')").arg(cssResolvedUrl));
+                    css.replace(QString("url('%1')").arg(u), QString("url('%1')").arg(cssResolvedUrl));
+                    css.replace(QString("url(%1)").arg(u), QString("url('%1')").arg(cssResolvedUrl));
                     if (u != decodedU) {
-                        css.replace(QString("url(\"%1\")").arg(decodedU), QString("url('file://%1')").arg(localPath));
-                        css.replace(QString("url('%1')").arg(decodedU), QString("url('file://%1')").arg(localPath));
-                        css.replace(QString("url(%1)").arg(decodedU), QString("url('file://%1')").arg(localPath));
+                        css.replace(QString("url(\"%1\")").arg(decodedU), QString("url('%1')").arg(cssResolvedUrl));
+                        css.replace(QString("url('%1')").arg(decodedU), QString("url('%1')").arg(cssResolvedUrl));
+                        css.replace(QString("url(%1)").arg(decodedU), QString("url('%1')").arg(cssResolvedUrl));
                     }
                 }
             }

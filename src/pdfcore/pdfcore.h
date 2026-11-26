@@ -1,27 +1,27 @@
-#ifndef __NSRREADERCORE_H__
-#define __NSRREADERCORE_H__
+#ifndef __PDFCORE_H__
+#define __PDFCORE_H__
 
 /**
- * @file nsrreadercore.h
- * @author Alexander Saprykin
+ * @file pdfcore.h
+ * @author Libris Team
  * @brief Rendering engine API
  */
 
-#include "interfaces/insrsettings.h"
-#include "interfaces/insrthumbnailer.h"
-#include "nsrabstractdocument.h"
-#include "nsrrenderthread.h"
-#include "nsrrenderrequest.h"
-#include "nsrpagescache.h"
-#include "nsrcroppadscache.h"
-#include "nsrsession.h"
-#include "nsrtocentry.h"
-#include "nsrreadercore_global.h"
+#include "interfaces/ipdfsettings.h"
+#include "interfaces/ipdfthumbnailer.h"
+#include "pdfabstractdocument.h"
+#include "pdfrenderthread.h"
+#include "pdfrenderrequest.h"
+#include "pdfpagescache.h"
+#include "pdfcroppadscache.h"
+#include "pdfsession.h"
+#include "pdftocentry.h"
+#include "pdfcore_global.h"
 
 #include <QObject>
 
 /**
- * @class NSRReaderCore nsrreadercore.h
+ * @class NSRReaderCore pdfcore.h
  * @brief Main render class
  */
 class NSRREADERCORE_SHARED NSRReaderCore: public QObject
@@ -358,6 +358,7 @@ private:
 		       NSRRenderRequest::NSRRenderReason	reason,
 		       int					page = 0);
 
+public:
 	/**
 	 * @brief Copies file handler
 	 * @param doc File handler to copy.
@@ -373,6 +374,8 @@ private:
 	 * @return New file handler in case of success, NULL otherwise.
 	 */
 	NSRAbstractDocument * fileHandlerByPath (const QString& path, const QString& passwd = QString ()) const;
+
+private:
 
 	/**
 	 * @brief Checks whether rendered page is still relevant
@@ -408,4 +411,12 @@ private:
 	bool			_isDestructing;	/**< Destructing flag		*/
 };
 
-#endif /* __NSRREADERCORE_H__ */
+// Libris Engine Type Aliases
+typedef NSRReaderCore       LibrisPdfCore;
+typedef NSRSession          LibrisPdfSession;
+typedef NSRTocEntry         LibrisPdfTocEntry;
+typedef NSRRenderRequest    LibrisPdfRenderRequest;
+typedef NSRRenderedPage     LibrisPdfRenderedPage;
+typedef NSRAbstractDocument LibrisPdfDocument;
+
+#endif /* __PDFCORE_H__ */

@@ -1,10 +1,10 @@
-#include "nsrreadercore/nsrreadercore.h"
-#include "nsrreadercore/nsrsession.h"
-#include "nsrreadercore/nsrtocentry.h"
-#include "nsrreadercore/nsrrenderedpage.h"
-#include "nsrreadercore/nsrrenderrequest.h"
-#include "nsrreadercore/nsrabstractdocument.h"
-#include "nsrreadercore/nsrcroppads.h"
+#include "pdfcore.h"
+#include "pdfsession.h"
+#include "pdftocentry.h"
+#include "pdfrenderedpage.h"
+#include "pdfrenderrequest.h"
+#include "pdfabstractdocument.h"
+#include "pdfcroppads.h"
 #include <bb/ImageData>
 
 // ============================================================================
@@ -187,7 +187,7 @@ NSRRenderedPage::~NSRRenderedPage()
 }
 
 // ============================================================================
-// NSRReaderCore Implementation (Simulator Stub)
+// Libris PDF/DjVu Core Implementation (Simulator Stub)
 // ============================================================================
 NSRReaderCore::NSRReaderCore(const INSRSettings *settings,
                              INSRThumbnailer *thumbnailer,
@@ -348,6 +348,13 @@ void NSRReaderCore::setCacheSize(qint64 size)
 
 NSRTocEntry* NSRReaderCore::getToc() const
 {
+    return NULL;
+}
+
+NSRAbstractDocument * NSRReaderCore::fileHandlerByPath(const QString& path, const QString& passwd) const
+{
+    Q_UNUSED(path);
+    Q_UNUSED(passwd);
     return NULL;
 }
 

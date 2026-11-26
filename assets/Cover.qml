@@ -3,7 +3,7 @@ import bb.cascades 1.3
 Container {
     id: coverRootContainer
     layout: DockLayout {}
-    background: Color.create("#000000")
+    background: Color.create("#0E0C0A")
     horizontalAlignment: HorizontalAlignment.Fill
     verticalAlignment: VerticalAlignment.Fill
 
@@ -13,19 +13,19 @@ Container {
     property string coverPath: (bookManager.currentCoverPath !== "") ? bookManager.currentCoverPath :
                                (bookManager.hasLastBook ? bookManager.lastBookCover : "")
 
+    property string bookFormat: (bookManager.currentFormat !== "") ? bookManager.currentFormat :
+                               (bookManager.hasLastBook ? bookManager.lastBookFormat : "epub")
+
     property int progressValue: (bookManager.currentFilePath !== "") ? (bookManager.readingProgress >= 0 ? bookManager.readingProgress : 0) :
                                 (bookManager.hasLastBook ? (bookManager.lastBookProgress >= 0 ? bookManager.lastBookProgress : 0) : 0)
 
-    // =========================================================================
-    // 1. ACTIVE BOOK STATE (Fullscreen Cover, Bottom Title & Sleek Progress Bar)
-    // =========================================================================
+    // 1. Active Book State
     Container {
         visible: bookTitle !== ""
         horizontalAlignment: HorizontalAlignment.Fill
         verticalAlignment: VerticalAlignment.Fill
         layout: DockLayout {}
 
-        // Fullscreen Enlarged Book Cover
         ImageView {
             visible: coverPath !== ""
             horizontalAlignment: HorizontalAlignment.Fill
@@ -34,67 +34,80 @@ Container {
             scalingMethod: ScalingMethod.AspectFill
         }
 
-        // Placeholder when no cover image exists
         Container {
             visible: coverPath === ""
             horizontalAlignment: HorizontalAlignment.Fill
             verticalAlignment: VerticalAlignment.Fill
-            background: Color.create("#111111")
             layout: DockLayout {}
 
             ImageView {
+                horizontalAlignment: HorizontalAlignment.Fill
+                verticalAlignment: VerticalAlignment.Fill
+                imageSource: {
+                    var fmt = coverRootContainer.bookFormat ? coverRootContainer.bookFormat.toLowerCase() : "epub";
+                    if (fmt === "azw" || fmt === "azw3" || fmt === "kf8" || fmt === "prc") fmt = "mobi";
+                    if (fmt !== "pdf" && fmt !== "epub" && fmt !== "mobi" && fmt !== "fb2" && fmt !== "cbz" && fmt !== "djvu" && fmt !== "txt") fmt = "epub";
+                    return "asset:///icons/default_cover_" + fmt + ".png";
+                }
+                scalingMethod: ScalingMethod.AspectFill
+            }
+
+            Container {
                 horizontalAlignment: HorizontalAlignment.Center
                 verticalAlignment: VerticalAlignment.Center
-                preferredWidth: 96
-                preferredHeight: 96
-                opacity: 0.35
-                imageSource: "asset:///icons/ic_book.png"
-                scalingMethod: ScalingMethod.AspectFit
+                leftPadding: bookManager.dp(18)
+                rightPadding: bookManager.dp(18)
+                bottomPadding: bookManager.dp(24)
+
+                Label {
+                    horizontalAlignment: HorizontalAlignment.Center
+                    verticalAlignment: VerticalAlignment.Center
+                    text: bookTitle
+                    textStyle.base: SystemDefaults.TextStyles.TitleText
+                    textStyle.fontWeight: FontWeight.Bold
+                    textStyle.textAlign: TextAlign.Center
+                    textStyle.color: Color.create("#F5EFE6")
+                    multiline: true
+                    autoSize.maxLineCount: 3
+                }
             }
         }
 
-        // Bottom Edge Overlay: Title & Sleek Progress Bar
         Container {
             horizontalAlignment: HorizontalAlignment.Fill
             verticalAlignment: VerticalAlignment.Bottom
-            background: Color.create("#E6000000")
+            background: Color.create("#E60E0C0A")
+            layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
-            layout: StackLayout {
-                orientation: LayoutOrientation.TopToBottom
-            }
-
-            // Book Title Container
             Container {
+                visible: coverPath !== ""
                 horizontalAlignment: HorizontalAlignment.Fill
-                topPadding: 10
-                bottomPadding: 8
-                leftPadding: 12
-                rightPadding: 12
+                topPadding: bookManager.dp(8)
+                bottomPadding: bookManager.dp(8)
+                leftPadding: bookManager.dp(12)
+                rightPadding: bookManager.dp(12)
 
                 Label {
                     horizontalAlignment: HorizontalAlignment.Fill
                     text: bookTitle
                     textStyle.base: SystemDefaults.TextStyles.SubtitleText
                     textStyle.fontWeight: FontWeight.Bold
-                    textStyle.color: Color.White
+                    textStyle.color: Color.create("#F5EFE6")
                     multiline: true
                     autoSize.maxLineCount: 2
                 }
             }
 
-            // Sleek Edge-to-Edge Progress Bar
             Container {
                 horizontalAlignment: HorizontalAlignment.Fill
-                preferredHeight: 5
-                minHeight: 5
-                background: Color.create("#222222")
-                layout: StackLayout {
-                    orientation: LayoutOrientation.LeftToRight
-                }
+                preferredHeight: bookManager.dp(4)
+                minHeight: bookManager.dp(4)
+                background: Color.create("#26211B")
+                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
                 Container {
                     verticalAlignment: VerticalAlignment.Fill
-                    background: progressValue >= 100 ? Color.create("#059669") : Color.create("#10B981")
+                    background: progressValue >= 100 ? Color.create("#E6C07B") : Color.create("#D9AB60")
                     visible: progressValue > 0
                     layoutProperties: StackLayoutProperties {
                         spaceQuota: Math.max(0.001, progressValue)
@@ -112,9 +125,7 @@ Container {
         }
     }
 
-    // =========================================================================
-    // 2. EMPTY STATE (When no book is open and no previous book exists)
-    // =========================================================================
+    // 2. Empty State
     Container {
         visible: bookTitle === ""
         horizontalAlignment: HorizontalAlignment.Center
@@ -122,26 +133,26 @@ Container {
 
         ImageView {
             horizontalAlignment: HorizontalAlignment.Center
-            preferredWidth: 64
-            preferredHeight: 64
-            imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_app_dark.png" : "asset:///icons/ic_app_light.png"
+            preferredWidth: bookManager.dp(56)
+            preferredHeight: bookManager.dp(56)
+            imageSource: "asset:///icons/ic_app_dark.png"
         }
 
         Label {
-            topMargin: 8
+            topMargin: bookManager.dp(8)
             horizontalAlignment: HorizontalAlignment.Center
-            text: "BerryLeaf"
+            text: "Libris"
             textStyle.base: SystemDefaults.TextStyles.TitleText
             textStyle.fontWeight: FontWeight.Bold
-            textStyle.color: Color.White
+            textStyle.color: Color.create("#D9AB60")
         }
 
         Label {
-            topMargin: 4
+            topMargin: bookManager.dp(4)
             horizontalAlignment: HorizontalAlignment.Center
             text: qsTr("Chưa có sách đang đọc") + Retranslate.onLanguageChanged
             textStyle.base: SystemDefaults.TextStyles.SmallText
-            textStyle.color: Color.create("#888888")
+            textStyle.color: Color.create("#9C9488")
         }
     }
 }

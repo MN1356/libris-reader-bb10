@@ -5,6 +5,7 @@ Sheet {
 
     signal performInPageSearch(string query)
     signal jumpToMatch(int matchIndex)
+    signal navigateToSearchResult(int chapterIndex, string query, int matchIndex)
     signal inPageNext()
     signal inPagePrev()
     signal inPageClear()
@@ -35,45 +36,45 @@ Sheet {
         }
 
         Container {
-            layout: DockLayout {}
-            background: bookManager.appTheme === "dark" ? Color.create("#000000") : Color.create("#FFFFFF")
+            horizontalAlignment: HorizontalAlignment.Fill
+            verticalAlignment: VerticalAlignment.Fill
+            background: Color.create(bookManager.uiBg)
+            layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
+            // Top Search Controls (padded horizontally, full-bleed ListView below)
             Container {
                 horizontalAlignment: HorizontalAlignment.Fill
-                verticalAlignment: VerticalAlignment.Fill
-                topPadding: 12
-                bottomPadding: 12
-                leftPadding: 12
-                rightPadding: 12
+                topPadding: bookManager.dp(12)
+                bottomPadding: bookManager.dp(10)
+                leftPadding: bookManager.dp(16)
+                rightPadding: bookManager.dp(16)
 
-                // Search Input Box
+                // Search Input Row
                 Container {
                     horizontalAlignment: HorizontalAlignment.Fill
-                    background: bookManager.appTheme === "dark" ? Color.create("#111111") : Color.create("#FFFFFF")
-                    topPadding: 6
-                    bottomPadding: 6
-                    leftPadding: 10
-                    rightPadding: 10
-                    bottomMargin: 8
-
-                    layout: StackLayout {
-                        orientation: LayoutOrientation.LeftToRight
-                    }
+                    background: Color.create(bookManager.uiCard)
+                    topPadding: bookManager.dp(8)
+                    bottomPadding: bookManager.dp(8)
+                    leftPadding: bookManager.dp(12)
+                    rightPadding: bookManager.dp(12)
+                    bottomMargin: bookManager.dp(10)
+                    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
                     ImageView {
-                        preferredWidth: 32
-                        preferredHeight: 32
+                        preferredWidth: bookManager.dp(24)
+                        preferredHeight: bookManager.dp(24)
+                        rightMargin: bookManager.dp(8)
                         verticalAlignment: VerticalAlignment.Center
-                        imageSource: "asset:///icons/ic_search.png"
+                        scalingMethod: ScalingMethod.AspectFit
+                        imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_search.png" : "asset:///icons/ic_search_dark.png"
                     }
 
                     TextField {
                         id: searchInputField
                         verticalAlignment: VerticalAlignment.Center
-                        layoutProperties: StackLayoutProperties {
-                            spaceQuota: 1.0
-                        }
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
                         hintText: qsTr("Nhập từ khóa tìm kiếm...") + Retranslate.onLanguageChanged
+                        clearButtonVisible: true
                         input.submitKey: SubmitKey.Search
                         input.onSubmitted: {
                             executeSearch();
@@ -81,8 +82,9 @@ Sheet {
                     }
 
                     Button {
+                        leftMargin: bookManager.dp(8)
                         text: qsTr("Tìm") + Retranslate.onLanguageChanged
-                        preferredWidth: 105
+                        appearance: ControlAppearance.Primary
                         verticalAlignment: VerticalAlignment.Center
                         onClicked: {
                             executeSearch();
@@ -94,7 +96,6 @@ Sheet {
                 SegmentedControl {
                     id: scopeControl
                     horizontalAlignment: HorizontalAlignment.Fill
-                    bottomMargin: 10
 
                     Option {
                         id: optFullBook
@@ -119,34 +120,30 @@ Sheet {
                 // In-Chapter Navigation Toolbar (Visible when in-chapter mode is selected)
                 Container {
                     visible: scopeControl.selectedValue === "chapter" && searchSheet.activeSearchTerm.length > 0 && !bookManager.isSearching
+                    topMargin: bookManager.dp(10)
                     horizontalAlignment: HorizontalAlignment.Fill
-                    background: bookManager.appTheme === "dark" ? Color.create("#111111") : Color.create("#FFFFFF")
-                    topPadding: 8
-                    bottomPadding: 8
-                    leftPadding: 12
-                    rightPadding: 12
-                    bottomMargin: 10
-
-                    layout: StackLayout {
-                        orientation: LayoutOrientation.LeftToRight
-                    }
+                    background: Color.create(bookManager.uiCard)
+                    topPadding: bookManager.dp(8)
+                    bottomPadding: bookManager.dp(8)
+                    leftPadding: bookManager.dp(12)
+                    rightPadding: bookManager.dp(12)
+                    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
                     Label {
                         verticalAlignment: VerticalAlignment.Center
-                        layoutProperties: StackLayoutProperties {
-                            spaceQuota: 1.0
-                        }
-                        text: (resultsDataModel && resultsDataModel.size() > 0) ? 
-                              (qsTr("Tìm thấy %1 kết quả trong chương").arg(resultsDataModel.size()) + Retranslate.onLanguageChanged) : 
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        multiline: true
+                        text: (resultsDataModel && resultsDataModel.size() > 0) ?
+                              (qsTr("Tìm thấy %1 kết quả trong chương").arg(resultsDataModel.size()) + Retranslate.onLanguageChanged) :
                               (qsTr("Không tìm thấy kết quả trong chương") + Retranslate.onLanguageChanged)
                         textStyle.base: SystemDefaults.TextStyles.SmallText
-                        textStyle.fontWeight: FontWeight.Bold
-                        textStyle.color: (resultsDataModel && resultsDataModel.size() > 0) ? (bookManager.appTheme === "dark" ? Color.White : Color.Black) : (bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#777777"))
+                        textStyle.fontWeight: FontWeight.W500
+                        textStyle.color: (resultsDataModel && resultsDataModel.size() > 0) ? Color.create(bookManager.uiInk) : Color.create(bookManager.uiMuted)
                     }
 
                     Button {
+                        leftMargin: bookManager.dp(8)
                         text: qsTr("Trước") + Retranslate.onLanguageChanged
-                        preferredWidth: 110
                         verticalAlignment: VerticalAlignment.Center
                         enabled: (resultsDataModel && resultsDataModel.size() > 0) || searchSheet.inPageTotal > 0
                         onClicked: {
@@ -155,9 +152,8 @@ Sheet {
                     }
 
                     Button {
-                        leftMargin: 6
+                        leftMargin: bookManager.dp(6)
                         text: qsTr("Tiếp") + Retranslate.onLanguageChanged
-                        preferredWidth: 110
                         verticalAlignment: VerticalAlignment.Center
                         enabled: (resultsDataModel && resultsDataModel.size() > 0) || searchSheet.inPageTotal > 0
                         onClicked: {
@@ -165,139 +161,154 @@ Sheet {
                         }
                     }
                 }
+            }
 
-                // Searching Indicator
-                Container {
+            Container {
+                horizontalAlignment: HorizontalAlignment.Fill
+                preferredHeight: 1
+                background: Color.create(bookManager.uiHairline)
+            }
+
+            // Searching Indicator
+            Container {
+                visible: bookManager.isSearching
+                horizontalAlignment: HorizontalAlignment.Center
+                topMargin: bookManager.dp(28)
+                bottomMargin: bookManager.dp(20)
+
+                ActivityIndicator {
                     visible: bookManager.isSearching
-                    horizontalAlignment: HorizontalAlignment.Center
-                    topMargin: 20
-                    bottomMargin: 20
-
-                    ActivityIndicator {
-                        visible: bookManager.isSearching
-                        running: bookManager.isSearching
-                        preferredWidth: 64
-                        preferredHeight: 64
-                        onVisibleChanged: { if (visible) start(); else stop(); }
-                    }
-
-                    Label {
-                        topMargin: 8
-                        text: qsTr("Đang tìm kiếm trong sách...") + Retranslate.onLanguageChanged
-                        textStyle.base: SystemDefaults.TextStyles.SmallText
-                        textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#777777")
-                    }
+                    running: bookManager.isSearching
+                    preferredWidth: bookManager.dp(56)
+                    preferredHeight: bookManager.dp(56)
+                    onVisibleChanged: { if (visible) start(); else stop(); }
                 }
 
-                // Search Results List (Visible for BOTH Full-Book and In-Chapter modes)
-                ListView {
-                    visible: !bookManager.isSearching && (typeof resultsDataModel !== "undefined" && resultsDataModel ? resultsDataModel.size() > 0 : false)
-                    id: searchResultsList
-                    horizontalAlignment: HorizontalAlignment.Fill
-                    verticalAlignment: VerticalAlignment.Fill
-                    layoutProperties: StackLayoutProperties {
-                        spaceQuota: 1.0
-                    }
+                Label {
+                    topMargin: bookManager.dp(10)
+                    text: qsTr("Đang tìm kiếm trong sách...") + Retranslate.onLanguageChanged
+                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                    textStyle.color: Color.create(bookManager.uiMuted)
+                }
+            }
 
-                    function itemType(data, indexPath) {
-                        return "item";
-                    }
+            // Search Results List (Full-bleed for BOTH Full-Book and In-Chapter modes)
+            ListView {
+                id: searchResultsList
+                scrollRole: ScrollRole.Main
+                visible: !bookManager.isSearching && (typeof resultsDataModel !== "undefined" && resultsDataModel ? resultsDataModel.size() > 0 : false)
+                horizontalAlignment: HorizontalAlignment.Fill
+                verticalAlignment: VerticalAlignment.Fill
+                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
 
-                    dataModel: ArrayDataModel {
-                        id: resultsDataModel
-                    }
+                function itemType(data, indexPath) {
+                    return "item";
+                }
 
-                    listItemComponents: [
-                        ListItemComponent {
-                            type: "item"
-                            CustomListItem {
-                                dividerVisible: false
-                                highlightAppearance: HighlightAppearance.Full
+                dataModel: ArrayDataModel {
+                    id: resultsDataModel
+                }
+
+                listItemComponents: [
+                    ListItemComponent {
+                        type: "item"
+                        CustomListItem {
+                            dividerVisible: false
+                            highlightAppearance: HighlightAppearance.Full
+
+                            Container {
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                background: Color.create(bookManager.uiBg)
+
                                 Container {
                                     horizontalAlignment: HorizontalAlignment.Fill
-                                    background: bookManager.appTheme === "dark" ? Color.create("#000000") : Color.create("#FFFFFF")
+                                    topPadding: bookManager.dp(12)
+                                    bottomPadding: bookManager.dp(12)
+                                    leftPadding: bookManager.dp(16)
+                                    rightPadding: bookManager.dp(16)
+                                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
-                                    Container {
-                                        horizontalAlignment: HorizontalAlignment.Fill
-                                        topPadding: 12
-                                        bottomPadding: 12
-                                        leftPadding: 14
-                                        rightPadding: 14
-
-                                        layout: StackLayout {
-                                            orientation: LayoutOrientation.TopToBottom
-                                        }
-
-                                        // Chapter / Result Title
-                                        Label {
-                                            text: ListItemData.chapterTitle ? ListItemData.chapterTitle : ""
-                                            textStyle.base: SystemDefaults.TextStyles.SmallText
-                                            textStyle.fontWeight: FontWeight.Bold
-                                            textStyle.color: bookManager.appTheme === "dark" ? Color.create("#10B981") : Color.create("#059669")
-                                            multiline: true
-                                            autoSize.maxLineCount: 2
-                                        }
-
-                                        // Snippet (Full paragraph / sentence excerpt with bold matching keyword)
-                                        Label {
-                                            topMargin: 4
-                                            text: ListItemData.snippet ? ListItemData.snippet : ""
-                                            textFormat: TextFormat.Html
-                                            textStyle.base: SystemDefaults.TextStyles.SmallText
-                                            textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#666666")
-                                            multiline: true
-                                            autoSize.maxLineCount: 5
-                                        }
+                                    // Chapter / Result Title
+                                    Label {
+                                        text: ListItemData.chapterTitle ? ListItemData.chapterTitle : ""
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.fontWeight: FontWeight.W500
+                                        textStyle.color: Color.create(bookManager.uiAccent)
+                                        multiline: true
+                                        autoSize.maxLineCount: 2
                                     }
 
-                                    Divider {
-                                        topMargin: 0
-                                        bottomMargin: 0
+                                    // Snippet
+                                    Label {
+                                        topMargin: bookManager.dp(4)
+                                        text: ListItemData.snippet ? ListItemData.snippet : ""
+                                        textFormat: TextFormat.Html
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.color: Color.create(bookManager.uiMuted)
+                                        multiline: true
+                                        autoSize.maxLineCount: 5
                                     }
+                                }
+
+                                Container {
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    leftMargin: bookManager.dp(16)
+                                    preferredHeight: 1
+                                    background: Color.create(bookManager.uiHairline)
                                 }
                             }
                         }
-                    ]
+                    }
+                ]
 
-                    onTriggered: {
-                        var item = dataModel.data(indexPath);
-                        if (item) {
-                            searchSheet.jumpedFromSearch = true;
-                            if (scopeControl.selectedValue === "full") {
-                                bookManager.goToChapter(item.chapterIndex);
-                            }
+                onTriggered: {
+                    var item = dataModel.data(indexPath);
+                    if (item) {
+                        searchSheet.jumpedFromSearch = true;
+                        var q = searchInputField.text.trim();
+                        var mIdx = (typeof item.matchIndex !== "undefined" && item.matchIndex !== null) ? item.matchIndex : -1;
+                        if (scopeControl.selectedValue === "full" && item.chapterIndex !== bookManager.currentChapterIndex) {
+                            searchSheet.navigateToSearchResult(item.chapterIndex, q, mIdx);
                             searchSheet.close();
-                            // Trigger in-page highlight for the query in the target chapter
-                            searchSheet.performInPageSearch(searchInputField.text.trim());
-                            if (typeof item.matchIndex !== "undefined" && item.matchIndex !== null) {
-                                searchSheet.jumpToMatch(item.matchIndex);
+                        } else {
+                            searchSheet.close();
+                            searchSheet.performInPageSearch(q);
+                            if (mIdx >= 0) {
+                                searchSheet.jumpToMatch(mIdx);
                             }
                         }
                     }
                 }
+            }
 
-                // Empty Results State
-                Container {
-                    visible: !bookManager.isSearching && (typeof resultsDataModel !== "undefined" && resultsDataModel ? resultsDataModel.size() === 0 : false) && searchSheet.activeSearchTerm.length > 0
+            // Empty Results State
+            Container {
+                visible: !bookManager.isSearching && (typeof resultsDataModel !== "undefined" && resultsDataModel ? resultsDataModel.size() === 0 : false) && searchSheet.activeSearchTerm.length > 0
+                horizontalAlignment: HorizontalAlignment.Fill
+                topMargin: bookManager.dp(40)
+                leftPadding: bookManager.dp(24)
+                rightPadding: bookManager.dp(24)
+
+                Label {
                     horizontalAlignment: HorizontalAlignment.Center
-                    topMargin: 30
+                    multiline: true
+                    textStyle.textAlign: TextAlign.Center
+                    text: (scopeControl.selectedValue === "chapter" ?
+                           (qsTr("Không tìm thấy kết quả nào trong chương.") + Retranslate.onLanguageChanged) :
+                           (qsTr("Không tìm thấy kết quả nào trong sách.") + Retranslate.onLanguageChanged))
+                    textStyle.base: SystemDefaults.TextStyles.SubtitleText
+                    textStyle.fontWeight: FontWeight.W500
+                    textStyle.color: Color.create(bookManager.uiInk)
+                }
 
-                    Label {
-                        horizontalAlignment: HorizontalAlignment.Center
-                        text: (scopeControl.selectedValue === "chapter" ? 
-                               (qsTr("Không tìm thấy kết quả nào trong chương.") + Retranslate.onLanguageChanged) : 
-                               (qsTr("Không tìm thấy kết quả nào trong sách.") + Retranslate.onLanguageChanged))
-                        textStyle.base: SystemDefaults.TextStyles.TitleText
-                        textStyle.color: bookManager.appTheme === "dark" ? Color.create("#888888") : Color.create("#777777")
-                    }
-
-                    Label {
-                        topMargin: 8
-                        horizontalAlignment: HorizontalAlignment.Center
-                        text: qsTr("Hãy thử tìm kiếm với từ khóa khác ngắn hơn.") + Retranslate.onLanguageChanged
-                        textStyle.base: SystemDefaults.TextStyles.SmallText
-                        textStyle.color: bookManager.appTheme === "dark" ? Color.create("#555555") : Color.create("#94A3B8")
-                    }
+                Label {
+                    topMargin: bookManager.dp(8)
+                    horizontalAlignment: HorizontalAlignment.Center
+                    multiline: true
+                    textStyle.textAlign: TextAlign.Center
+                    text: qsTr("Hãy thử tìm kiếm với từ khóa khác ngắn hơn.") + Retranslate.onLanguageChanged
+                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                    textStyle.color: Color.create(bookManager.uiMuted)
                 }
             }
         }

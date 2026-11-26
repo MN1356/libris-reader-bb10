@@ -1,14 +1,14 @@
-#ifndef __INSRTHUMBNAILER_H__
-#define __INSRTHUMBNAILER_H__
+#ifndef __IPDFTHUMBNAILER_H__
+#define __IPDFTHUMBNAILER_H__
 
 /**
- * @file insrthumbnailer.h
- * @author Alexander Saprykin
+ * @file ipdfthumbnailer.h
+ * @author Libris Team
  * @brief Interface for thumbnailer
  */
 
-#include "nsrreadercore_global.h"
-#include "nsrrenderedpage.h"
+#include "pdfcore_global.h"
+#include "pdfrenderedpage.h"
 
 #include <QString>
 
@@ -58,4 +58,4 @@ public:
 	virtual int getThumbnailWidth () const = 0;
 };
 
-#endif /* __INSRTHUMBNAILER_H__ */
+#endif /* __IPDFTHUMBNAILER_H__ */

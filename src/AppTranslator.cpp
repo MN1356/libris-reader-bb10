@@ -91,9 +91,9 @@ void AppTranslator::initTranslations()
     add("Thoát", "Exit", "Thoát");
     add("Thoát ứng dụng", "Exit application", "Thoát ứng dụng");
     add("Thoát Ứng Dụng", "Exit Application", "Thoát Ứng Dụng");
-    add("Thoát BerryLeaf", "Exit BerryLeaf", "Thoát BerryLeaf");
+    add("Thoát Libris", "Exit Libris", "Thoát Libris");
     add("Bạn có muốn lưu tiến độ đọc và thoát hoàn toàn ứng dụng không?", "Do you want to save reading progress and exit the application?", "Bạn có muốn lưu tiến độ đọc và thoát hoàn toàn ứng dụng không?");
-    add("Lưu tiến độ và đóng hoàn toàn BerryLeaf (tránh chạy nền)", "Save progress and completely close BerryLeaf (prevent background running)", "Lưu tiến độ và đóng hoàn toàn BerryLeaf (tránh chạy nền)");
+    add("Lưu tiến độ và đóng hoàn toàn Libris (tránh chạy nền)", "Save progress and completely close Libris (prevent background running)", "Lưu tiến độ và đóng hoàn toàn Libris (tránh chạy nền)");
     add("Lưu tiến độ và đóng hoàn toàn ứng dụng?", "Save progress and completely close application?", "Lưu tiến độ và đóng hoàn toàn ứng dụng?");
     add("Đóng", "Close", "Đóng");
     add("Quay lại", "Back", "Quay lại");
@@ -122,9 +122,9 @@ void AppTranslator::initTranslations()
     add("Hãy sao chép file sách vào thẻ nhớ microSD hoặc bộ nhớ trong, sau đó bấm 'Quét lại' hoặc chuyển sang tab 'Duyệt Thư Mục'.",
         "Copy e-books into microSD card or internal storage, then tap 'Rescan' or switch to 'File Browser'.",
         "Hãy sao chép file sách vào thẻ nhớ microSD hoặc bộ nhớ trong, sau đó bấm 'Quét lại' hoặc chuyển sang tab 'Duyệt Thư Mục'.");
-    add("Hãy sao chép file sách (.epub, .txt, .fb2, .pdf, .djvu) vào thẻ nhớ microSD (thư mục Book, books...) hoặc thư mục documents, sau đó bấm 'Quét lại' hoặc 'Mở file...'.",
-        "Copy e-books (.epub, .txt, .fb2, .pdf, .djvu) to microSD card or documents folder, then tap 'Rescan' or 'Open file...'.",
-        "Hãy sao chép file sách (.epub, .txt, .fb2, .pdf, .djvu) vào thẻ nhớ microSD (thư mục Book, books...) hoặc thư mục documents, sau đó bấm 'Quét lại' hoặc 'Mở file...'.");
+    add("Hãy sao chép file sách (.epub, .txt, .fb2, .pdf, .djvu, .cbz, .mobi) vào thẻ nhớ microSD (thư mục Book, books...) hoặc thư mục documents, sau đó bấm 'Quét lại' hoặc 'Mở file...'.",
+        "Copy e-books (.epub, .txt, .fb2, .pdf, .djvu, .cbz, .mobi) to microSD card or documents folder, then tap 'Rescan' or 'Open file...'.",
+        "Hãy sao chép file sách (.epub, .txt, .fb2, .pdf, .djvu, .cbz, .mobi) vào thẻ nhớ microSD (thư mục Book, books...) hoặc thư mục documents, sau đó bấm 'Quét lại' hoặc 'Mở file...'.");
     add("Không tìm thấy sách phù hợp", "No matching books", "Không tìm thấy sách phù hợp");
     add("Không có cuốn sách nào khớp với từ khóa tìm kiếm hoặc bộ lọc định dạng hiện tại.",
         "No books match the current search keyword or format filter.",
@@ -135,11 +135,13 @@ void AppTranslator::initTranslations()
     add("Văn bản TXT", "TXT Document", "Văn bản TXT");
     add("Tài liệu PDF", "PDF Document", "Tài liệu PDF");
     add("Tài liệu DjVu", "DjVu Document", "Tài liệu DjVu");
+    add("Truyện tranh CBZ", "CBZ Comic Book", "Truyện tranh CBZ");
+    add("Sách điện tử MOBI", "MOBI eBook", "Sách điện tử MOBI");
     add("EPUB eBook", "EPUB eBook", "EPUB eBook");
     add("FB2 FictionBook", "FB2 FictionBook", "FB2 FictionBook");
 
     // Filter & Sort
-    add("Filter & Sort", "Filter & Sort", "Filter & Sort");
+    add("Filter & Sort", "Filter & Sort", "Lọc & Sắp xếp");
     add("Lọc & Sắp Xếp Tủ Sách", "Filter & Sort Books", "Lọc & Sắp Xếp Tủ Sách");
     add("Tủ sách (Đang đọc & Hoàn thành)", "Bookshelf (Reading & Finished)", "Tủ sách (Đang đọc & Hoàn thành)");
     add("Chỉ sách đang đọc", "Currently Reading only", "Chỉ sách đang đọc");
@@ -205,6 +207,8 @@ void AppTranslator::initTranslations()
     add("Thông tin chi tiết", "Details", "Thông tin chi tiết");
     add("Thể loại", "Genre", "Thể loại");
     add("Mô tả sách", "Description", "Mô tả sách");
+    add("Xem thêm", "Show more", "Xem thêm");
+    add("Thu gọn", "Show less", "Thu gọn");
     add("Chưa xác định", "Not specified", "Chưa xác định");
     add("Chưa có mô tả cho cuốn sách này.", "No description available for this book.", "Chưa có mô tả cho cuốn sách này.");
     add("Đường dẫn file", "File Path", "Đường dẫn file");
@@ -354,9 +358,9 @@ void AppTranslator::initTranslations()
     add("Tự động tìm kiếm sách trên thẻ nhớ và bộ nhớ trong.",
         "Automatically scans for books on SD card and storage.",
         "Tự động tìm kiếm sách trên thẻ nhớ và bộ nhớ trong.");
-    add("Ứng dụng đọc sách Native dành cho BlackBerry 10.\n• Hỗ trợ định dạng: EPUB, TXT, FB2, PDF, DJVU\n• Engine PDF và DJVU: Poppler và NSRReaderCore C++\n• Tối ưu cho màn hình cảm ứng và bàn phím cứng Q10, Classic, Passport.",
-        "Native E-Book Reader for BlackBerry 10.\n• Supported formats: EPUB, TXT, FB2, PDF, DJVU\n• PDF & DJVU engine: Poppler & NSRReaderCore C++\n• Optimized for touchscreens and keyboards (Q10, Classic, Passport).",
-        "Ứng dụng đọc sách Native dành cho BlackBerry 10.\n• Hỗ trợ định dạng: EPUB, TXT, FB2, PDF, DJVU\n• Engine PDF và DJVU: Poppler và NSRReaderCore C++\n• Tối ưu cho màn hình cảm ứng và bàn phím cứng Q10, Classic, Passport.");
+    add("Ứng dụng đọc sách Native dành cho BlackBerry 10.\n• Hỗ trợ định dạng: EPUB, TXT, FB2, PDF, DJVU, CBZ, MOBI\n• Engine PDF và DJVU: Poppler và Libris Vector Engine C++\n• Tối ưu cho màn hình cảm ứng và bàn phím cứng Q10, Classic, Passport.",
+        "Native E-Book Reader for BlackBerry 10.\n• Supported formats: EPUB, TXT, FB2, PDF, DJVU, CBZ, MOBI\n• PDF & DJVU engine: Poppler & Libris Vector Engine C++\n• Optimized for touchscreens and keyboards (Q10, Classic, Passport).",
+        "Ứng dụng đọc sách Native dành cho BlackBerry 10.\n• Hỗ trợ định dạng: EPUB, TXT, FB2, PDF, DJVU, CBZ, MOBI\n• Engine PDF và DJVU: Poppler và Libris Vector Engine C++\n• Tối ưu cho màn hình cảm ứng và bàn phím cứng Q10, Classic, Passport.");
 
     // Hero Card & Detailed View Progress
     add("Đang đọc", "Reading", "Đang đọc");
@@ -400,10 +404,10 @@ void AppTranslator::initTranslations()
         "Deep scans all folders on microSD (Book, Books, Download, Documents, etc.) and internal storage.",
         "Tự động quét sâu toàn bộ thư mục trên thẻ nhớ microSD (Book, Books, Download, Documents, v.v.) và bộ nhớ trong.");
     add("THÔNG TIN ỨNG DỤNG", "ABOUT APPLICATION", "THÔNG TIN ỨNG DỤNG");
-    add("Ứng dụng đọc sách Native dành cho BlackBerry 10.\n• Hỗ trợ định dạng: EPUB, TXT, FB2, PDF, DJVU\n• Engine PDF & DJVU: Poppler & NSRReaderCore C++\n• Tối ưu cho màn hình cảm ứng & bàn phím cứng Q10/Classic/Passport.",
-        "Native E-Book Reader for BlackBerry 10.\n• Supported formats: EPUB, TXT, FB2, PDF, DJVU\n• PDF & DJVU Engine: Poppler & NSRReaderCore C++\n• Optimized for touchscreens & hardware keyboards (Q10/Classic/Passport).",
-        "Ứng dụng đọc sách Native dành cho BlackBerry 10.\n• Hỗ trợ định dạng: EPUB, TXT, FB2, PDF, DJVU\n• Engine PDF & DJVU: Poppler & NSRReaderCore C++\n• Tối ưu cho màn hình cảm ứng & bàn phím cứng Q10/Classic/Passport.");
-    add("Chọn sách (EPUB, TXT, FB2, PDF, DJVU)", "Select Book (EPUB, TXT, FB2, PDF, DJVU)", "Chọn sách (EPUB, TXT, FB2, PDF, DJVU)");
+    add("Ứng dụng đọc sách Native dành cho BlackBerry 10.\n• Hỗ trợ định dạng: EPUB, TXT, FB2, PDF, DJVU, CBZ, MOBI\n• Engine PDF & DJVU: Poppler & Libris Vector Engine C++\n• Tối ưu cho màn hình cảm ứng & bàn phím cứng Q10/Classic/Passport.",
+        "Native E-Book Reader for BlackBerry 10.\n• Supported formats: EPUB, TXT, FB2, PDF, DJVU, CBZ, MOBI\n• PDF & DJVU Engine: Poppler & Libris Vector Engine C++\n• Optimized for touchscreens & hardware keyboards (Q10/Classic/Passport).",
+        "Ứng dụng đọc sách Native dành cho BlackBerry 10.\n• Hỗ trợ định dạng: EPUB, TXT, FB2, PDF, DJVU, CBZ, MOBI\n• Engine PDF & DJVU: Poppler & Libris Vector Engine C++\n• Tối ưu cho màn hình cảm ứng & bàn phím cứng Q10/Classic/Passport.");
+    add("Chọn sách (EPUB, TXT, FB2, PDF, DJVU, CBZ, MOBI)", "Select Book (EPUB, TXT, FB2, PDF, DJVU, CBZ, MOBI)", "Chọn sách (EPUB, TXT, FB2, PDF, DJVU, CBZ, MOBI)");
 
     // TOC, Search, Reflow, Dictionary, Translate
     add("Mục lục", "Table of Contents", "Mục lục");
@@ -501,9 +505,9 @@ void AppTranslator::initTranslations()
     add("Tiếp tục đọc", "Continue Reading", "Tiếp tục đọc");
     add("Tiếp tục đọc ›", "Continue Reading ›", "Tiếp tục đọc ›");
     add("Đã đọc %1%", "Read %1%", "Đã đọc %1%");
-    add("Ứng dụng đọc sách Native dành cho BlackBerry 10.\n• Phiên bản: 2.0.0\n• Hỗ trợ: EPUB, TXT, FB2, PDF, DJVU\n• Phát triển với BlackBerry Cascades Qt C++.",
-        "Native e-Book reader for BlackBerry 10.\n• Version: 2.0.0\n• Formats: EPUB, TXT, FB2, PDF, DJVU\n• Built with BlackBerry Cascades Qt C++.",
-        "Ứng dụng đọc sách Native dành cho BlackBerry 10.\n• Phiên bản: 2.0.0\n• Hỗ trợ: EPUB, TXT, FB2, PDF, DJVU\n• Phát triển với BlackBerry Cascades Qt C++.");
+    add("Ứng dụng đọc sách Native dành cho BlackBerry 10.\n• Phiên bản: 2.0.0\n• Hỗ trợ: EPUB, TXT, FB2, PDF, DJVU, CBZ, MOBI\n• Phát triển với BlackBerry Cascades Qt C++.",
+        "Native e-Book reader for BlackBerry 10.\n• Version: 2.0.0\n• Formats: EPUB, TXT, FB2, PDF, DJVU, CBZ, MOBI\n• Built with BlackBerry Cascades Qt C++.",
+        "Ứng dụng đọc sách Native dành cho BlackBerry 10.\n• Phiên bản: 2.0.0\n• Hỗ trợ: EPUB, TXT, FB2, PDF, DJVU, CBZ, MOBI\n• Phát triển với BlackBerry Cascades Qt C++.");
 
     // =========================================================================
     // UNIFIED FULL TRANSLATIONS (All Screens, Settings, Actions, Dashboards)
@@ -571,7 +575,7 @@ void AppTranslator::initTranslations()
     add("Tủ sách & Quản lý dữ liệu", "Bookshelf & Management", "Tủ sách & Quản lý");
     add("Chế độ xem Lưới/Danh sách, gom nhóm, quét thư mục sách", "Mosaic/List view, grouping, book folder scanning", "Chế độ xem Lưới/Danh sách, gom nhóm, quét thư mục sách");
     add("Thông tin ứng dụng", "About Application", "Thông tin ứng dụng");
-    add("Phiên bản BerryReader v2.0, công nghệ và hỗ trợ thiết bị", "BerryReader v2.0, technology and device support", "Phiên bản BerryReader v2.0, công nghệ và hỗ trợ thiết bị");
+    add("Phiên bản Libris v2.0, công nghệ và hỗ trợ thiết bị", "Libris v2.0, technology and device support", "Phiên bản Libris v2.0, công nghệ và hỗ trợ thiết bị");
 
     // --- DisplaySettingsPage ---
     add("GIAO DIỆN CHỦ ĐỀ", "THEME & APPEARANCE", "GIAO DIỆN CHỦ ĐỀ");
@@ -687,27 +691,27 @@ void AppTranslator::initTranslations()
     add("TỔNG QUAN",
         "OVERVIEW",
         "TỔNG QUAN");
-    add("BerryLeaf mang lại trải nghiệm đọc sách nguyên bản, mượt mà và tối ưu nhất trên BlackBerry 10. Tích hợp thanh bên vuốt trái (Navigation Drawer), hỗ trợ đa dạng định dạng tệp sách, tra từ điển ngoại tuyến tức thì và đọc sách bằng giọng nói (TTS).",
-        "BerryLeaf delivers a native, fluid, and optimized e-reading experience for BlackBerry 10. Features a slide-out Navigation Drawer, comprehensive e-book format support, instant offline dictionary definitions, and Text-To-Speech (TTS) voice reading.",
-        "BerryLeaf mang lại trải nghiệm đọc sách nguyên bản, mượt mà và tối ưu nhất trên BlackBerry 10. Tích hợp thanh bên vuốt trái (Navigation Drawer), hỗ trợ đa dạng định dạng tệp sách, tra từ điển ngoại tuyến tức thì và đọc sách bằng giọng nói (TTS).");
+    add("Libris mang lại trải nghiệm đọc sách nguyên bản, mượt mà và tối ưu nhất trên BlackBerry 10. Tích hợp thanh bên vuốt trái (Navigation Drawer), hỗ trợ đa dạng định dạng tệp sách, tra từ điển ngoại tuyến tức thì và đọc sách bằng giọng nói (TTS).",
+        "Libris delivers a native, fluid, and optimized e-reading experience for BlackBerry 10. Features a slide-out Navigation Drawer, comprehensive e-book format support, instant offline dictionary definitions, and Text-To-Speech (TTS) voice reading.",
+        "Libris mang lại trải nghiệm đọc sách nguyên bản, mượt mà và tối ưu nhất trên BlackBerry 10. Tích hợp thanh bên vuốt trái (Navigation Drawer), hỗ trợ đa dạng định dạng tệp sách, tra từ điển ngoại tuyến tức thì và đọc sách bằng giọng nói (TTS).");
     add("CÔNG NGHỆ & BỘ XỬ LÝ LÕI",
         "CORE ENGINES & TECHNOLOGY",
         "CÔNG NGHỆ & BỘ XỬ LÝ LÕI");
-    add("• Lõi PDF & DJVU: Thư viện nsrreadercore kết hợp Poppler C++ và DjVuLibre kết xuất trang nhanh, sắc nét.\n• Lõi EPUB & FB2: Bộ giải mã pugixml DOM C++ siêu nhẹ và thư viện nén miniz tốc độ cao.\n• Bảng mã Tiếng Việt: Tự động nhận diện bảng mã (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) cho tệp TXT.\n• Đọc Giọng Nói (TTS): Tích hợp trực tiếp hệ thống giọng đọc BlackBerry Multimedia Services.\n• Từ Điển Ngoại Tuyến: Cơ sở dữ liệu SQLite tích hợp trong máy, tra từ tức thì không cần mạng.",
-        "• PDF & DJVU Engine: nsrreadercore library combining Poppler C++ and DjVuLibre for crisp, fast rendering.\n• EPUB & FB2 Parser: Lightweight pugixml DOM parser C++ and high-speed miniz decompression.\n• Vietnamese Charsets: Automatic encoding detection (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) for TXT files.\n• Voice Engine (TTS): Native integration with BlackBerry Multimedia Services speech synthesis.\n• Offline Dictionary: Embedded SQLite database for instant word definition lookups without internet.",
-        "• Lõi PDF & DJVU: Thư viện nsrreadercore kết hợp Poppler C++ và DjVuLibre kết xuất trang nhanh, sắc nét.\n• Lõi EPUB & FB2: Bộ giải mã pugixml DOM C++ siêu nhẹ và thư viện nén miniz tốc độ cao.\n• Bảng mã Tiếng Việt: Tự động nhận diện bảng mã (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) cho tệp TXT.\n• Đọc Giọng Nói (TTS): Tích hợp trực tiếp hệ thống giọng đọc BlackBerry Multimedia Services.\n• Từ Điển Ngoại Tuyến: Cơ sở dữ liệu SQLite tích hợp trong máy, tra từ tức thì không cần mạng.");
+    add("• Lõi PDF & DJVU: Động cơ Libris Vector Engine kết hợp Poppler C++ và DjVuLibre kết xuất trang nhanh, sắc nét.\n• Lõi EPUB & FB2: Bộ giải mã pugixml DOM C++ siêu nhẹ và thư viện nén miniz tốc độ cao.\n• Bảng mã Tiếng Việt: Tự động nhận diện bảng mã (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) cho tệp TXT.\n• Đọc Giọng Nói (TTS): Tích hợp trực tiếp hệ thống giọng đọc BlackBerry Multimedia Services.\n• Từ Điển Ngoại Tuyến: Cơ sở dữ liệu SQLite tích hợp trong máy, tra từ tức thì không cần mạng.",
+        "• PDF & DJVU Engine: Libris Vector Engine combining Poppler C++ and DjVuLibre for crisp, fast rendering.\n• EPUB & FB2 Parser: Lightweight pugixml DOM parser C++ and high-speed miniz decompression.\n• Vietnamese Charsets: Automatic encoding detection (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) for TXT files.\n• Voice Engine (TTS): Native integration with BlackBerry Multimedia Services speech synthesis.\n• Offline Dictionary: Embedded SQLite database for instant word definition lookups without internet.",
+        "• Lõi PDF & DJVU: Động cơ Libris Vector Engine kết hợp Poppler C++ và DjVuLibre kết xuất trang nhanh, sắc nét.\n• Lõi EPUB & FB2: Bộ giải mã pugixml DOM C++ siêu nhẹ và thư viện nén miniz tốc độ cao.\n• Bảng mã Tiếng Việt: Tự động nhận diện bảng mã (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) cho tệp TXT.\n• Đọc Giọng Nói (TTS): Tích hợp trực tiếp hệ thống giọng đọc BlackBerry Multimedia Services.\n• Từ Điển Ngoại Tuyến: Cơ sở dữ liệu SQLite tích hợp trong máy, tra từ tức thì không cần mạng.");
     add("ĐỊNH DẠNG TÀI LIỆU HỖ TRỢ",
         "SUPPORTED DOCUMENT FORMATS",
         "ĐỊNH DẠNG TÀI LIỆU HỖ TRỢ");
-    add("• EPUB (.epub): Chuẩn EPUB 2.0 & 3.0 với phông chữ nhúng, hình ảnh và mục lục NCX.\n• PDF (.pdf): Chế độ đồ họa nguyên bản và cuộn văn bản Reflow OCR.\n• DJVU (.djvu, .djv): Tài liệu scan nén chất lượng cao.\n• FB2 (.fb2): Định dạng FictionBook kèm chú thích chân trang.\n• TXT (.txt): Văn bản thuần tự động phát hiện mã hóa tiếng Việt.",
-        "• EPUB (.epub): EPUB 2.0 & 3.0 standards with embedded fonts, images, and NCX TOC.\n• PDF (.pdf): Native vector graphic rendering and Text Reflow OCR mode.\n• DJVU (.djvu, .djv): High-compression scanned books and documents.\n• FB2 (.fb2): FictionBook format with full footnote annotations.\n• TXT (.txt): Plain text with automatic Vietnamese charset decoding.",
-        "• EPUB (.epub): Chuẩn EPUB 2.0 & EPUB 3.0 với phông chữ nhúng, hình ảnh và mục lục NCX.\n• PDF (.pdf): Chế độ đồ họa nguyên bản và cuộn văn bản Reflow OCR.\n• DJVU (.djvu, .djv): Tài liệu scan nén chất lượng cao.\n• FB2 (.fb2): Định dạng FictionBook kèm chú thích chân trang.\n• TXT (.txt): Văn bản thuần tự động phát hiện mã hóa tiếng Việt.");
+    add("• EPUB (.epub): Chuẩn EPUB 2.0 & 3.0 với phông chữ nhúng, hình ảnh và mục lục NCX.\n• MOBI (.mobi, .prc): Sách điện tử Mobipocket / Kindle với mục lục và ảnh nhúng.\n• CBZ (.cbz): Truyện tranh nén với lật trang mượt mà và trích xuất ComicInfo.\n• PDF (.pdf): Chế độ đồ họa nguyên bản và cuộn văn bản Reflow OCR.\n• DJVU (.djvu, .djv): Tài liệu scan nén chất lượng cao.\n• FB2 (.fb2): Định dạng FictionBook kèm chú thích chân trang.\n• TXT (.txt): Văn bản thuần tự động phát hiện mã hóa tiếng Việt.",
+        "• EPUB (.epub): EPUB 2.0 & 3.0 standards with embedded fonts, images, and NCX TOC.\n• MOBI (.mobi, .prc): Mobipocket / Kindle eBook format with embedded images & TOC.\n• CBZ (.cbz): Comic book archive with smooth page flipping and ComicInfo parsing.\n• PDF (.pdf): Native vector graphic rendering and Text Reflow OCR mode.\n• DJVU (.djvu, .djv): High-compression scanned books and documents.\n• FB2 (.fb2): FictionBook format with full footnote annotations.\n• TXT (.txt): Plain text with automatic Vietnamese charset decoding.",
+        "• EPUB (.epub): Chuẩn EPUB 2.0 & EPUB 3.0 với phông chữ nhúng, hình ảnh và mục lục NCX.\n• MOBI (.mobi, .prc): Sách điện tử Mobipocket / Kindle với mục lục và ảnh nhúng.\n• CBZ (.cbz): Truyện tranh nén với lật trang mượt mà và trích xuất ComicInfo.\n• PDF (.pdf): Chế độ đồ họa nguyên bản và cuộn văn bản Reflow OCR.\n• DJVU (.djvu, .djv): Tài liệu scan nén chất lượng cao.\n• FB2 (.fb2): Định dạng FictionBook kèm chú thích chân trang.\n• TXT (.txt): Văn bản thuần tự động phát hiện mã hóa tiếng Việt.");
     add("BẢN QUYỀN & GIẤY PHÉP",
         "COPYRIGHT & LICENSE",
         "BẢN QUYỀN & GIẤY PHÉP");
-    add("• Tác giả: NhatLee (BerryLife Developer Team)\n• Động cơ nsrreadercore: © Alexander Saprykin (NSR Reader)\n• Giấy phép: Phần mềm nguồn mở theo giấy phép GNU General Public License v2 (GPLv2)\n• Môi trường: BlackBerry 10 Native SDK 10.3.1, QNX Momentics IDE.",
-        "• Author: NhatLee (BerryLife Developer Team)\n• nsrreadercore Engine: © Alexander Saprykin (NSR Reader)\n• License: Open-source software under GNU General Public License v2 (GPLv2)\n• Environment: BlackBerry 10 Native SDK 10.3.1, QNX Momentics IDE.",
-        "• Tác giả: NhatLee (BerryLife Developer Team)\n• Động cơ nsrreadercore: © Alexander Saprykin (NSR Reader)\n• Giấy phép: Phần mềm nguồn mở theo giấy phép GNU General Public License v2 (GPLv2)\n• Môi trường: BlackBerry 10 Native SDK 10.3.1, QNX Momentics IDE.");
+    add("• Tác giả: NhatLee (Libris Developer Team)\n• Bộ dựng Vector PDF & DjVu: Libris Engine\n• Giấy phép: Phần mềm nguồn mở theo giấy phép GNU General Public License v2 (GPLv2)\n• Môi trường: BlackBerry 10 Native SDK 10.3.1, QNX Momentics IDE.",
+        "• Author: NhatLee (Libris Developer Team)\n• PDF & DjVu Vector Engine: Libris Engine\n• License: Open-source software under GNU General Public License v2 (GPLv2)\n• Environment: BlackBerry 10 Native SDK 10.3.1, QNX Momentics IDE.",
+        "• Tác giả: NhatLee (Libris Developer Team)\n• Bộ dựng Vector PDF & DjVu: Libris Engine\n• Giấy phép: Phần mềm nguồn mở theo giấy phép GNU General Public License v2 (GPLv2)\n• Môi trường: BlackBerry 10 Native SDK 10.3.1, QNX Momentics IDE.");
     add("CỬ CHỈ ĐIỀU HƯỚNG NATIVE (BB10 GESTURES)",
         "NATIVE BB10 GESTURES",
         "CỬ CHỈ ĐIỀU HƯỚNG NATIVE (BB10 GESTURES)");
@@ -729,9 +733,9 @@ void AppTranslator::initTranslations()
     add("NHẬT KÝ THAY ĐỔI THEO BẢN BUILD",
         "CHANGELOG BY BUILD",
         "NHẬT KÝ THAY ĐỔI THEO BẢN BUILD");
-    add("• Bản dựng Build 65 - 66 (Mới nhất):\n  - Icon Thư Viện Đơn Sắc: Chuyển icon Thư viện sang màu đen trắng (monochrome) đồng bộ với toàn bộ thanh Tab và Action Bar chuẩn BlackBerry 10.\n  - Đồng Bộ Ngôn Ngữ Toàn Diện: Chuẩn hóa 100% tiếng Việt & tiếng Anh cho Giới Thiệu (About), Hướng Dẫn (Help), Cài Đặt (Settings) và các menu.\n  - Khối Đang Đọc Tinh Gọn: Loại bỏ viền xanh và icon thừa, mang lại diện mạo hiện đại, sạch sẽ cho thẻ sách đang đọc.\n  - Đọc Giọng Nói (TTS) Hoàn Thiện: Tối ưu đọc TTS trên trang sách, hỗ trợ tạm dừng bằng phím Space và tự động cuộn trang theo giọng đọc.\n  - Tối Ưu Hóa Giao Diện: Rút gọn mô tả các mục menu và cài đặt, giúp thao tác nhanh trên màn hình nhỏ.\n\n• Bản dựng Build 50 - 64:\n  - Bảo Toàn Dữ Liệu Sau Cài Lại: Tự động lưu và khôi phục lịch sử đọc, tiến độ và ghi chú vào bộ nhớ ngoài (/accounts/1000/shared/documents/BerryReader).\n  - Từ Điển Ngoại Tuyến (Offline Dictionary): Tra cứu từ điển SQLite tức thì khi bôi đen từ trong sách mà không cần kết nối mạng.\n  - Bảng Thống Kê Đọc Sách (Reading Stats): Theo dõi thời gian đọc, tốc độ đọc và tiến độ hoàn thành sách chi tiết.\n  - Bộ Phím Tắt Toàn Diện: Tối ưu hóa tối đa cho bàn phím vật lý BlackBerry Passport, Classic Q20 và Q10.\n\n• Bản dựng Build 30 - 49 (Phiên bản 2.0.0):\n  - Navigation Drawer 5 Tab Native: Giao diện chuẩn NSR Reader với 5 tab trượt trái: Đang đọc, Gần đây, Mục lục, Tủ sách, Duyệt tệp.\n  - Nâng Cấp Lõi nsrreadercore: Tối ưu hiệu năng kết xuất PDF và DJVU, hỗ trợ bộ nhớ đệm trang thông minh.\n  - Tự Động Nhận Diện Bảng Mã Tiếng Việt: Đọc mượt mà mọi tệp TXT (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) không lỗi phông.\n  - Trang Thông Tin Toàn Diện: Màn hình thông tin chuẩn BB10 với 3 tab: Giới thiệu, Hướng dẫn phím tắt và Nhật ký phiên bản.\n\n• Phiên bản 1.0.0 (Bản dựng ban đầu):\n  - Phát hành nền tảng đọc sách Cascades thuần C++ / Qt 4.8.\n  - Hỗ trợ định dạng EPUB 2/3 với trích xuất ảnh bìa và mục lục.\n  - Hỗ trợ Active Frame hiển thị tiến độ đọc ngoài màn hình chủ.",
-        "• Build 65 - 66 (Latest):\n  - Monochrome Library Icon: Converted Library tab icon to clean black-and-white, matching the native BlackBerry 10 design.\n  - Complete Bilingual Sync: 100% unified English and Vietnamese for About, Help, Settings, and Action menus.\n  - Minimalist Reading Card: Removed distracting borders and redundant badges for a clean reading card.\n  - Polished Voice Reading (TTS): Refined text-to-speech reading on book pages, with Spacebar pause/play and auto-page turning.\n  - Streamlined UI Descriptions: Condensed menu labels and settings descriptions for quick glancing on compact BB10 screens.\n\n• Build 50 - 64:\n  - Persistent Data Storage: Automatically saves and restores reading history and progress in shared documents across reinstalls.\n  - Offline SQLite Dictionary: Instant word definition and translation popup when selecting text, no internet required.\n  - Reading Statistics Sheet: Detailed tracking of reading sessions, reading speed, and completion estimates.\n  - Comprehensive Keyboard Shortcuts: Full physical keyboard navigation for BlackBerry Passport, Classic Q20, and Q10.\n\n• Build 30 - 49 (Version 2.0.0):\n  - 5-Tab Navigation Drawer: NSR Reader-style native slide-out menu with Reading, Recent, Contents, Bookshelf, and File Browser.\n  - Optimized nsrreadercore Engine: High-performance rendering for PDF and DJVU with intelligent memory page caching.\n  - Automatic Vietnamese Charset Detection: Seamlessly reads TXT files in UTF-8, UTF-16, TCVN3, Windows-1258, and VNI.\n  - Full Info Screen: Standard BB10 page layout featuring About, Keyboard Guides, and Version Changelog.\n\n• Version 1.0.0 (Initial Release):\n  - Native BlackBerry Cascades C++ / Qt 4.8 e-book reader launch.\n  - EPUB 2/3 parser with cover image extraction and NCX TOC navigation.\n  - Active Frame cover displaying reading progress on the homescreen.",
-        "• Bản dựng Build 65 - 66 (Mới nhất):\n  - Icon Thư Viện Đơn Sắc: Chuyển icon Thư viện sang màu đen trắng (monochrome) đồng bộ với toàn bộ thanh Tab và Action Bar chuẩn BlackBerry 10.\n  - Đồng Bộ Ngôn Ngữ Toàn Diện: Chuẩn hóa 100% tiếng Việt & tiếng Anh cho Giới Thiệu (About), Hướng Dẫn (Help), Cài Đặt (Settings) và các menu.\n  - Khối Đang Đọc Tinh Gọn: Loại bỏ viền xanh và icon thừa, mang lại diện mạo hiện đại, sạch sẽ cho thẻ sách đang đọc.\n  - Đọc Giọng Nói (TTS) Hoàn Thiện: Tối ưu đọc TTS trên trang sách, hỗ trợ tạm dừng bằng phím Space và tự động cuộn trang theo giọng đọc.\n  - Tối Ưu Hóa Giao Diện: Rút gọn mô tả các mục menu và cài đặt, giúp thao tác nhanh trên màn hình nhỏ.\n\n• Bản dựng Build 50 - 64:\n  - Bảo Toàn Dữ Liệu Sau Cài Lại: Tự động lưu và khôi phục lịch sử đọc, tiến độ và ghi chú vào bộ nhớ ngoài (/accounts/1000/shared/documents/BerryReader).\n  - Từ Điển Ngoại Tuyến (Offline Dictionary): Tra cứu từ điển SQLite tức thì khi bôi đen từ trong sách mà không cần kết nối mạng.\n  - Bảng Thống Kê Đọc Sách (Reading Stats): Theo dõi thời gian đọc, tốc độ đọc và tiến độ hoàn thành sách chi tiết.\n  - Bộ Phím Tắt Toàn Diện: Tối ưu hóa tối đa cho bàn phím vật lý BlackBerry Passport, Classic Q20 và Q10.\n\n• Bản dựng Build 30 - 49 (Phiên bản 2.0.0):\n  - Navigation Drawer 5 Tab Native: Giao diện chuẩn NSR Reader với 5 tab trượt trái: Đang đọc, Gần đây, Mục lục, Tủ sách, Duyệt tệp.\n  - Nâng Cấp Lõi nsrreadercore: Tối ưu hiệu năng kết xuất PDF và DJVU, hỗ trợ bộ nhớ đệm trang thông minh.\n  - Tự Động Nhận Diện Bảng Mã Tiếng Việt: Đọc mượt mà mọi tệp TXT (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) không lỗi phông.\n  - Trang Thông Tin Toàn Diện: Màn hình thông tin chuẩn BB10 với 3 tab: Giới thiệu, Hướng dẫn phím tắt và Nhật ký phiên bản.\n\n• Phiên bản 1.0.0 (Bản dựng ban đầu):\n  - Phát hành nền tảng đọc sách Cascades thuần C++ / Qt 4.8.\n  - Hỗ trợ định dạng EPUB 2/3 với trích xuất ảnh bìa và mục lục.\n  - Hỗ trợ Active Frame hiển thị tiến độ đọc ngoài màn hình chủ.");
+    add("• Bản dựng Build 65 - 66 (Mới nhất):\n  - Icon Thư Viện Đơn Sắc: Chuyển icon Thư viện sang màu đen trắng (monochrome) đồng bộ với toàn bộ thanh Tab và Action Bar chuẩn BlackBerry 10.\n  - Đồng Bộ Ngôn Ngữ Toàn Diện: Chuẩn hóa 100% tiếng Việt & tiếng Anh cho Giới Thiệu (About), Hướng Dẫn (Help), Cài Đặt (Settings) và các menu.\n  - Khối Đang Đọc Tinh Gọn: Loại bỏ viền xanh và icon thừa, mang lại diện mạo hiện đại, sạch sẽ cho thẻ sách đang đọc.\n  - Đọc Giọng Nói (TTS) Hoàn Thiện: Tối ưu đọc TTS trên trang sách, hỗ trợ tạm dừng bằng phím Space và tự động cuộn trang theo giọng đọc.\n  - Tối Ưu Hóa Giao Diện: Rút gọn mô tả các mục menu và cài đặt, giúp thao tác nhanh trên màn hình nhỏ.\n\n• Bản dựng Build 50 - 64:\n  - Bảo Toàn Dữ Liệu Sau Cài Lại: Tự động lưu và khôi phục lịch sử đọc, tiến độ và ghi chú vào bộ nhớ ngoài (/accounts/1000/shared/documents/Libris).\n  - Từ Điển Ngoại Tuyến (Offline Dictionary): Tra cứu từ điển SQLite tức thì khi bôi đen từ trong sách mà không cần kết nối mạng.\n  - Bảng Thống Kê Đọc Sách (Reading Stats): Theo dõi thời gian đọc, tốc độ đọc và tiến độ hoàn thành sách chi tiết.\n  - Bộ Phím Tắt Toàn Diện: Tối ưu hóa tối đa cho bàn phím vật lý BlackBerry Passport, Classic Q20 và Q10.\n\n• Bản dựng Build 30 - 49 (Phiên bản 2.0.0):\n  - Navigation Drawer 5 Tab Native: Giao diện chuẩn 5 Tab Native với ngăn kéo trượt trái: Đang đọc, Gần đây, Mục lục, Tủ sách, Duyệt tệp.\n  - Nâng Cấp Lõi Libris: Tối ưu hiệu năng kết xuất PDF và DJVU, hỗ trợ bộ nhớ đệm trang thông minh.\n  - Tự Động Nhận Diện Bảng Mã Tiếng Việt: Đọc mượt mà mọi tệp TXT (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) không lỗi phông.\n  - Trang Thông Tin Toàn Diện: Màn hình thông tin chuẩn BB10 với 3 tab: Giới thiệu, Hướng dẫn phím tắt và Nhật ký phiên bản.\n\n• Phiên bản 1.0.0 (Bản dựng ban đầu):\n  - Phát hành nền tảng đọc sách Cascades thuần C++ / Qt 4.8.\n  - Hỗ trợ định dạng EPUB 2/3 với trích xuất ảnh bìa và mục lục.\n  - Hỗ trợ Active Frame hiển thị tiến độ đọc ngoài màn hình chủ.",
+        "• Build 65 - 66 (Latest):\n  - Monochrome Library Icon: Converted Library tab icon to clean black-and-white, matching the native BlackBerry 10 design.\n  - Complete Bilingual Sync: 100% unified English and Vietnamese for About, Help, Settings, and Action menus.\n  - Minimalist Reading Card: Removed distracting borders and redundant badges for a clean reading card.\n  - Polished Voice Reading (TTS): Refined text-to-speech reading on book pages, with Spacebar pause/play and auto-page turning.\n  - Streamlined UI Descriptions: Condensed menu labels and settings descriptions for quick glancing on compact BB10 screens.\n\n• Build 50 - 64:\n  - Persistent Data Storage: Automatically saves and restores reading history and progress in shared documents across reinstalls.\n  - Offline SQLite Dictionary: Instant word definition and translation popup when selecting text, no internet required.\n  - Reading Statistics Sheet: Detailed tracking of reading sessions, reading speed, and completion estimates.\n  - Comprehensive Keyboard Shortcuts: Full physical keyboard navigation for BlackBerry Passport, Classic Q20, and Q10.\n\n• Build 30 - 49 (Version 2.0.0):\n  - 5-Tab Navigation Drawer: Native slide-out menu with Reading, Recent, Contents, Bookshelf, and File Browser.\n  - Optimized Libris Engine: High-performance rendering for PDF and DJVU with intelligent memory page caching.\n  - Automatic Vietnamese Charset Detection: Seamlessly reads TXT files in UTF-8, UTF-16, TCVN3, Windows-1258, and VNI.\n  - Full Info Screen: Standard BB10 page layout featuring About, Keyboard Guides, and Version Changelog.\n\n• Version 1.0.0 (Initial Release):\n  - Native BlackBerry Cascades C++ / Qt 4.8 e-book reader launch.\n  - EPUB 2/3 parser with cover image extraction and NCX TOC navigation.\n  - Active Frame cover displaying reading progress on the homescreen.",
+        "• Bản dựng Build 65 - 66 (Mới nhất):\n  - Icon Thư Viện Đơn Sắc: Chuyển icon Thư viện sang màu đen trắng (monochrome) đồng bộ với toàn bộ thanh Tab và Action Bar chuẩn BlackBerry 10.\n  - Đồng Bộ Ngôn Ngữ Toàn Diện: Chuẩn hóa 100% tiếng Việt & tiếng Anh cho Giới Thiệu (About), Hướng Dẫn (Help), Cài Đặt (Settings) và các menu.\n  - Khối Đang Đọc Tinh Gọn: Loại bỏ viền xanh và icon thừa, mang lại diện mạo hiện đại, sạch sẽ cho thẻ sách đang đọc.\n  - Đọc Giọng Nói (TTS) Hoàn Thiện: Tối ưu đọc TTS trên trang sách, hỗ trợ tạm dừng bằng phím Space và tự động cuộn trang theo giọng đọc.\n  - Tối Ưu Hóa Giao Diện: Rút gọn mô tả các mục menu và cài đặt, giúp thao tác nhanh trên màn hình nhỏ.\n\n• Bản dựng Build 50 - 64:\n  - Bảo Toàn Dữ Liệu Sau Cài Lại: Tự động lưu và khôi phục lịch sử đọc, tiến độ và ghi chú vào bộ nhớ ngoài (/accounts/1000/shared/documents/Libris).\n  - Từ Điển Ngoại Tuyến (Offline Dictionary): Tra cứu từ điển SQLite tức thì khi bôi đen từ trong sách mà không cần kết nối mạng.\n  - Bảng Thống Kê Đọc Sách (Reading Stats): Theo dõi thời gian đọc, tốc độ đọc và tiến độ hoàn thành sách chi tiết.\n  - Bộ Phím Tắt Toàn Diện: Tối ưu hóa tối đa cho bàn phím vật lý BlackBerry Passport, Classic Q20 và Q10.\n\n• Bản dựng Build 30 - 49 (Phiên bản 2.0.0):\n  - Navigation Drawer 5 Tab Native: Giao diện chuẩn 5 Tab Native với ngăn kéo trượt trái: Đang đọc, Gần đây, Mục lục, Tủ sách, Duyệt tệp.\n  - Nâng Cấp Lõi Libris: Tối ưu hiệu năng kết xuất PDF và DJVU, hỗ trợ bộ nhớ đệm trang thông minh.\n  - Tự Động Nhận Diện Bảng Mã Tiếng Việt: Đọc mượt mà mọi tệp TXT (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) không lỗi phông.\n  - Trang Thông Tin Toàn Diện: Màn hình thông tin chuẩn BB10 với 3 tab: Giới thiệu, Hướng dẫn phím tắt và Nhật ký phiên bản.\n\n• Phiên bản 1.0.0 (Bản dựng ban đầu):\n  - Phát hành nền tảng đọc sách Cascades thuần C++ / Qt 4.8.\n  - Hỗ trợ định dạng EPUB 2/3 với trích xuất ảnh bìa và mục lục.\n  - Hỗ trợ Active Frame hiển thị tiến độ đọc ngoài màn hình chủ.");
     
     // --- ReaderPage Actions & Overlays ---
     add("Đi Đến (Mục Lục)", "Go to (Contents)", "Đi Đến (Mục Lục)");
@@ -943,9 +947,9 @@ void AppTranslator::initTranslations()
     add("Dữ liệu đã được đồng bộ với bộ nhớ ngoài.", "Data is synchronized with external storage.", "Dữ liệu đã được đồng bộ với bộ nhớ ngoài.");
     add("Đã khôi phục từ tệp JSON.", "Restored data from JSON file.", "Đã khôi phục từ tệp JSON.");
     add("Bộ nhớ ngoài sẵn sàng: ", "External storage ready: ", "Bộ nhớ ngoài sẵn sàng: ");
-    add("BerryReader tự động lưu toàn bộ lịch sử đọc, tiến độ đọc của từng cuốn sách, sách đang đọc và ghi chú vào bộ nhớ ngoài dùng chung. Khi bạn cài lại ứng dụng hoặc cập nhật bản mới, toàn bộ dữ liệu đọc sẽ được tự động bảo toàn 100%.",
-        "BerryReader automatically saves your reading history, per-book progress, currently reading book, and highlights into shared external storage. When you reinstall or update the app, your reading data will be 100% preserved.",
-        "BerryReader tự động lưu toàn bộ lịch sử đọc, tiến độ đọc của từng cuốn sách, sách đang đọc và ghi chú vào bộ nhớ ngoài dùng chung. Khi bạn cài lại ứng dụng hoặc cập nhật bản mới, toàn bộ dữ liệu đọc sẽ được tự động bảo toàn 100%.");
+    add("Libris tự động lưu toàn bộ lịch sử đọc, tiến độ đọc của từng cuốn sách, sách đang đọc và ghi chú vào bộ nhớ ngoài dùng chung. Khi bạn cài lại ứng dụng hoặc cập nhật bản mới, toàn bộ dữ liệu đọc sẽ được tự động bảo toàn 100%.",
+        "Libris automatically saves your reading history, per-book progress, currently reading book, and highlights into shared external storage. When you reinstall or update the app, your reading data will be 100% preserved.",
+        "Libris tự động lưu toàn bộ lịch sử đọc, tiến độ đọc của từng cuốn sách, sách đang đọc và ghi chú vào bộ nhớ ngoài dùng chung. Khi bạn cài lại ứng dụng hoặc cập nhật bản mới, toàn bộ dữ liệu đọc sẽ được tự động bảo toàn 100%.");
 
     // --- Navigation Tabs & Main App ---
     add("Gần đây", "Recent", "Gần đây");
@@ -961,9 +965,9 @@ void AppTranslator::initTranslations()
     add("Không thể khởi tạo giao diện đọc sách", "Failed to initialize reading interface", "Không thể khởi tạo giao diện đọc sách");
     add("Không thể khởi tạo giao diện đọc sách:\n", "Failed to initialize reading interface:\n", "Không thể khởi tạo giao diện đọc sách:\n");
     add("Không thể mở sách. File có thể bị hỏng hoặc không được hỗ trợ.", "Cannot open book. File may be corrupted or unsupported.", "Không thể mở sách. File có thể bị hỏng hoặc không được hỗ trợ.");
-    add("Hãy mở sách từ 'Thư Viện' hoặc bấm 'Mở Tệp' để bắt đầu đọc cùng BerryLeaf!", "Open a book from 'Library' or tap 'Open File' to start reading with BerryLeaf!", "Hãy mở sách từ 'Thư Viện' hoặc bấm 'Mở Tệp' để bắt đầu đọc cùng BerryLeaf!");
-    add("BerryLeaf", "BerryLeaf", "BerryLeaf");
-    add("BerryLeaf TTS", "BerryLeaf TTS", "BerryLeaf TTS");
+    add("Hãy mở sách từ 'Thư Viện' hoặc bấm 'Mở Tệp' để bắt đầu đọc cùng Libris!", "Open a book from 'Library' or tap 'Open File' to start reading with Libris!", "Hãy mở sách từ 'Thư Viện' hoặc bấm 'Mở Tệp' để bắt đầu đọc cùng Libris!");
+    add("Libris", "Libris", "Libris");
+    add("Libris TTS", "Libris TTS", "Libris TTS");
 
     // --- Library Page & Bookshelf ---
     add("Xem Danh Sách", "List View", "Xem Danh Sách");
@@ -1010,8 +1014,8 @@ void AppTranslator::initTranslations()
 
     // --- Reading & Footer Settings ---
     add("CHẾ ĐỘ ĐỌC SÁCH", "READING MODE", "CHẾ ĐỘ ĐỌC SÁCH");
-    add("Vuốt", "Paged (Swipe)", "Vuốt");
-    add("Cuộn", "Scroll (Continuous)", "Cuộn");
+    add("Vuốt", "Paged", "Vuốt");
+    add("Cuộn", "Scroll", "Cuộn");
     add("MỤC HIỂN THỊ DƯỚI ĐÁY TRANG", "ITEMS SHOWN AT PAGE BOTTOM", "MỤC HIỂN THỊ DƯỚI ĐÁY TRANG");
     add("Tên chương hiện tại", "Current chapter title", "Tên chương hiện tại");
     add("Tiến độ đọc (% và trang)", "Reading progress (% and page)", "Tiến độ đọc (% và trang)");
@@ -1025,9 +1029,9 @@ void AppTranslator::initTranslations()
     add("Danh sách chi tiết", "Detailed List", "Danh sách chi tiết");
     add("QUÉT LẠI DỮ LIỆU SÁCH", "RESCAN BOOK DATA", "QUÉT LẠI DỮ LIỆU SÁCH");
     add("Quét lại toàn bộ thẻ nhớ và thiết bị", "Rescan all storage and memory card", "Quét lại toàn bộ thẻ nhớ và thiết bị");
-    add("BerryLeaf tự động lưu toàn bộ lịch sử đọc, tiến độ đọc của từng cuốn sách, sách đang đọc và ghi chú vào bộ nhớ ngoài dùng chung. Khi bạn cài lại ứng dụng hoặc cập nhật bản mới, toàn bộ dữ liệu đọc sẽ được tự động bảo toàn 100%.",
-        "BerryLeaf automatically saves your entire reading history, per-book progress, current reading book, and highlights to shared external storage. When you reinstall or update the app, all reading data is 100% preserved.",
-        "BerryLeaf tự động lưu toàn bộ lịch sử đọc, tiến độ đọc của từng cuốn sách, sách đang đọc và ghi chú vào bộ nhớ ngoài dùng chung. Khi bạn cài lại ứng dụng hoặc cập nhật bản mới, toàn bộ dữ liệu đọc sẽ được tự động bảo toàn 100%.");
+    add("Libris tự động lưu toàn bộ lịch sử đọc, tiến độ đọc của từng cuốn sách, sách đang đọc và ghi chú vào bộ nhớ ngoài dùng chung. Khi bạn cài lại ứng dụng hoặc cập nhật bản mới, toàn bộ dữ liệu đọc sẽ được tự động bảo toàn 100%.",
+        "Libris automatically saves your entire reading history, per-book progress, current reading book, and highlights to shared external storage. When you reinstall or update the app, all reading data is 100% preserved.",
+        "Libris tự động lưu toàn bộ lịch sử đọc, tiến độ đọc của từng cuốn sách, sách đang đọc và ghi chú vào bộ nhớ ngoài dùng chung. Khi bạn cài lại ứng dụng hoặc cập nhật bản mới, toàn bộ dữ liệu đọc sẽ được tự động bảo toàn 100%.");
 
     // --- TTS & Voice Settings ---
     add("BỘ MÁY & GIỌNG ĐỌC", "VOICE ENGINE & VOICES", "BỘ MÁY & GIỌNG ĐỌC");
@@ -1144,12 +1148,12 @@ void AppTranslator::initTranslations()
     add("Đã tải log lên đám mây và sao chép link vào bộ nhớ tạm: %1",
         "Uploaded log to cloud and copied link: %1",
         "Đã tải log lên đám mây và sao chép link vào bộ nhớ tạm: %1");
-    add("Không thể gửi qua mạng. Đã lưu báo cáo tại: Documents/BerryReader_Debug.log",
-        "Cannot send over network. Saved report to: Documents/BerryReader_Debug.log",
-        "Không thể gửi qua mạng. Đã lưu báo cáo tại: Documents/BerryReader_Debug.log");
-    add("Hết thời gian chờ kết nối. Đã lưu báo cáo tại: Documents/BerryReader_Debug.log",
-        "Connection timed out. Saved report to: Documents/BerryReader_Debug.log",
-        "Hết thời gian chờ kết nối. Đã lưu báo cáo tại: Documents/BerryReader_Debug.log");
+    add("Không thể gửi qua mạng. Đã lưu báo cáo tại: Documents/Libris_Debug.log",
+        "Cannot send over network. Saved report to: Documents/Libris_Debug.log",
+        "Không thể gửi qua mạng. Đã lưu báo cáo tại: Documents/Libris_Debug.log");
+    add("Hết thời gian chờ kết nối. Đã lưu báo cáo tại: Documents/Libris_Debug.log",
+        "Connection timed out. Saved report to: Documents/Libris_Debug.log",
+        "Hết thời gian chờ kết nối. Đã lưu báo cáo tại: Documents/Libris_Debug.log");
     add("Đã gửi trực tiếp tới máy chủ phát triển (%1:8080) thành công!",
         "Successfully sent directly to dev server (%1:8080)!",
         "Đã gửi trực tiếp tới máy chủ phát triển (%1:8080) thành công!");
@@ -1273,13 +1277,13 @@ void AppTranslator::initTranslations()
     add("Bộ máy đọc, giọng nói AI & tốc độ", "Engine, AI voice & reading speed", "Bộ máy đọc, giọng nói AI & tốc độ");
     add("Tên chương, tiến độ, pin & đồng hồ", "Chapter title, progress, battery & clock", "Tên chương, tiến độ, pin & đồng hồ");
     add("Chế độ cuộn & lật trang", "Scroll & page turn mode", "Chế độ cuộn & lật trang");
-    add("Phiên bản BerryLeaf & hướng dẫn", "BerryLeaf version & user guide", "Phiên bản BerryLeaf & hướng dẫn");
+    add("Phiên bản Libris & hướng dẫn", "Libris version & user guide", "Phiên bản Libris & hướng dẫn");
 
     // --- Reading & Display Modes ---
-    add("Chế độ Cuộn (Scroll)", "Continuous Scroll Mode", "Chế độ Cuộn (Scroll)");
-    add("Chế độ Lật trang (Paged)", "Page Turn Mode", "Chế độ Lật trang (Paged)");
-    add("Cuộn liên tục (Scroll)", "Continuous Scroll", "Cuộn liên tục (Scroll)");
-    add("Vuốt lật trang (Paged)", "Swipe Page Turn", "Vuốt lật trang (Paged)");
+    add("Chế độ Cuộn (Scroll)", "Continuous Scroll Mode", "Chế độ Cuộn");
+    add("Chế độ Lật trang (Paged)", "Page Turn Mode", "Chế độ Lật trang");
+    add("Cuộn liên tục (Scroll)", "Continuous Scroll", "Cuộn liên tục");
+    add("Vuốt lật trang (Paged)", "Swipe Page Turn", "Vuốt lật trang");
     add("Đã chuyển sang chế độ Cuộn liên tục", "Switched to Continuous Scroll Mode", "Đã chuyển sang chế độ Cuộn liên tục");
     add("Đã chuyển sang chế độ Vuốt lật trang", "Switched to Page Turn Mode", "Đã chuyển sang chế độ Vuốt lật trang");
     add("Đảo màu trang", "Invert Page Colors", "Đảo màu trang");
@@ -1300,7 +1304,7 @@ void AppTranslator::initTranslations()
     add("Xóa toàn bộ lịch sử đọc", "Clear All Reading History", "Xóa toàn bộ lịch sử đọc");
     add("Toàn bộ danh sách sách đã đọc gần đây và tiến độ đọc sẽ được xóa. Các đánh dấu (Bookmark) và ghi chú (Highlight) vẫn sẽ được giữ nguyên.\n\nBạn có chắc chắn muốn xóa không?",
         "All recent books and reading progress will be cleared. Bookmarks and highlights will be preserved.\n\nAre you sure you want to proceed?",
-        "Toàn bộ danh sách sách đã đọc gần đây và tiến độ đọc sẽ được xóa. Các đánh dấu (Bookmark) và ghi chú (Highlight) vẫn sẽ được giữ nguyên.\n\nBạn có chắc chắn muốn xóa không?");
+        "Toàn bộ danh sách sách đã đọc gần đây và tiến độ đọc sẽ được xóa. Các dấu trang và ghi chú vẫn sẽ được giữ nguyên.\n\nBạn có chắc chắn muốn xóa không?");
     add("Đã xóa sạch lịch sử đọc gần đây và đặt lại tiến độ.", "Cleared recent reading history and reset progress.", "Đã xóa sạch lịch sử đọc gần đây và đặt lại tiến độ.");
     add("Đã xóa toàn bộ lịch sử đọc.", "Cleared all reading history.", "Đã xóa toàn bộ lịch sử đọc.");
 
@@ -1332,6 +1336,13 @@ void AppTranslator::initTranslations()
     add("Đã cập nhật kho sách!", "Catalog updated successfully!", "Đã cập nhật kho sách!");
     add("Đã tải xong: ", "Download complete: ", "Đã tải xong: ");
     add("Đã khôi phục các kho sách mặc định.", "Restored default catalogs.", "Đã khôi phục các kho sách mặc định.");
+    add("Lỗi chuyển hướng quá nhiều lần (Redirect loop)!", "Too many redirects (Redirect loop)!", "Lỗi chuyển hướng quá nhiều lần (Redirect loop)!");
+    add("Máy chủ bắt buộc dùng HTTPS với chuẩn TLS/mã hóa mới mà thiết bị BB10 chưa hỗ trợ.", "Server requires modern HTTPS TLS/ciphers unsupported by BlackBerry 10.", "Máy chủ bắt buộc dùng HTTPS với chuẩn TLS/mã hóa mới mà thiết bị BB10 chưa hỗ trợ.");
+    add("Máy chủ từ chối kết nối (HTTP 403 / Bảo vệ chống Bot).", "Server denied access (HTTP 403 / Bot Protection).", "Máy chủ từ chối kết nối (HTTP 403 / Bảo vệ chống Bot).");
+    add("Lỗi bắt tay SSL/TLS: Máy chủ yêu cầu phiên bản TLS hoặc thuật toán mã hóa (cipher) mới.", "SSL/TLS handshake error: Server requires a newer TLS version or cipher.", "Lỗi bắt tay SSL/TLS: Máy chủ yêu cầu phiên bản TLS hoặc thuật toán mã hóa (cipher) mới.");
+    add("Lỗi chuyển hướng tải sách quá nhiều lần (Redirect loop)!", "Too many download redirects (Redirect loop)!", "Lỗi chuyển hướng tải sách quá nhiều lần (Redirect loop)!");
+    add("Máy chủ chặn tải sách (HTTP 403 / Cloudflare Protection).", "Server blocked download (HTTP 403 / Cloudflare Protection).", "Máy chủ chặn tải sách (HTTP 403 / Cloudflare Protection).");
+    add("Lỗi bắt tay SSL khi tải sách. Máy chủ yêu cầu chuẩn TLS mới hơn.", "SSL handshake error while downloading book. Server requires newer TLS.", "Lỗi bắt tay SSL khi tải sách. Máy chủ yêu cầu chuẩn TLS mới hơn.");
 
     // --- Add/Edit Catalog Dialog ---
     add("THÔNG TIN KHO SÁCH", "CATALOG INFORMATION", "THÔNG TIN KHO SÁCH");
@@ -1345,10 +1356,11 @@ void AppTranslator::initTranslations()
     add("Máy chủ Calibre trong mạng Wi-Fi", "Calibre server on local Wi-Fi", "Máy chủ Calibre trong mạng Wi-Fi");
     add("Máy chủ đọc sách Kavita", "Kavita reading server", "Máy chủ đọc sách Kavita");
     add("Thư viện truyện và sách Komga", "Komga comics and book library", "Thư viện truyện và sách Komga");
+    add("http://<IP-máy-tính>:8080/opds", "http://<PC-IP-Address>:8080/opds", "http://<IP-máy-tính>:8080/opds");
     add("XÁC THỰC TÀI KHOẢN (NẾU CÓ)", "ACCOUNT AUTHENTICATION (IF REQUIRED)", "XÁC THỰC TÀI KHOẢN (NẾU CÓ)");
     add("Nếu máy chủ yêu cầu đăng nhập (HTTP Basic Auth), hãy nhập thông tin bên dưới:", "If server requires login (HTTP Basic Auth), enter credentials below:", "Nếu máy chủ yêu cầu đăng nhập (HTTP Basic Auth), hãy nhập thông tin bên dưới:");
-    add("Tên đăng nhập (Username):", "Username:", "Tên đăng nhập (Username):");
-    add("Mật khẩu (Password):", "Password:", "Mật khẩu (Password):");
+    add("Tên đăng nhập (Username):", "Username:", "Tên đăng nhập:");
+    add("Mật khẩu (Password):", "Password:", "Mật khẩu:");
     add("Để trống nếu không yêu cầu mật khẩu", "Leave blank if no password required", "Để trống nếu không yêu cầu mật khẩu");
     add("Mật khẩu truy cập máy chủ", "Server access password", "Mật khẩu truy cập máy chủ");
     add("HƯỚNG DẪN KẾT NỐI CALIBRE NHANH", "QUICK CALIBRE CONNECTION GUIDE", "HƯỚNG DẪN KẾT NỐI CALIBRE NHANH");
@@ -1380,10 +1392,10 @@ void AppTranslator::initTranslations()
     add("Đang nạp và quét thư viện sách...", "Loading and scanning book library...", "Đang nạp và quét thư viện sách...");
 
     // --- Version & Changelog (Build 67-69) ---
-    add("Phiên bản 2.0.0 (Build 69) • BlackBerry 10", "Version 2.0.0 (Build 69) • BlackBerry 10", "Phiên bản 2.0.0 (Build 69) • BlackBerry 10");
-    add("• Bản dựng Build 67 - 69 (Mới nhất):\n  - Nhận Diện Tên Chương Mục Lục: Tự động trích xuất tên chương thực tế từ nội dung sách EPUB, TXT, FB2 thay vì chỉ hiển thị Chương 1, Chương 2...\n  - Tinh Chỉnh Số Thứ Tự & Số Trang: Bỏ ký tự '#' ở huy hiệu số thứ tự/số trang, hiển thị số thuần gọn gàng.\n  - Tăng Cỡ Chữ Mục Lục: Tăng kích thước phông chữ các dòng mục lục giúp đọc dễ dàng và rõ ràng hơn trên màn hình BlackBerry.\n  - Tinh Chỉnh Tra Cứu & Dịch Thuật: Rút gọn nhãn 'From:', bỏ icon thừa trong hộp thoại tìm kiếm từ điển.\n  - Icon Thư Viện Đơn Sắc: Chuyển icon Thư viện sang màu đen trắng (monochrome) đồng bộ với toàn bộ thanh Tab và Action Bar chuẩn BlackBerry 10.\n  - Khối Đang Đọc Tinh Gọn: Loại bỏ viền xanh và icon thừa, mang lại diện mạo hiện đại, sạch sẽ cho thẻ sách đang đọc.\n\n• Bản dựng Build 65 - 66:\n  - Đồng Bộ Ngôn Ngữ Toàn Diện: Chuẩn hóa 100% tiếng Việt & tiếng Anh cho Giới Thiệu (About), Hướng Dẫn (Help), Cài Đặt (Settings) và các menu.\n  - Đọc Giọng Nói (TTS) Hoàn Thiện: Tối ưu đọc TTS trên trang sách, hỗ trợ tạm dừng bằng phím Space và tự động cuộn trang theo giọng đọc.\n  - Tối Ưu Hóa Giao Diện: Rút gọn mô tả các mục menu và cài đặt, giúp thao tác nhanh trên màn hình nhỏ.\n\n• Bản dựng Build 50 - 64:\n  - Bảo Toàn Dữ Liệu Sau Cài Lại: Tự động lưu và khôi phục lịch sử đọc, tiến độ và ghi chú vào bộ nhớ ngoài (/accounts/1000/shared/documents/BerryReader).\n  - Từ Điển Ngoại Tuyến (Offline Dictionary): Tra cứu từ điển SQLite tức thì khi bôi đen từ trong sách mà không cần kết nối mạng.\n  - Bảng Thống Kê Đọc Sách (Reading Stats): Theo dõi thời gian đọc, tốc độ đọc và tiến độ hoàn thành sách chi tiết.\n  - Bộ Phím Tắt Toàn Diện: Tối ưu hóa tối đa cho bàn phím vật lý BlackBerry Passport, Classic Q20 và Q10.\n\n• Bản dựng Build 30 - 49 (Phiên bản 2.0.0):\n  - Navigation Drawer 5 Tab Native: Giao diện chuẩn NSR Reader với 5 tab trượt trái: Đang đọc, Gần đây, Mục lục, Tủ sách, Duyệt tệp.\n  - Nâng Cấp Lõi nsrreadercore: Tối ưu hiệu năng kết xuất PDF và DJVU, hỗ trợ bộ nhớ đệm trang thông minh.\n  - Tự Động Nhận Diện Bảng Mã Tiếng Việt: Đọc mượt mà mọi tệp TXT (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) không lỗi phông.\n  - Trang Thông Tin Toàn Diện: Màn hình thông tin chuẩn BB10 với 3 tab: Giới thiệu, Hướng dẫn phím tắt và Nhật ký phiên bản.\n\n• Phiên bản 1.0.0 (Bản dựng ban đầu):\n  - Phát hành nền tảng đọc sách Cascades thuần C++ / Qt 4.8.\n  - Hỗ trợ định dạng EPUB 2/3 với trích xuất ảnh bìa và mục lục.\n  - Hỗ trợ Active Frame hiển thị tiến độ đọc ngoài màn hình chủ.",
-        "• Build 67 - 69 (Latest):\n  - Smart Chapter Name Detection: Automatically extracts actual chapter titles from EPUB, TXT, and FB2 content instead of generic 'Chapter 1, Chapter 2...'\n  - Clean Badges: Removed '#' prefix from index/page count badges for a clean look.\n  - Larger TOC Font Size: Increased font size in Table of Contents for effortless readability on compact BlackBerry screens.\n  - Streamlined Translation & Dictionary: Condensed 'From:' labels and removed redundant icons in dictionary search dialog.\n  - Monochrome Library Icon: Clean black-and-white icon matching the native BlackBerry 10 design.\n  - Minimalist Reading Card: Removed borders and badges for a sleek currently-reading card.\n\n• Build 65 - 66:\n  - Complete Bilingual Sync: 100% unified English and Vietnamese for About, Help, Settings, and Action menus.\n  - Polished Voice Reading (TTS): Refined text-to-speech reading on book pages, with Spacebar pause/play and auto-page turning.\n  - Streamlined UI Descriptions: Condensed menu labels and settings descriptions for quick glancing on compact BB10 screens.\n\n• Build 50 - 64:\n  - Persistent Data Storage: Automatically saves and restores reading history and progress in shared documents across reinstalls.\n  - Offline SQLite Dictionary: Instant word definition and translation popup when selecting text, no internet required.\n  - Reading Statistics Sheet: Detailed tracking of reading sessions, reading speed, and completion estimates.\n  - Comprehensive Keyboard Shortcuts: Full physical keyboard navigation for BlackBerry Passport, Classic Q20, and Q10.\n\n• Build 30 - 49 (Version 2.0.0):\n  - 5-Tab Navigation Drawer: NSR Reader-style native slide-out menu with Reading, Recent, Contents, Bookshelf, and File Browser.\n  - Optimized nsrreadercore Engine: High-performance rendering for PDF and DJVU with intelligent memory page caching.\n  - Automatic Vietnamese Charset Detection: Seamlessly reads TXT files in UTF-8, UTF-16, TCVN3, Windows-1258, and VNI.\n  - Full Info Screen: Standard BB10 page layout featuring About, Keyboard Guides, and Version Changelog.\n\n• Version 1.0.0 (Initial Release):\n  - Native BlackBerry Cascades C++ / Qt 4.8 e-book reader launch.\n  - EPUB 2/3 parser with cover image extraction and NCX TOC navigation.\n  - Active Frame cover displaying reading progress on the homescreen.",
-        "• Bản dựng Build 67 - 69 (Mới nhất):\n  - Nhận Diện Tên Chương Mục Lục: Tự động trích xuất tên chương thực tế từ nội dung sách EPUB, TXT, FB2 thay vì chỉ hiển thị Chương 1, Chương 2...\n  - Tinh Chỉnh Số Thứ Tự & Số Trang: Bỏ ký tự '#' ở huy hiệu số thứ tự/số trang, hiển thị số thuần gọn gàng.\n  - Tăng Cỡ Chữ Mục Lục: Tăng kích thước phông chữ các dòng mục lục giúp đọc dễ dàng và rõ ràng hơn trên màn hình BlackBerry.\n  - Tinh Chỉnh Tra Cứu & Dịch Thuật: Rút gọn nhãn 'From:', bỏ icon thừa trong hộp thoại tìm kiếm từ điển.\n  - Icon Thư Viện Đơn Sắc: Chuyển icon Thư viện sang màu đen trắng (monochrome) đồng bộ với toàn bộ thanh Tab và Action Bar chuẩn BlackBerry 10.\n  - Khối Đang Đọc Tinh Gọn: Loại bỏ viền xanh và icon thừa, mang lại diện mạo hiện đại, sạch sẽ cho thẻ sách đang đọc.\n\n• Bản dựng Build 65 - 66:\n  - Đồng Bộ Ngôn Ngữ Toàn Diện: Chuẩn hóa 100% tiếng Việt & tiếng Anh cho Giới Thiệu (About), Hướng Dẫn (Help), Cài Đặt (Settings) và các menu.\n  - Đọc Giọng Nói (TTS) Hoàn Thiện: Tối ưu đọc TTS trên trang sách, hỗ trợ tạm dừng bằng phím Space và tự động cuộn trang theo giọng đọc.\n  - Tối Ưu Hóa Giao Diện: Rút gọn mô tả các mục menu và cài đặt, giúp thao tác nhanh trên màn hình nhỏ.\n\n• Bản dựng Build 50 - 64:\n  - Bảo Toàn Dữ Liệu Sau Cài Lại: Tự động lưu và khôi phục lịch sử đọc, tiến độ và ghi chú vào bộ nhớ ngoài (/accounts/1000/shared/documents/BerryReader).\n  - Từ Điển Ngoại Tuyến (Offline Dictionary): Tra cứu từ điển SQLite tức thì khi bôi đen từ trong sách mà không cần kết nối mạng.\n  - Bảng Thống Kê Đọc Sách (Reading Stats): Theo dõi thời gian đọc, tốc độ đọc và tiến độ hoàn thành sách chi tiết.\n  - Bộ Phím Tắt Toàn Diện: Tối ưu hóa tối đa cho bàn phím vật lý BlackBerry Passport, Classic Q20 và Q10.\n\n• Bản dựng Build 30 - 49 (Phiên bản 2.0.0):\n  - Navigation Drawer 5 Tab Native: Giao diện chuẩn NSR Reader với 5 tab trượt trái: Đang đọc, Gần đây, Mục lục, Tủ sách, Duyệt tệp.\n  - Nâng Cấp Lõi nsrreadercore: Tối ưu hiệu năng kết xuất PDF và DJVU, hỗ trợ bộ nhớ đệm trang thông minh.\n  - Tự Động Nhận Diện Bảng Mã Tiếng Việt: Đọc mượt mà mọi tệp TXT (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) không lỗi phông.\n  - Trang Thông Tin Toàn Diện: Màn hình thông tin chuẩn BB10 với 3 tab: Giới thiệu, Hướng dẫn phím tắt và Nhật ký phiên bản.\n\n• Phiên bản 1.0.0 (Bản dựng ban đầu):\n  - Phát hành nền tảng đọc sách Cascades thuần C++ / Qt 4.8.\n  - Hỗ trợ định dạng EPUB 2/3 với trích xuất ảnh bìa và mục lục.\n  - Hỗ trợ Active Frame hiển thị tiến độ đọc ngoài màn hình chủ.");
+    add("Phiên bản 2.0.0 (Build 200) • BlackBerry 10", "Version 2.0.0 (Build 200) • BlackBerry 10", "Phiên bản 2.0.0 (Build 200) • BlackBerry 10");
+    add("• Bản dựng Build 67 - 69 (Mới nhất):\n  - Nhận Diện Tên Chương Mục Lục: Tự động trích xuất tên chương thực tế từ nội dung sách EPUB, TXT, FB2 thay vì chỉ hiển thị Chương 1, Chương 2...\n  - Tinh Chỉnh Số Thứ Tự & Số Trang: Bỏ ký tự '#' ở huy hiệu số thứ tự/số trang, hiển thị số thuần gọn gàng.\n  - Tăng Cỡ Chữ Mục Lục: Tăng kích thước phông chữ các dòng mục lục giúp đọc dễ dàng và rõ ràng hơn trên màn hình BlackBerry.\n  - Tinh Chỉnh Tra Cứu & Dịch Thuật: Rút gọn nhãn 'From:', bỏ icon thừa trong hộp thoại tìm kiếm từ điển.\n  - Icon Thư Viện Đơn Sắc: Chuyển icon Thư viện sang màu đen trắng (monochrome) đồng bộ với toàn bộ thanh Tab và Action Bar chuẩn BlackBerry 10.\n  - Khối Đang Đọc Tinh Gọn: Loại bỏ viền xanh và icon thừa, mang lại diện mạo hiện đại, sạch sẽ cho thẻ sách đang đọc.\n\n• Bản dựng Build 65 - 66:\n  - Đồng Bộ Ngôn Ngữ Toàn Diện: Chuẩn hóa 100% tiếng Việt & tiếng Anh cho Giới Thiệu (About), Hướng Dẫn (Help), Cài Đặt (Settings) và các menu.\n  - Đọc Giọng Nói (TTS) Hoàn Thiện: Tối ưu đọc TTS trên trang sách, hỗ trợ tạm dừng bằng phím Space và tự động cuộn trang theo giọng đọc.\n  - Tối Ưu Hóa Giao Diện: Rút gọn mô tả các mục menu và cài đặt, giúp thao tác nhanh trên màn hình nhỏ.\n\n• Bản dựng Build 50 - 64:\n  - Bảo Toàn Dữ Liệu Sau Cài Lại: Tự động lưu và khôi phục lịch sử đọc, tiến độ và ghi chú vào bộ nhớ ngoài (/accounts/1000/shared/documents/Libris).\n  - Từ Điển Ngoại Tuyến (Offline Dictionary): Tra cứu từ điển SQLite tức thì khi bôi đen từ trong sách mà không cần kết nối mạng.\n  - Bảng Thống Kê Đọc Sách (Reading Stats): Theo dõi thời gian đọc, tốc độ đọc và tiến độ hoàn thành sách chi tiết.\n  - Bộ Phím Tắt Toàn Diện: Tối ưu hóa tối đa cho bàn phím vật lý BlackBerry Passport, Classic Q20 và Q10.\n\n• Bản dựng Build 30 - 49 (Phiên bản 2.0.0):\n  - Navigation Drawer 5 Tab Native: Giao diện chuẩn 5 Tab Native với ngăn kéo trượt trái: Đang đọc, Gần đây, Mục lục, Tủ sách, Duyệt tệp.\n  - Nâng Cấp Lõi Libris: Tối ưu hiệu năng kết xuất PDF và DJVU, hỗ trợ bộ nhớ đệm trang thông minh.\n  - Tự Động Nhận Diện Bảng Mã Tiếng Việt: Đọc mượt mà mọi tệp TXT (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) không lỗi phông.\n  - Trang Thông Tin Toàn Diện: Màn hình thông tin chuẩn BB10 với 3 tab: Giới thiệu, Hướng dẫn phím tắt và Nhật ký phiên bản.\n\n• Phiên bản 1.0.0 (Bản dựng ban đầu):\n  - Phát hành nền tảng đọc sách Cascades thuần C++ / Qt 4.8.\n  - Hỗ trợ định dạng EPUB 2/3 với trích xuất ảnh bìa và mục lục.\n  - Hỗ trợ Active Frame hiển thị tiến độ đọc ngoài màn hình chủ.",
+        "• Build 67 - 69 (Latest):\n  - Smart Chapter Name Detection: Automatically extracts actual chapter titles from EPUB, TXT, and FB2 content instead of generic 'Chapter 1, Chapter 2...'\n  - Clean Badges: Removed '#' prefix from index/page count badges for a clean look.\n  - Larger TOC Font Size: Increased font size in Table of Contents for effortless readability on compact BlackBerry screens.\n  - Streamlined Translation & Dictionary: Condensed 'From:' labels and removed redundant icons in dictionary search dialog.\n  - Monochrome Library Icon: Clean black-and-white icon matching the native BlackBerry 10 design.\n  - Minimalist Reading Card: Removed borders and badges for a sleek currently-reading card.\n\n• Build 65 - 66:\n  - Complete Bilingual Sync: 100% unified English and Vietnamese for About, Help, Settings, and Action menus.\n  - Polished Voice Reading (TTS): Refined text-to-speech reading on book pages, with Spacebar pause/play and auto-page turning.\n  - Streamlined UI Descriptions: Condensed menu labels and settings descriptions for quick glancing on compact BB10 screens.\n\n• Build 50 - 64:\n  - Persistent Data Storage: Automatically saves and restores reading history and progress in shared documents across reinstalls.\n  - Offline SQLite Dictionary: Instant word definition and translation popup when selecting text, no internet required.\n  - Reading Statistics Sheet: Detailed tracking of reading sessions, reading speed, and completion estimates.\n  - Comprehensive Keyboard Shortcuts: Full physical keyboard navigation for BlackBerry Passport, Classic Q20, and Q10.\n\n• Build 30 - 49 (Version 2.0.0):\n  - 5-Tab Navigation Drawer: Native slide-out menu with Reading, Recent, Contents, Bookshelf, and File Browser.\n  - Optimized Libris Engine: High-performance rendering for PDF and DJVU with intelligent memory page caching.\n  - Automatic Vietnamese Charset Detection: Seamlessly reads TXT files in UTF-8, UTF-16, TCVN3, Windows-1258, and VNI.\n  - Full Info Screen: Standard BB10 page layout featuring About, Keyboard Guides, and Version Changelog.\n\n• Version 1.0.0 (Initial Release):\n  - Native BlackBerry Cascades C++ / Qt 4.8 e-book reader launch.\n  - EPUB 2/3 parser with cover image extraction and NCX TOC navigation.\n  - Active Frame cover displaying reading progress on the homescreen.",
+        "• Bản dựng Build 67 - 69 (Mới nhất):\n  - Nhận Diện Tên Chương Mục Lục: Tự động trích xuất tên chương thực tế từ nội dung sách EPUB, TXT, FB2 thay vì chỉ hiển thị Chương 1, Chương 2...\n  - Tinh Chỉnh Số Thứ Tự & Số Trang: Bỏ ký tự '#' ở huy hiệu số thứ tự/số trang, hiển thị số thuần gọn gàng.\n  - Tăng Cỡ Chữ Mục Lục: Tăng kích thước phông chữ các dòng mục lục giúp đọc dễ dàng và rõ ràng hơn trên màn hình BlackBerry.\n  - Tinh Chỉnh Tra Cứu & Dịch Thuật: Rút gọn nhãn 'From:', bỏ icon thừa trong hộp thoại tìm kiếm từ điển.\n  - Icon Thư Viện Đơn Sắc: Chuyển icon Thư viện sang màu đen trắng (monochrome) đồng bộ với toàn bộ thanh Tab và Action Bar chuẩn BlackBerry 10.\n  - Khối Đang Đọc Tinh Gọn: Loại bỏ viền xanh và icon thừa, mang lại diện mạo hiện đại, sạch sẽ cho thẻ sách đang đọc.\n\n• Bản dựng Build 65 - 66:\n  - Đồng Bộ Ngôn Ngữ Toàn Diện: Chuẩn hóa 100% tiếng Việt & tiếng Anh cho Giới Thiệu (About), Hướng Dẫn (Help), Cài Đặt (Settings) và các menu.\n  - Đọc Giọng Nói (TTS) Hoàn Thiện: Tối ưu đọc TTS trên trang sách, hỗ trợ tạm dừng bằng phím Space và tự động cuộn trang theo giọng đọc.\n  - Tối Ưu Hóa Giao Diện: Rút gọn mô tả các mục menu và cài đặt, giúp thao tác nhanh trên màn hình nhỏ.\n\n• Bản dựng Build 50 - 64:\n  - Bảo Toàn Dữ Liệu Sau Cài Lại: Tự động lưu và khôi phục lịch sử đọc, tiến độ và ghi chú vào bộ nhớ ngoài (/accounts/1000/shared/documents/Libris).\n  - Từ Điển Ngoại Tuyến (Offline Dictionary): Tra cứu từ điển SQLite tức thì khi bôi đen từ trong sách mà không cần kết nối mạng.\n  - Bảng Thống Kê Đọc Sách (Reading Stats): Theo dõi thời gian đọc, tốc độ đọc và tiến độ hoàn thành sách chi tiết.\n  - Bộ Phím Tắt Toàn Diện: Tối ưu hóa tối đa cho bàn phím vật lý BlackBerry Passport, Classic Q20 và Q10.\n\n• Bản dựng Build 30 - 49 (Phiên bản 2.0.0):\n  - Navigation Drawer 5 Tab Native: Giao diện chuẩn 5 Tab Native với ngăn kéo trượt trái: Đang đọc, Gần đây, Mục lục, Tủ sách, Duyệt tệp.\n  - Nâng Cấp Lõi Libris: Tối ưu hiệu năng kết xuất PDF và DJVU, hỗ trợ bộ nhớ đệm trang thông minh.\n  - Tự Động Nhận Diện Bảng Mã Tiếng Việt: Đọc mượt mà mọi tệp TXT (UTF-8, UTF-16, TCVN3, Windows-1258, VNI) không lỗi phông.\n  - Trang Thông Tin Toàn Diện: Màn hình thông tin chuẩn BB10 với 3 tab: Giới thiệu, Hướng dẫn phím tắt và Nhật ký phiên bản.\n\n• Phiên bản 1.0.0 (Bản dựng ban đầu):\n  - Phát hành nền tảng đọc sách Cascades thuần C++ / Qt 4.8.\n  - Hỗ trợ định dạng EPUB 2/3 với trích xuất ảnh bìa và mục lục.\n  - Hỗ trợ Active Frame hiển thị tiến độ đọc ngoài màn hình chủ.");
     // --- OPDS C++ Backend & Download Statuses ---
     add("DANH MỤC CÔNG CỘNG", "PUBLIC CATALOGS", "DANH MỤC CÔNG CỘNG");
     add("KHO SÁCH CÁ NHÂN (CALIBRE, KAVITA...)", "PERSONAL CATALOGS (CALIBRE, KAVITA...)", "KHO SÁCH CÁ NHÂN (CALIBRE, KAVITA...)");
@@ -1411,10 +1423,33 @@ void AppTranslator::initTranslations()
     add("Đã hủy tải sách", "Download cancelled", "Đã hủy tải sách");
     add("Trang %1", "Page %1", "Trang %1");
     add("Tìm: \"%1\"", "Search: \"%1\"", "Tìm: \"%1\"");
+    add("%1 mục", "%1 items", "%1 mục");
+    add("Bộ lọc danh mục", "Catalog filter", "Bộ lọc danh mục");
+    add("Nhóm danh mục", "Catalog group", "Nhóm danh mục");
+    add("Không thể đọc cấu trúc danh mục OPDS 2.0 JSON!", "Cannot parse OPDS 2.0 JSON catalog structure!", "Không thể đọc cấu trúc danh mục OPDS 2.0 JSON!");
+    add("Không tìm thấy đường dẫn danh mục OPDS (HTTP 404).", "OPDS catalog URL not found (HTTP 404).", "Không tìm thấy đường dẫn danh mục OPDS (HTTP 404).");
+    add("Máy chủ chặn tải sách (HTTP 403 / Bảo vệ chống Bot).", "Server blocked book download (HTTP 403 / Bot protection).", "Máy chủ chặn tải sách (HTTP 403 / Bảo vệ chống Bot).");
+    add("Máy chủ gặp lỗi nội bộ (HTTP %1).", "Server internal error (HTTP %1).", "Máy chủ gặp lỗi nội bộ (HTTP %1).");
+    add("Máy chủ phản hồi chậm hoặc cổng kết nối gặp sự cố (HTTP %1).", "Server timed out or gateway error (HTTP %1).", "Máy chủ phản hồi chậm hoặc cổng kết nối gặp sự cố (HTTP %1).");
+    add("Máy chủ trả về dữ liệu trống.", "Server returned an empty response.", "Máy chủ trả về dữ liệu trống.");
+    add("Máy chủ trả về trang web HTML thay vì danh mục OPDS (%1).", "Server returned an HTML web page instead of an OPDS feed (%1).", "Máy chủ trả về trang web HTML thay vì danh mục OPDS (%1).");
+    add("Máy chủ trả về trang web HTML thay vì danh mục OPDS.", "Server returned an HTML web page instead of an OPDS feed.", "Máy chủ trả về trang web HTML thay vì danh mục OPDS.");
+    add("Máy chủ tải sách đang bảo trì hoặc quá tải (HTTP 503 Service Unavailable). Vui lòng thử lại sau.",
+        "Download server is down for maintenance or overloaded (HTTP 503 Service Unavailable). Please try again later.",
+        "Máy chủ tải sách đang bảo trì hoặc quá tải (HTTP 503 Service Unavailable). Vui lòng thử lại sau.");
+    add("Máy chủ yêu cầu đăng nhập (HTTP 401). Hãy kiểm tra tên người dùng và mật khẩu.",
+        "Server requires authentication (HTTP 401). Check your username and password.",
+        "Máy chủ yêu cầu đăng nhập (HTTP 401). Hãy kiểm tra tên người dùng và mật khẩu.");
+    add("Máy chủ đang bảo trì hoặc tạm ngừng phục vụ (HTTP 503 Service Unavailable). Vui lòng thử lại sau.",
+        "Server is down for maintenance or temporarily unavailable (HTTP 503 Service Unavailable). Please try again later.",
+        "Máy chủ đang bảo trì hoặc tạm ngừng phục vụ (HTTP 503 Service Unavailable). Vui lòng thử lại sau.");
+    add("Quá nhiều yêu cầu tới máy chủ (HTTP 429). Vui lòng đợi một lát rồi thử lại.",
+        "Too many requests to server (HTTP 429). Please wait a moment and try again.",
+        "Quá nhiều yêu cầu tới máy chủ (HTTP 429). Vui lòng đợi một lát rồi thử lại.");
 
     // --- TTS Backend Status & Dialogs ---
     add("Google Translate (Tự động)", "Google Translate (Auto)", "Google Translate (Tự động)");
-    add("BerryReader xin chào! Kết nối API thành công.", "BerryReader greeting! API connection successful.", "BerryReader xin chào! Kết nối API thành công.");
+    add("Libris xin chào! Kết nối API thành công.", "Libris greeting! API connection successful.", "Libris xin chào! Kết nối API thành công.");
     add("Chế độ Ngoại tuyến: Câu này chưa có trong bộ nhớ máy. Hãy bấm nút 'Tải về' để lưu trước toàn bộ chương.",
         "Offline Mode: This sentence is not cached yet. Tap 'Download' to pre-cache the whole chapter.",
         "Chế độ Ngoại tuyến: Câu này chưa có trong bộ nhớ máy. Hãy bấm nút 'Tải về' để lưu trước toàn bộ chương.");
@@ -1438,9 +1473,9 @@ void AppTranslator::initTranslations()
     add("Vui lòng nhập Google AI Studio API Key trước khi kiểm tra.",
         "Please enter Google AI Studio API Key before testing.",
         "Vui lòng nhập Google AI Studio API Key trước khi kiểm tra.");
-    add("Xin chào, đây là giọng đọc sách trực tuyến của BerryReader.",
-        "Hello, this is BerryReader online voice reading.",
-        "Xin chào, đây là giọng đọc sách trực tuyến của BerryReader.");
+    add("Xin chào, đây là giọng đọc sách trực tuyến của Libris.",
+        "Hello, this is Libris online voice reading.",
+        "Xin chào, đây là giọng đọc sách trực tuyến của Libris.");
     add("Đang kết nối và kiểm tra API Key với Google AI Studio...",
         "Connecting and verifying API Key with Google AI Studio...",
         "Đang kết nối và kiểm tra API Key với Google AI Studio...");
@@ -1473,14 +1508,14 @@ void AppTranslator::initTranslations()
     add("✗ Phản hồi không có âm thanh: %1", "✗ Response has no audio: %1", "✗ Phản hồi không có âm thanh: %1");
 
     // --- Dictionary Parts of Speech & Meaning ---
-    add("Danh từ (noun)", "Noun", "Danh từ (noun)");
-    add("Động từ (verb)", "Verb", "Động từ (verb)");
-    add("Tính từ (adjective)", "Adjective", "Tính từ (adjective)");
-    add("Phó từ (adverb)", "Adverb", "Phó từ (adverb)");
-    add("Giới từ (preposition)", "Preposition", "Giới từ (preposition)");
-    add("Liên từ (conjunction)", "Conjunction", "Liên từ (conjunction)");
-    add("Đại từ (pronoun)", "Pronoun", "Đại từ (pronoun)");
-    add("Thán từ (interjection)", "Interjection", "Thán từ (interjection)");
+    add("Danh từ (noun)", "Noun", "Danh từ");
+    add("Động từ (verb)", "Verb", "Động từ");
+    add("Tính từ (adjective)", "Adjective", "Tính từ");
+    add("Phó từ (adverb)", "Adverb", "Phó từ");
+    add("Giới từ (preposition)", "Preposition", "Giới từ");
+    add("Liên từ (conjunction)", "Conjunction", "Liên từ");
+    add("Đại từ (pronoun)", "Pronoun", "Đại từ");
+    add("Thán từ (interjection)", "Interjection", "Thán từ");
     add("★ Nghĩa: ", "★ Meaning: ", "★ Nghĩa: ");
 
     // --- Book Workers & App Startup ---
@@ -1490,7 +1525,7 @@ void AppTranslator::initTranslations()
     add("Tài liệu FB2", "FB2 Document", "Tài liệu FB2");
     add("Lời giới thiệu", "Introduction", "Lời giới thiệu");
     add("Văn bản thường", "Plain Text", "Văn bản thường");
-    add("BerryLeaf - Khởi Động Thất Bại", "BerryLeaf - Startup Failed", "BerryLeaf - Khởi Động Thất Bại");
+    add("Libris - Khởi Động Thất Bại", "Libris - Startup Failed", "Libris - Khởi Động Thất Bại");
     add("Không thể tải giao diện chính asset:///main.qml:\n\n", "Cannot load main UI asset:///main.qml:\n\n", "Không thể tải giao diện chính asset:///main.qml:\n\n");
 
     // --- Book Stats and Details ---
@@ -1510,6 +1545,337 @@ void AppTranslator::initTranslations()
     add("Đã quét xong! Tổng cộng: %1 cuốn sách.", "Scan complete! Total: %1 books found.", "Đã quét xong! Tổng cộng: %1 cuốn sách.");
     add("Đã cập nhật kho sách!", "Catalog updated successfully!", "Đã cập nhật kho sách!");
     add("Đã thêm kho sách thành công!", "Catalog added successfully!", "Đã thêm kho sách thành công!");
+
+    // Sleep Timer
+    add("HẸN GIỜ TẮT", "SLEEP TIMER", "HẸN GIỜ TẮT");
+    add("Tự động dừng sau", "Auto-stop after", "Tự động dừng sau");
+    add("Tắt (Không hẹn giờ)", "Off (No timer)", "Tắt (Không hẹn giờ)");
+    add("15 phút", "15 minutes", "15 phút");
+    add("30 phút", "30 minutes", "30 phút");
+    add("45 phút", "45 minutes", "45 phút");
+    add("60 phút", "60 minutes", "60 phút");
+    add("Khi đọc xong chương này", "At the end of this chapter", "Khi đọc xong chương này");
+    add("Trạng thái: Sẽ tự động dừng khi đọc hết chương.", "Status: Will stop at the end of chapter.", "Trạng thái: Sẽ tự động dừng khi đọc hết chương.");
+    add("Thời gian còn lại: ", "Remaining time: ", "Thời gian còn lại: ");
+    add("Hẹn giờ", "Timer", "Hẹn giờ");
+    add("Hẹn giờ tắt: ", "Sleep timer: ", "Hẹn giờ tắt: ");
+    add("Đã tắt hẹn giờ", "Sleep timer cancelled", "Đã tắt hẹn giờ");
+    add("Hẹn giờ: Dừng khi hết chương", "Timer: Stop at end of chapter", "Hẹn giờ: Dừng khi hết chương");
+
+    // Column Layout
+    add("Bố cục cột", "Column layout", "Bố cục cột");
+    add("Tự động (2 cột trên Passport)", "Auto (2 columns on Passport)", "Tự động (2 cột trên Passport)");
+    add("1 cột (Toàn màn hình)", "1 column (Full screen)", "1 cột (Toàn màn hình)");
+    add("2 cột (Trang sách đôi)", "2 columns (Book spread)", "2 cột (Trang sách đôi)");
+
+    // Comics & Manga RTL
+    add("TRUYỆN TRANH & MANGA", "COMICS & MANGA", "TRUYỆN TRANH & MANGA");
+    add("Chế độ Manga (Phải qua Trái)", "Manga Mode (Right-to-Left)", "Chế độ Manga (Phải qua Trái)");
+    add("Chạm bên trái để lật trang tiếp theo, vuốt phải sang trái để đọc", "Tap left edge to turn next, swipe right-to-left to read", "Chạm bên trái để lật trang tiếp theo, vuốt phải sang trái để đọc");
+    add("Manga RTL (Đang bật)", "Manga RTL (On)", "Manga RTL (Đang bật)");
+    add("Manga RTL (Đang tắt)", "Manga RTL (Off)", "Manga RTL (Đang tắt)");
+    add("Đã bật chế độ Manga (Phải qua Trái)", "Manga Mode enabled (Right-to-Left)", "Đã bật chế độ Manga (Phải qua Trái)");
+    add("Đã tắt chế độ Manga (Trái qua Phải)", "Manga Mode disabled (Left-to-Right)", "Đã tắt chế độ Manga (Trái qua Phải)");
+
+    // Footnotes & Markdown Export
+    add("Chú thích", "Footnote", "Chú thích");
+    add("Xuất .MD", "Export .MD", "Xuất .MD");
+    add("Đã lưu vào Documents: ", "Saved to Documents: ", "Đã lưu vào Documents: ");
+    add("Không có ghi chú nào để xuất.", "No notes or bookmarks to export.", "Không có ghi chú nào để xuất.");
+
+    // WiFi Drop, Reader, Highlights, About, & Misc Missing Strings
+    add("Truyền sách Wi-Fi", "Wi-Fi Book Drop", "Truyền sách Wi-Fi");
+    add("Máy chủ WiFi Book Drop", "WiFi Book Drop Server", "Máy chủ WiFi Book Drop");
+    add("● MÁY CHỦ ĐANG HOẠT ĐỘNG", "● SERVER ACTIVE", "● MÁY CHỦ ĐANG HOẠT ĐỘNG");
+    add("○ MÁY CHỦ ĐÃ TẠM DỪNG", "○ SERVER STOPPED", "○ MÁY CHỦ ĐÃ TẠM DỪNG");
+    add("Bật công tắc phía trên để kích hoạt máy chủ nhận sách không dây.", "Turn on the switch above to start the wireless book upload server.", "Bật công tắc phía trên để kích hoạt máy chủ nhận sách không dây.");
+    add("Mở trình duyệt trên máy tính hoặc điện thoại trong cùng mạng Wi-Fi và truy cập địa chỉ trên để truyền sách không dây.", "Open a browser on your PC or phone on the same Wi-Fi network and visit the address above to transfer books wirelessly.", "Mở trình duyệt trên máy tính hoặc điện thoại trong cùng mạng Wi-Fi và truy cập địa chỉ trên để truyền sách không dây.");
+    add("Chưa phát hiện địa chỉ Wi-Fi. Vui lòng kết nối vào mạng Wi-Fi.", "No Wi-Fi IP detected. Please connect to a Wi-Fi network.", "Chưa phát hiện địa chỉ Wi-Fi. Vui lòng kết nối vào mạng Wi-Fi.");
+    add("Thư mục lưu: /accounts/1000/shared/books (Tự động cập nhật thư viện)", "Save folder: /accounts/1000/shared/books (Auto-updates library)", "Thư mục lưu: /accounts/1000/shared/books (Tự động cập nhật thư viện)");
+    add("SÁCH ĐÃ NHẬN TRONG PHIÊN", "BOOKS RECEIVED IN SESSION", "SÁCH ĐÃ NHẬN TRONG PHIÊN");
+    add("Chưa có sách nào được truyền", "No books transferred yet", "Chưa có sách nào được truyền");
+    add("tệp", "files", "tệp");
+    add(" phút", " min", " phút");
+    add("0 phút", "0 min", "0 phút");
+    add(" • Yêu thích", " • Favorites", " • Yêu thích");
+    add("Tài liệu đã đọc", "Document Read", "Tài liệu đã đọc");
+    add("Hết chương", "End of Chapter", "Hết chương");
+    add("Tắt", "Off", "Tắt");
+    add("Dừng", "Stop", "Dừng");
+    add("Đổi", "Swap", "Đổi");
+    add("Trước", "Prev", "Trước");
+    add("Tiếp", "Next", "Tiếp");
+    add("Sách yêu thích", "Favorite Books", "Sách yêu thích");
+    add("Danh sách đọc", "Reading List", "Danh sách đọc");
+    add("Sách hiện tại", "Current Book", "Sách hiện tại");
+    add("Sách này", "This Book", "Sách này");
+    add("Phạm vi: Sách hiện tại", "Scope: Current Book", "Phạm vi: Sách hiện tại");
+    add("Phạm vi: Toàn bộ thư viện", "Scope: Entire Library", "Phạm vi: Toàn bộ thư viện");
+    add("Chưa có dấu trang hoặc ghi chú", "No bookmarks or notes yet", "Chưa có dấu trang hoặc ghi chú");
+    add("Chưa có ghi chú nào", "No notes yet", "Chưa có ghi chú nào");
+    add("Bôi đen văn bản khi đọc sách để lưu trích dẫn và ghi chú.", "Highlight text while reading to save quotes and notes.", "Bôi đen văn bản khi đọc sách để lưu trích dẫn và ghi chú.");
+    add("Chạm phím 'H' hoặc nút đánh dấu trong trình đọc để lưu trang.", "Press 'H' or tap the bookmark button in the reader to save a page.", "Chạm phím 'H' hoặc nút đánh dấu trong trình đọc để lưu trang.");
+    add("Đánh dấu trang hoặc lưu trích dẫn khi đọc sách để xem lại tại đây.", "Bookmark pages or highlight passages while reading to review them here.", "Đánh dấu trang hoặc lưu trích dẫn khi đọc sách để xem lại tại đây.");
+    add("Hãy bấm vào biểu tượng ngôi sao để thêm sách vào mục Yêu Thích.", "Tap the star icon to add a book to Favorites.", "Hãy bấm vào biểu tượng ngôi sao để thêm sách vào mục Yêu Thích.");
+    add("Tủ sách đang trống", "Bookshelf is Empty", "Tủ sách đang trống");
+    add("Tủ sách của bạn đang trống. Hãy mở tệp hoặc duyệt thư mục để bắt đầu đọc sách!", "Your bookshelf is empty. Open a file or browse folders to start reading!", "Tủ sách của bạn đang trống. Hãy mở tệp hoặc duyệt thư mục để bắt đầu đọc sách!");
+    add("KẾT QUẢ TÌM KIẾM (%1)", "SEARCH RESULTS (%1)", "KẾT QUẢ TÌM KIẾM (%1)");
+    add("Thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc.", "Try another keyword or clear your filters.", "Thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc.");
+    add("Chuyển đến trang ", "Go to page ", "Chuyển đến trang ");
+    add("Cỡ chữ: ", "Font size: ", "Cỡ chữ: ");
+    add("Chế độ Vuốt trang (Swipe)", "Swipe Page Mode", "Chế độ Vuốt trang");
+    add("Giao diện: Sáng", "Theme: Light", "Giao diện: Sáng");
+    add("Giao diện: Tối (AMOLED)", "Theme: Dark (AMOLED)", "Giao diện: Tối (AMOLED)");
+    add("Giao diện: Vàng dịu (Sepia)", "Theme: Sepia", "Giao diện: Vàng dịu (Sepia)");
+    add("Đang thử lại kết nối HTTP...", "Retrying over HTTP...", "Đang thử lại kết nối HTTP...");
+
+    // About & Help
+    add("Phiên bản 2.0.0 (Build 200) - BlackBerry 10", "Version 2.0.0 (Build 200) - BlackBerry 10", "Phiên bản 2.0.0 (Build 200) - BlackBerry 10");
+    add("Trình đọc sách Native thuần C++ và Cascades cho BlackBerry 10.", "Pure C++ and Cascades Native eBook Reader for BlackBerry 10.", "Trình đọc sách Native thuần C++ và Cascades cho BlackBerry 10.");
+    add("Libris là ứng dụng đọc sách chuẩn Native Cascades dành cho BlackBerry 10. Hỗ trợ nhiều định dạng, cử chỉ vuốt mượt mà, tra từ điển ngoại tuyến và đọc giọng nói TTS.", "Libris is a Native Cascades eBook reader for BlackBerry 10 supporting multiple formats, smooth swipe gestures, offline dictionary, and TTS voice reading.", "Libris là ứng dụng đọc sách chuẩn Native Cascades dành cho BlackBerry 10. Hỗ trợ nhiều định dạng, cử chỉ vuốt mượt mà, tra từ điển ngoại tuyến và đọc giọng nói TTS.");
+    add("Hỗ trợ EPUB, PDF, MOBI, AZW3, PRC, FB2, TXT, CBZ, DJVU.", "Supports EPUB, PDF, MOBI, AZW3, PRC, FB2, TXT, CBZ, DJVU.", "Hỗ trợ EPUB, PDF, MOBI, AZW3, PRC, FB2, TXT, CBZ, DJVU.");
+    add("CÔNG NGHỆ VÀ BỘ XỬ LÝ LÕI", "CORE TECHNOLOGIES & ENGINES", "CÔNG NGHỆ VÀ BỘ XỬ LÝ LÕI");
+    add("BẢN QUYỀN VÀ GIẤY PHÉP", "COPYRIGHT & LICENSE", "BẢN QUYỀN VÀ GIẤY PHÉP");
+    add("CỬ CHỈ ĐIỀU HƯỚNG NATIVE", "NATIVE NAVIGATION GESTURES", "CỬ CHỈ ĐIỀU HƯỚNG NATIVE");
+    add("PHÍM TẮT BÀN PHÍM VẬT LÝ", "PHYSICAL KEYBOARD SHORTCUTS", "PHÍM TẮT BÀN PHÍM VẬT LÝ");
+    add("NHẬT KÝ PHIÊN BẢN", "RELEASE CHANGELOG", "NHẬT KÝ PHIÊN BẢN");
+    add("Lõi tài liệu: Poppler C++, DjVuLibre, pugixml DOM và miniz.\nBảng mã Tiếng Việt: Nhận diện tự động UTF-8, UTF-16, TCVN3, Windows-1258, VNI.\nĐọc văn bản TTS: BlackBerry Multimedia Services, Google TTS và Gemini AI.\nTừ điển ngoại tuyến: Cơ sở dữ liệu SQLite tích hợp trên thiết bị.",
+        "Document Core: Poppler C++, DjVuLibre, pugixml DOM, and miniz.\nVietnamese Encodings: Auto-detects UTF-8, UTF-16, TCVN3, Windows-1258, VNI.\nVoice Reading (TTS): BlackBerry Multimedia Services, Google TTS, and Gemini AI.\nOffline Dictionary: Embedded on-device SQLite database.",
+        "Lõi tài liệu: Poppler C++, DjVuLibre, pugixml DOM và miniz.\nBảng mã Tiếng Việt: Nhận diện tự động UTF-8, UTF-16, TCVN3, Windows-1258, VNI.\nĐọc văn bản TTS: BlackBerry Multimedia Services, Google TTS và Gemini AI.\nTừ điển ngoại tuyến: Cơ sở dữ liệu SQLite tích hợp trên thiết bị.");
+    add("EPUB (.epub): Chuẩn EPUB 2.0 và 3.0 với phông chữ nhúng và mục lục NCX.\nMOBI / AZW3 (.mobi, .azw, .azw3, .kf8, .prc): Sách điện tử Mobipocket / Kindle KF8 với mục lục, CSS và ảnh nhúng.\nCBZ (.cbz): Truyện tranh nén với lật trang mượt mà và trích xuất ComicInfo.\nPDF (.pdf): Trang đồ họa nguyên bản và chế độ cuộn văn bản Reflow.\nDJVU (.djvu, .djv): Tài liệu scan nén chất lượng cao.\nFB2 (.fb2): Định dạng FictionBook kèm chú thích chân trang.\nTXT (.txt): Văn bản thuần tự động phát hiện mã hóa.",
+        "EPUB (.epub): EPUB 2.0 & 3.0 standard with embedded fonts and NCX Table of Contents.\nMOBI / AZW3 (.mobi, .azw, .azw3, .kf8, .prc): Mobipocket / Kindle KF8 eBooks with TOC, CSS, and embedded images.\nCBZ (.cbz): Compressed comic books with smooth page flipping and ComicInfo metadata.\nPDF (.pdf): Native graphic pages and Reflow text reading mode.\nDJVU (.djvu, .djv): High-compression scanned documents.\nFB2 (.fb2): FictionBook XML with footnotes.\nTXT (.txt): Plain text with automatic encoding detection.",
+        "EPUB (.epub): Chuẩn EPUB 2.0 và 3.0 với phông chữ nhúng và mục lục NCX.\nMOBI / AZW3 (.mobi, .azw, .azw3, .kf8, .prc): Sách điện tử Mobipocket / Kindle KF8 với mục lục, CSS và ảnh nhúng.\nCBZ (.cbz): Truyện tranh nén với lật trang mượt mà và trích xuất ComicInfo.\nPDF (.pdf): Trang đồ họa nguyên bản và chế độ cuộn văn bản Reflow.\nDJVU (.djvu, .djv): Tài liệu scan nén chất lượng cao.\nFB2 (.fb2): Định dạng FictionBook kèm chú thích chân trang.\nTXT (.txt): Văn bản thuần tự động phát hiện mã hóa.");
+    add("Tác giả: NhatLee (Libris Developer Team)\nBộ dựng Vector PDF & DjVu: Libris PDF/DjVu Engine\nGiấy phép: GNU General Public License v2 (GPLv2)\nMôi trường: BlackBerry 10 Native SDK 10.3.1",
+        "Author: NhatLee (Libris Developer Team)\nPDF & DjVu Vector Renderer: Libris PDF/DjVu Engine\nLicense: GNU General Public License v2 (GPLv2)\nEnvironment: BlackBerry 10 Native SDK 10.3.1",
+        "Tác giả: NhatLee (Libris Developer Team)\nBộ dựng Vector PDF & DjVu: Libris PDF/DjVu Engine\nGiấy phép: GNU General Public License v2 (GPLv2)\nMôi trường: BlackBerry 10 Native SDK 10.3.1");
+    add("Vuốt mép viền trái: Mở thanh điều hướng Sidebar trượt trái.\nVuốt mép viền trên: Mở Menu ứng dụng BlackBerry 10.\nChạm giữa màn hình: Bật hoặc tắt thanh tiêu đề và thanh công cụ.\nVuốt mép viền phải: Mở danh sách tác vụ mở rộng.",
+        "Swipe from left edge: Open the sliding Sidebar drawer.\nSwipe from top edge: Open BlackBerry 10 Application Menu.\nTap center of screen: Toggle title bar and action toolbar.\nSwipe from right edge: Open extended overflow action menu.",
+        "Vuốt mép viền trái: Mở thanh điều hướng Sidebar trượt trái.\nVuốt mép viền trên: Mở Menu ứng dụng BlackBerry 10.\nChạm giữa màn hình: Bật hoặc tắt thanh tiêu đề và thanh công cụ.\nVuốt mép viền phải: Mở danh sách tác vụ mở rộng.");
+    add("Space: Sang trang kế tiếp / Tạm dừng đọc TTS\nN: Sang trang kế tiếp\nP / U: Về trang trước đó\nJ / K: Cuộn trang xuống / lên\nZ / W: Phóng to / Thu nhỏ cỡ chữ\nG / M: Mở mục lục sách\nT / B: Nhảy về đầu sách / cuối sách\nV: Đổi màu nền Ngày / Đêm\nF: Tìm kiếm trong sách\nA: Bật hoặc tắt đọc giọng nói TTS\nD: Tra từ điển ngoại tuyến\nH: Đánh dấu trang hiện tại\nO: Mở tệp sách mới\nS: Mở bảng cài đặt\nQ: Thoát hoàn toàn ứng dụng",
+        "Space: Next page / Pause or Resume TTS\nN: Next page\nP / U: Previous page\nJ / K: Scroll down / up\nZ / W: Increase / Decrease font size\nG / M: Open Table of Contents\nT / B: Jump to start / end of book\nV: Switch Day / Night background\nF: Search inside book\nA: Toggle Text-to-Speech reading\nD: Offline dictionary lookup\nH: Bookmark current page\nO: Open a new book file\nS: Open settings panel\nQ: Quit application completely",
+        "Space: Sang trang kế tiếp / Tạm dừng đọc TTS\nN: Sang trang kế tiếp\nP / U: Về trang trước đó\nJ / K: Cuộn trang xuống / lên\nZ / W: Phóng to / Thu nhỏ cỡ chữ\nG / M: Mở mục lục sách\nT / B: Nhảy về đầu sách / cuối sách\nV: Đổi màu nền Ngày / Đêm\nF: Tìm kiếm trong sách\nA: Bật hoặc tắt đọc giọng nói TTS\nD: Tra từ điển ngoại tuyến\nH: Đánh dấu trang hiện tại\nO: Mở tệp sách mới\nS: Mở bảng cài đặt\nQ: Thoát hoàn toàn ứng dụng");
+    add("BlackBerry Passport: Vuốt trượt trên bàn phím cảm ứng để lật trang hoặc cuộn dòng.\nBlackBerry Classic: Sử dụng bàn rê quang học Trackpad để điều hướng và cuộn trang.",
+        "BlackBerry Passport: Swipe across the touch-enabled keyboard to turn pages or scroll.\nBlackBerry Classic: Use the optical Trackpad to navigate and scroll pages.",
+        "BlackBerry Passport: Vuốt trượt trên bàn phím cảm ứng để lật trang hoặc cuộn dòng.\nBlackBerry Classic: Sử dụng bàn rê quang học Trackpad để điều hướng và cuộn trang.");
+    add("Phiên bản 2.0.0 (Build 200):\n- Bảng màu đơn sắc Đen, Trắng và điểm nhấn Emerald theo chuẩn BlackBerry 10.\n- Loại bỏ toàn bộ thẻ xanh đậm và ký tự rườm rà.\n- Nhận diện tên chương thực tế từ nội dung sách EPUB, TXT, FB2.\n- Tối ưu tra từ điển ngoại tuyến và đọc giọng nói TTS.\n- Điều hướng mượt mà với bàn phím và bàn rê quang học Passport, Classic, Q10.\n\nPhiên bản 2.0.0 (Bản dựng trước):\n- Cấu trúc Navigation Drawer 5 tab Native: Đang đọc, Gần đây, Mục lục, Tủ sách, Duyệt tệp.\n- Tự động nhận diện bảng mã tiếng Việt TCVN3, Windows-1258, VNI, UTF-8.\n- Đồng bộ dữ liệu lịch sử đọc và cấu hình vào bộ nhớ lưu trữ an toàn.",
+        "Version 2.0.0 (Build 200):\n- Monochrome Black & White palette with Emerald accents following BlackBerry 10 design.\n- Removed cluttered labels and redundant badges.\n- Real chapter title extraction from EPUB, TXT, and FB2 content.\n- Optimized offline dictionary and TTS voice reading.\n- Smooth keyboard & optical trackpad navigation for Passport, Classic, and Q10.\n\nVersion 2.0.0 (Previous Builds):\n- Native 5-tab Navigation Drawer: Reading, Recent, TOC, Library, Files.\n- Automatic Vietnamese charset detection (TCVN3, Windows-1258, VNI, UTF-8).\n- Persistent sync of reading history and settings to safe storage.",
+        "Phiên bản 2.0.0 (Build 200):\n- Bảng màu đơn sắc Đen, Trắng và điểm nhấn Emerald theo chuẩn BlackBerry 10.\n- Loại bỏ toàn bộ thẻ xanh đậm và ký tự rườm rà.\n- Nhận diện tên chương thực tế từ nội dung sách EPUB, TXT, FB2.\n- Tối ưu tra từ điển ngoại tuyến và đọc giọng nói TTS.\n- Điều hướng mượt mà với bàn phím và bàn rê quang học Passport, Classic, Q10.\n\nPhiên bản 2.0.0 (Bản dựng trước):\n- Cấu trúc Navigation Drawer 5 tab Native: Đang đọc, Gần đây, Mục lục, Tủ sách, Duyệt tệp.\n- Tự động nhận diện bảng mã tiếng Việt TCVN3, Windows-1258, VNI, UTF-8.\n- Đồng bộ dữ liệu lịch sử đọc và cấu hình vào bộ nhớ lưu trữ an toàn.");
+    add("Không thể mở tệp PDF/DjVu.", "Unable to open PDF/DjVu file.", "Không thể mở tệp PDF/DjVu.");
+    add("Không thể mở hoặc giải mã tệp PDF/DjVu (mã lỗi %1).", "Unable to open or decode PDF/DjVu file (error %1).", "Không thể mở hoặc giải mã tệp PDF/DjVu (mã lỗi %1).");
+    add("Lỗi dịch thuật:", "Translation error:", "Lỗi dịch thuật:");
+    add("Phiên bản %1 (Build %2) - BlackBerry 10", "Version %1 (Build %2) - BlackBerry 10", "Phiên bản %1 (Build %2) - BlackBerry 10");
+    add("Phiên bản hiện tại: %1 (Build %2)", "Current version: %1 (Build %2)", "Phiên bản hiện tại: %1 (Build %2)");
+    add("TỔNG 7 NGÀY", "7-DAY TOTAL", "TỔNG 7 NGÀY");
+    add("Chưa đọc sách", "No reading", "Chưa đọc sách");
+
+    // Libris Editorial & 5-Tab Drawer Strings
+    add("Đang đọc", "Reading", "Đang đọc");
+    add("Ghi chú", "Notes", "Ghi chú");
+    add("Nhập sách", "Import", "Nhập sách");
+    add("Nhập Sách", "Import Books", "Nhập Sách");
+    add("NHẬP SÁCH VÀO LIBRIS", "IMPORT BOOKS TO LIBRIS", "NHẬP SÁCH VÀO LIBRIS");
+    add("Hiển thị", "Display", "Hiển thị");
+    add("Cắt lề PDF", "Auto-Crop PDF", "Cắt lề PDF");
+    add("Đảo màu Đêm", "Night Invert", "Đảo màu Đêm");
+    add("Xoay 90°", "Rotate 90°", "Xoay 90°");
+    add("Mục tiêu hôm nay", "Today's Goal", "Mục tiêu hôm nay");
+    add("ĐANG ĐỌC", "CURRENTLY READING", "ĐANG ĐỌC");
+    add("Xuất Markdown", "Export Markdown", "Xuất Markdown");
+    add("Tất cả file", "All Files", "Tất cả file");
+    add("DS đọc", "Reading List", "DS đọc");
+    add("Tối (AMOLED)", "AMOLED Black", "Tối (AMOLED)");
+    add("Cài đặt thêm...", "More Settings...", "Cài đặt thêm...");
+    add("Gọn", "Tight", "Gọn");
+    add("Vừa", "Normal", "Vừa");
+    add("Thoáng", "Loose", "Thoáng");
+    add("1 cột", "1 Col", "1 cột");
+    add("2 cột", "2 Cols", "2 cột");
+    add("Lật trang", "Paged", "Lật trang");
+    add("MÀU NỀN ĐỌC", "READING THEME", "MÀU NỀN ĐỌC");
+    add("FONT CHỮ", "FONT FAMILY", "FONT CHỮ");
+    add("CỠ CHỮ", "FONT SIZE", "CỠ CHỮ");
+    add("SỐ CỘT", "COLUMNS", "SỐ CỘT");
+    add("DÃN DÒNG", "LINE SPACING", "DÃN DÒNG");
+    add("Đọc sách", "Read book", "Đọc sách");
+    add("Cập nhật", "Updated", "Cập nhật");
+    add("Sách khác gần đây", "Other Recent Books", "Sách khác gần đây");
+    add("Mục tiêu", "Goal", "Mục tiêu");
+    add("BẬT", "ON", "BẬT");
+    add("TẮT", "OFF", "TẮT");
+    add("Đã sẵn sàng", "Ready", "Đã sẵn sàng");
+    add("Bộ lọc & Sắp xếp", "Filter & Sort", "Bộ lọc & Sắp xếp");
+    add("Không", "None", "Không");
+    add("Tác giả", "Author", "Tác giả");
+    add("Trong máy", "Internal", "Trong máy");
+    add("Thẻ SD", "SD Card", "Thẻ SD");
+    add("Đặt lại tất cả", "Reset All", "Đặt lại tất cả");
+    add("Lọc phần / chương...", "Filter parts / chapters...", "Lọc phần / chương...");
+    add("TRẢI NGHIỆM ĐỌC", "READING EXPERIENCE", "TRẢI NGHIỆM ĐỌC");
+    add("TÍNH NĂNG & KHO SÁCH", "FEATURES & LIBRARY", "TÍNH NĂNG & KHO SÁCH");
+    add("ỨNG DỤNG", "APPLICATION", "ỨNG DỤNG");
+    add("Đã bật cắt lề trắng PDF", "PDF Auto-Crop enabled", "Đã bật cắt lề trắng PDF");
+    add("Đã tắt cắt lề trắng PDF", "PDF Auto-Crop disabled", "Đã tắt cắt lề trắng PDF");
+    add("Đã xuất ghi chú: ", "Notes exported: ", "Đã xuất ghi chú: ");
+    add("Không có ghi chú để xuất", "No notes to export", "Không có ghi chú để xuất");
+    add("Truyền Wi-Fi", "Wi-Fi Drop", "Truyền Wi-Fi");
+    add("Kho OPDS", "OPDS", "Kho OPDS");
+    add("Libris TTS", "Libris TTS", "Libris TTS");
+    add("Phiên bản Libris & hướng dẫn", "Libris version & guide", "Phiên bản Libris & hướng dẫn");
+    add("Chạm để bật máy chủ", "Tap to start server", "Chạm để bật máy chủ");
+    add("Tải sách từ thư viện công cộng & Calibre", "Download from public & Calibre OPDS feeds", "Tải sách từ thư viện công cộng & Calibre");
+    add("Đồng bộ & Quét thư viện", "Sync & Scan Library", "Đồng bộ & Quét thư viện");
+    add("Duyệt thư mục", "Browse Folders", "Duyệt thư mục");
+    add("Đặt lại", "Reset", "Đặt lại");
+
+    // Phase 2 Libris Features
+    add("Kệ sách", "Shelves", "Kệ sách");
+    add("Quản lý Kệ sách", "Manage Shelves", "Quản lý Kệ sách");
+    add("Thêm vào kệ sách", "Add to Shelf", "Thêm vào kệ sách");
+    add("Thêm vào kệ...", "Add to shelf...", "Thêm vào kệ...");
+    add("Tạo kệ mới", "Create Shelf", "Tạo kệ mới");
+    add("Tên kệ sách mới...", "New shelf name...", "Tên kệ sách mới...");
+    add("Tạo", "Create", "Tạo");
+    add("Chưa có kệ sách tùy chỉnh nào", "No custom shelves yet", "Chưa có kệ sách tùy chỉnh nào");
+    add("Đã tạo kệ sách: ", "Created shelf: ", "Đã tạo kệ sách: ");
+    add("Đã xóa kệ sách: ", "Deleted shelf: ", "Đã xóa kệ sách: ");
+    add("Xóa kệ", "Delete Shelf", "Xóa kệ");
+    add("Phông chữ tùy chỉnh (.ttf / .otf)", "Custom Fonts (.ttf / .otf)", "Phông chữ tùy chỉnh (.ttf / .otf)");
+    add("Quét lại phông chữ", "Rescan Fonts", "Quét lại phông chữ");
+    add("Đã tìm thấy %1 phông chữ tùy chỉnh", "Found %1 custom font(s)", "Đã tìm thấy %1 phông chữ tùy chỉnh");
+    add("Thư mục phông chữ:", "Fonts folder:", "Thư mục phông chữ:");
+    add("BẢO VỆ MẮT & TỰ ĐỘNG", "EYE CARE & AUTOMATION", "BẢO VỆ MẮT & TỰ ĐỘNG");
+    add("Lọc dịu mắt (Ánh sáng ấm)", "Warm Amber Night Filter", "Lọc dịu mắt (Ánh sáng ấm)");
+    add("Cường độ lọc ấm", "Warm Filter Intensity", "Cường độ lọc ấm");
+    add("Tự động chế độ Đêm (20:00 - 06:00)", "Auto Night Theme (20:00 - 06:00)", "Tự động chế độ Đêm (20:00 - 06:00)");
+    add("Lọc ấm", "Warm Filter", "Lọc ấm");
+    add("MỤC TIÊU & PHÍM CỨNG", "DAILY GOAL & HARDWARE KEYS", "MỤC TIÊU & PHÍM CỨNG");
+    add("Mục tiêu đọc hằng ngày", "Daily Reading Goal", "Mục tiêu đọc hằng ngày");
+    add("Lật trang bằng phím âm lượng", "Volume Key Page Turn", "Lật trang bằng phím âm lượng");
+    add("Nhấn Giảm âm lượng để sang trang tiếp, Tăng âm lượng để lùi trang (tự nhả khi bật TTS)",
+        "Press Volume Down for next page, Volume Up for previous page (auto-releases during TTS)",
+        "Nhấn Giảm âm lượng để sang trang tiếp, Tăng âm lượng để lùi trang (tự nhả khi bật TTS)");
+    add("TRÍCH DẪN HÔM NAY", "TODAY'S HIGHLIGHT", "TRÍCH DẪN HÔM NAY");
+    add("Xuất ảnh Quote Card", "Export Quote Card PNG", "Xuất ảnh Quote Card");
+    add("Đã lưu ảnh Quote Card: ", "Saved Quote Card: ", "Đã lưu ảnh Quote Card: ");
+    add("Không thể xuất ảnh Quote Card", "Unable to export Quote Card", "Không thể xuất ảnh Quote Card");
+    add("Tự cuộn", "Auto-Scroll", "Tự cuộn");
+    add("Tự cuộn (Teleprompter)", "Auto-Scroll", "Tự cuộn");
+    add("Kho máy", "On Device", "Kho máy");
+    add("Kệ", "Shelf", "Kệ");
+    add("CHUỖI MAX", "MAX STREAK", "CHUỖI MAX");
+    add("MỤC TIÊU HÔM NAY", "TODAY'S GOAL", "MỤC TIÊU HÔM NAY");
+    add("Mục tiêu: ", "Goal: ", "Mục tiêu: ");
+    add("NGÀY ĐỌC", "READ DAYS", "NGÀY ĐỌC");
+    add("TB / NGÀY", "AVG / DAY", "TB / NGÀY");
+    add("TỔNG THÁNG", "MONTH TOTAL", "TỔNG THÁNG");
+    add("liên tục", "streak", "liên tục");
+    add("ngày có đọc", "active days", "ngày có đọc");
+    add("phút/ngày", "min/day", "phút/ngày");
+    add("tháng", "month", "tháng");
+    add("thời gian đọc", "reading time", "thời gian đọc");
+    add("cuốn khác", "other books", "cuốn khác");
+    add("Tự chuyển nền đọc Tối AMOLED vào buổi tối và Sepia ban ngày",
+        "Auto-switch to AMOLED Dark at night and Sepia in daytime",
+        "Tự chuyển nền đọc Tối AMOLED vào buổi tối và Sepia ban ngày");
+    add("Áp lớp lọc ánh sáng ấm dịu mắt khi đọc ban đêm",
+        "Apply a warm eye-comfort tint for night reading",
+        "Áp lớp lọc ánh sáng ấm dịu mắt khi đọc ban đêm");
+    add("1. Mở Calibre trên máy tính -> Chọn 'Kết nối/chia sẻ' -> 'Khởi động máy chủ nội dung'.",
+        "1. Open Calibre on PC -> 'Connect/share' -> 'Start Content server'.",
+        "1. Mở Calibre trên máy tính -> Chọn 'Kết nối/chia sẻ' -> 'Khởi động máy chủ nội dung'.");
+    add("2. Đảm bảo thiết bị BlackBerry và máy tính đang cùng kết nối một mạng Wi-Fi.",
+        "2. Ensure your BlackBerry and PC are on the same Wi-Fi network.",
+        "2. Đảm bảo thiết bị BlackBerry và máy tính đang cùng kết nối một mạng Wi-Fi.");
+    add("3. Xem địa chỉ IP của máy tính (ví dụ: 192.168.1.15) và nhập dạng: http://192.168.1.15:8080/opds vào ô ở trên.",
+        "3. Find your PC IP (e.g. 192.168.1.15) and enter: http://192.168.1.15:8080/opds above.",
+        "3. Xem địa chỉ IP của máy tính (ví dụ: 192.168.1.15) và nhập dạng: http://192.168.1.15:8080/opds vào ô ở trên.");
+    add("Dừng", "Stop", "Dừng");
+
+    // --- Focus Mode, Next Series, Quote Share, Flashcards, OPDS Queue & .librisbackup ---
+    add("Chế độ Tập trung (Thước đọc)", "Focus Mode (Reading Ruler)", "Chế độ Tập trung (Thước đọc)");
+    add("Làm mờ vùng chữ xung quanh, chạm để dời dải đọc", "Dim surrounding text, tap to move reading band", "Làm mờ vùng chữ xung quanh, chạm để dời dải đọc");
+    add("Chế độ Tập trung", "Focus Mode", "Chế độ Tập trung");
+    add("Chế độ Tập trung (Đang bật)", "Focus Mode (On)", "Chế độ Tập trung (Đang bật)");
+    add("Đã bật Chế độ Tập trung", "Focus Mode enabled", "Đã bật Chế độ Tập trung");
+    add("Đã tắt Chế độ Tập trung", "Focus Mode disabled", "Đã tắt Chế độ Tập trung");
+    add("Đọc tiếp tập kế", "Read Next Volume", "Đọc tiếp tập kế");
+    add("Chia sẻ Quote Card", "Share Quote Card", "Chia sẻ Quote Card");
+    add("Lưu từ", "Save Word", "Lưu từ");
+    add("Lưu vào Flashcard", "Save to Flashcard", "Lưu vào Flashcard");
+    add("Đã lưu vào sổ từ vựng!", "Saved to vocabulary book!", "Đã lưu vào sổ từ vựng!");
+    add("Flashcard", "Flashcard", "Flashcard");
+    add("Tổng số thẻ:", "Total cards:", "Tổng số thẻ:");
+    add("Xuất CSV (Anki)", "Export CSV (Anki)", "Xuất CSV (Anki)");
+    add("Đã xuất CSV: ", "Exported CSV: ", "Đã xuất CSV: ");
+    add("Không thể xuất CSV", "Unable to export CSV", "Không thể xuất CSV");
+    add("Chưa có từ vựng nào.\nHãy tra từ hoặc dịch rồi bấm 'Lưu từ' để ôn tập Flashcard.",
+        "No vocabulary cards yet.\nLook up or translate a word and tap 'Save Word' to practice with Flashcards.",
+        "Chưa có từ vựng nào.\nHãy tra từ hoặc dịch rồi bấm 'Lưu từ' để ôn tập Flashcard.");
+    add("Chạm thẻ để lật", "Tap card to flip", "Chạm thẻ để lật");
+    add("Đã thuộc ✓", "Mastered ✓", "Đã thuộc ✓");
+    add("Đánh dấu chưa thuộc", "Mark as Learning", "Đánh dấu chưa thuộc");
+    add("Nguồn:", "Source:", "Nguồn:");
+    add("‹ Trước", "‹ Prev", "‹ Trước");
+    add("Lật thẻ", "Flip Card", "Lật thẻ");
+    add("Tiếp ›", "Next ›", "Tiếp ›");
+    add("chờ", "queued", "chờ");
+    add("Đã thêm vào hàng đợi", "Added to download queue", "Đã thêm vào hàng đợi");
+    add("Xuất .librisbackup", "Export .librisbackup", "Xuất .librisbackup");
+    add("Nhập .librisbackup", "Import .librisbackup", "Nhập .librisbackup");
+    add("Đã tạo gói sao lưu: ", "Backup created: ", "Đã tạo gói sao lưu: ");
+    add("Không thể tạo gói sao lưu", "Unable to create backup archive", "Không thể tạo gói sao lưu");
+    add("Chọn tệp sao lưu .librisbackup", "Select .librisbackup file", "Chọn tệp sao lưu .librisbackup");
+    add("Đã khôi phục dữ liệu từ gói sao lưu!", "Restored data from backup archive!", "Đã khôi phục dữ liệu từ gói sao lưu!");
+    add("Gói sao lưu không hợp lệ hoặc bị lỗi", "Invalid or corrupted backup archive", "Gói sao lưu không hợp lệ hoặc bị lỗi");
+
+    // --- UI Overhaul Phase 2/3 Strings ---
+    add("NGUỒN NHẬP SÁCH", "IMPORT SOURCES", "NGUỒN NHẬP SÁCH");
+    add("THƯ VIỆN MÁY", "DEVICE LIBRARY", "THƯ VIỆN MÁY");
+    add("Chọn tệp từ bộ nhớ máy hoặc thẻ SD", "Choose files from device storage or SD card", "Chọn tệp từ bộ nhớ máy hoặc thẻ SD");
+    add("Không tìm thấy chương phù hợp", "No matching chapters found", "Không tìm thấy chương phù hợp");
+    add("Không tìm thấy kết quả phù hợp", "No matching results found", "Không tìm thấy kết quả phù hợp");
+    add("Toàn bộ thư viện", "Entire library", "Toàn bộ thư viện");
+    add("dấu trang", "bookmarks", "dấu trang");
+    add("ghi chú", "notes", "ghi chú");
+    add("Xóa Dấu Trang", "Delete Bookmark", "Xóa Dấu Trang");
+    add("Xác nhận xóa", "Confirm Delete", "Xác nhận xóa");
+    add("Bạn có chắc muốn xóa dấu trang này?", "Are you sure you want to delete this bookmark?", "Bạn có chắc muốn xóa dấu trang này?");
+    add("Bạn có chắc muốn xóa highlight này?", "Are you sure you want to delete this highlight?", "Bạn có chắc muốn xóa highlight này?");
+    add("XEM TRƯỚC CHÂN TRANG", "FOOTER PREVIEW", "XEM TRƯỚC CHÂN TRANG");
+    add("Chương 3: Đêm tĩnh lặng", "Chapter 3: The Quiet Night", "Chương 3: Đêm tĩnh lặng");
+    add("Tất cả mục chân trang đang ẩn", "All footer items are hidden", "Tất cả mục chân trang đang ẩn");
+
+    // --- Reading Statistics Redesign ---
+    add("7 NGÀY GẦN NHẤT", "LAST 7 DAYS", "7 NGÀY GẦN NHẤT");
+    add("TÍCH LŨY", "ALL-TIME", "TÍCH LŨY");
+    add("THEO ĐỊNH DẠNG", "BY FORMAT", "THEO ĐỊNH DẠNG");
+    add("TỔNG TUẦN", "WEEK TOTAL", "TỔNG TUẦN");
+    add("TIẾN ĐỘ CHƯƠNG", "CHAPTER PROGRESS", "TIẾN ĐỘ CHƯƠNG");
+    add("Thư viện còn:", "Also in library:", "Thư viện còn:");
+    add("Chưa có dữ liệu đọc sách", "No reading data yet", "Chưa có dữ liệu đọc sách");
+
+    // --- eSpeak-NG ---
+    add("eSpeak-NG (Ngoại tuyến)", "eSpeak-NG (Offline)", "eSpeak-NG (Ngoại tuyến)");
+    add("Giọng vùng miền (Tiếng Việt)", "Vietnamese regional accent", "Giọng vùng miền (Tiếng Việt)");
+    add("Miền Bắc", "Northern", "Miền Bắc");
+    add("Miền Nam", "Southern", "Miền Nam");
+    add("Miền Trung", "Central", "Miền Trung");
+    add("Chất giọng eSpeak-NG", "eSpeak-NG voice style", "Chất giọng eSpeak-NG");
+    add("Nữ êm dịu", "Female - Smooth", "Nữ êm dịu");
+    add("Nữ sáng", "Female - Bright", "Nữ sáng");
+    add("Nam chuẩn", "Male - Standard", "Nam chuẩn");
+    add("Nam trầm ấm", "Male - Warm", "Nam trầm ấm");
+    add("Klatt rõ chữ", "Klatt - Clear", "Klatt rõ chữ");
+    add("Giọng Nguyễn", "Nguyen voice", "Giọng Nguyễn");
+    add("Chế độ ngoại tuyến: ưu tiên phát âm thanh đã tải, câu chưa có sẽ tự đọc bằng eSpeak-NG tích hợp sẵn.", "Offline mode: downloaded audio plays first; uncached sentences are read by the built-in eSpeak-NG.", "Chế độ ngoại tuyến: ưu tiên phát âm thanh đã tải, câu chưa có sẽ tự đọc bằng eSpeak-NG tích hợp sẵn.");
+    // --- TTS quick HUD ---
+    add("Tạm dừng", "Pause", "Tạm dừng");
+    add("Phát tiếp", "Play", "Phát tiếp");
+    add("Nguồn", "Source", "Nguồn");
+    add("Giọng", "Voice", "Giọng");
+    add("Chuẩn (mượt nhất)", "Standard (smoothest)", "Chuẩn (mượt nhất)");
+    add("Chế độ ngoại tuyến: đọc âm thanh đã tải hoặc eSpeak-NG", "Offline mode: cached audio or eSpeak-NG", "Chế độ ngoại tuyến: đọc âm thanh đã tải hoặc eSpeak-NG");
+    add("Chế độ trực tuyến", "Online mode", "Chế độ trực tuyến");
 }
 
 void AppTranslator::setLanguage(const QString &lang)

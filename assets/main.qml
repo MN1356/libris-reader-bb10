@@ -6,9 +6,7 @@ TabbedPane {
     id: rootTabbedPane
 
     // =========================================================================
-    // NATIVE CASCADES LEFT-SWIPE DRAWER SIDEBAR
-    // When showTabsOnActionBar is false, BB10 places tabs in the native
-    // slide-out sidebar accessible via bezel swipe from left edge or '≡' button!
+    // NATIVE CASCADES LEFT-SWIPE DRAWER SIDEBAR (5 Fixed Tabs for Libris)
     // =========================================================================
     showTabsOnActionBar: false
     peekEnabled: !bookManager.isReaderActive
@@ -32,13 +30,6 @@ TabbedPane {
         }
         actions: [
             ActionItem {
-                title: qsTr("Tiến Độ") + Retranslate.onLanguageChanged
-                imageSource: "asset:///icons/ic_chart.png"
-                onTriggered: {
-                    rootTabbedPane.openReadingStats();
-                }
-            },
-            ActionItem {
                 title: qsTr("Thoát") + Retranslate.onLanguageChanged
                 imageSource: "asset:///icons/ic_exit.png"
                 onTriggered: {
@@ -51,13 +42,15 @@ TabbedPane {
     property alias settingsSheet: settingsSheet
     property alias aboutSheet: aboutSheet
     property alias readingStatsSheet: readingStatsSheet
+    property alias opdsSheet: opdsSheet
+    property alias wifiDropSheet: wifiDropSheet
     property alias filePicker: filePicker
     property alias navPane: navPane
     property alias recentTab: recentTab
-    property alias contentsTab: contentsTab
-    property alias highlightTab: highlightTab
     property alias shelfTab: shelfTab
+    property alias highlightTab: highlightTab
     property alias browserTab: browserTab
+    property alias importTab: importTab
 
     property string pendingExternalPath: ""
 
@@ -77,19 +70,23 @@ TabbedPane {
         filePicker.open();
     }
 
+    function openWifiDrop() {
+        wifiDropSheet.open();
+    }
+
+    function openOpds() {
+        opdsSheet.open();
+    }
+
     function promptExit() {
         exitConfirmDialog.show();
     }
 
     function switchToTab(tabName) {
-        if (tabName === "reading" || tabName === "stats" || tabName === "progress") {
+        if (tabName === "stats" || tabName === "progress") {
             rootTabbedPane.openReadingStats();
-        } else if (tabName === "recent" || tabName === "home") {
+        } else if (tabName === "reading" || tabName === "recent" || tabName === "home") {
             rootTabbedPane.activeTab = recentTab;
-        } else if (tabName === "contents") {
-            if (rootTabbedPane.indexOf(contentsTab) !== -1) {
-                rootTabbedPane.activeTab = contentsTab;
-            }
         } else if (tabName === "highlight" || tabName === "highlights" || tabName === "bookmark" || tabName === "bookmarks") {
             rootTabbedPane.activeTab = highlightTab;
         } else if (tabName === "shelf" || tabName === "library") {
@@ -97,39 +94,19 @@ TabbedPane {
             rootTabbedPane.activeTab = shelfTab;
         } else if (tabName === "browser") {
             rootTabbedPane.activeTab = browserTab;
+        } else if (tabName === "import" || tabName === "wifi" || tabName === "opds") {
+            rootTabbedPane.activeTab = importTab;
         }
         rootTabbedPane.resetSidebarState();
-    }
-
-    function updateContentsTabVisibility() {
-        // Table of contents tab in sidebar should ONLY appear while inside the book reader
-        var isReading = (navPane && navPane.count() > 1);
-        var idx = rootTabbedPane.indexOf(contentsTab);
-        if (isReading) {
-            if (idx === -1) {
-                console.log("[main.qml] Showing Contents tab in reader sidebar");
-                rootTabbedPane.insert(2, contentsTab);
-            }
-        } else {
-            if (idx !== -1) {
-                console.log("[main.qml] Hiding Contents tab from sidebar outside reader");
-                if (rootTabbedPane.activeTab === contentsTab) {
-                    rootTabbedPane.activeTab = recentTab;
-                }
-                rootTabbedPane.remove(contentsTab);
-            }
-        }
     }
 
     function openBookWithLoading(filePath) {
         console.log("[main.qml] openBookWithLoading called with:", filePath);
         if (!filePath) return;
 
-        // Switch to recent tab and close left sidebar
         rootTabbedPane.activeTab = recentTab;
         rootTabbedPane.resetSidebarState();
 
-        // If reader is already pushed on top, pop first if opening a different book
         if (navPane.count() > 1) {
             if (bookManager.currentFilePath === filePath) {
                 console.log("[main.qml] Book is already currently open:", filePath);
@@ -153,7 +130,6 @@ TabbedPane {
                 }
                 bookManager.setIsLoadingBook(false);
                 bookManager.setIsReaderActive(true);
-                rootTabbedPane.updateContentsTabVisibility();
             } else {
                 var errDetail = "";
                 if (typeof readerDefinition.errorMessage === "function") {
@@ -184,9 +160,10 @@ TabbedPane {
         app.openSettingsRequested.connect(rootTabbedPane.openSettings);
         app.openReadingStatsRequested.connect(rootTabbedPane.openReadingStats);
         app.openFilePickerRequested.connect(rootTabbedPane.openFilePicker);
+        app.openWifiDropRequested.connect(rootTabbedPane.openWifiDrop);
+        app.openOpdsRequested.connect(rootTabbedPane.openOpds);
         app.promptExitRequested.connect(rootTabbedPane.promptExit);
         bookManager.promptExitRequested.connect(rootTabbedPane.promptExit);
-        rootTabbedPane.updateContentsTabVisibility();
     }
 
     function openBookExternal(filePath) {
@@ -205,10 +182,6 @@ TabbedPane {
             bookManager.setIsReaderActive(false);
             if (activeTab === shelfTab) {
                 bookManager.setMainViewMode("shelf");
-            } else if (activeTab === contentsTab) {
-                if (tocPage && tocPage.reloadTocModel) {
-                    tocPage.reloadTocModel();
-                }
             } else if (activeTab === highlightTab) {
                 if (highlightPage && highlightPage.reloadHighlights) {
                     highlightPage.reloadHighlights();
@@ -218,11 +191,11 @@ TabbedPane {
     }
 
     // =========================================================================
-    // TAB 1: RECENT (SÁCH GẦN ĐÂY) - Primary Landing Tab with Continue Reading
+    // TAB 1: ĐANG ĐỌC (HOME) - Editorial Dashboard & Continue Reading
     // =========================================================================
     Tab {
         id: recentTab
-        title: qsTr("Gần đây") + Retranslate.onLanguageChanged
+        title: qsTr("Trang chủ") + Retranslate.onLanguageChanged
         imageSource: "asset:///icons/ic_recent.png"
 
         NavigationPane {
@@ -242,7 +215,6 @@ TabbedPane {
                 bookManager.setIsLoadingBook(false);
                 var isReaderOnTop = (navPane.count() > 1 && navPane.top !== recentPage && rootTabbedPane.activeTab === recentTab);
                 bookManager.setIsReaderActive(isReaderOnTop);
-                rootTabbedPane.updateContentsTabVisibility();
             }
 
             onPushTransitionEnded: {
@@ -261,7 +233,6 @@ TabbedPane {
                 bookManager.setIsLoadingBook(false);
                 page.destroy();
                 bookManager.refreshStats();
-                rootTabbedPane.updateContentsTabVisibility();
                 if (pendingExternalPath !== "") {
                     var nextPath = pendingExternalPath;
                     pendingExternalPath = "";
@@ -272,11 +243,11 @@ TabbedPane {
     }
 
     // =========================================================================
-    // TAB 2: LIBRARY (THƯ VIỆN / TỦ SÁCH) - 3 Books side-by-side Icon
+    // TAB 2: THƯ VIỆN (LIBRARY)
     // =========================================================================
     Tab {
         id: shelfTab
-        title: qsTr("Thư viện") + Retranslate.onLanguageChanged
+        title: qsTr("Tủ Sách") + Retranslate.onLanguageChanged
         imageSource: "asset:///icons/ic_library.png"
 
         LibraryPage {
@@ -285,24 +256,11 @@ TabbedPane {
     }
 
     // =========================================================================
-    // TAB 3: CONTENTS (MỤC LỤC SÁCH) - Visible while inside reader
-    // =========================================================================
-    Tab {
-        id: contentsTab
-        title: qsTr("Mục lục") + Retranslate.onLanguageChanged
-        imageSource: "asset:///icons/ic_toc.png"
-
-        TocPage {
-            id: tocPage
-        }
-    }
-
-    // =========================================================================
-    // TAB 4: DẤU TRANG & GHI CHÚ (BOOKMARKS & HIGHLIGHTS)
+    // TAB 3: GHI CHÚ & DẤU TRANG (NOTES & BOOKMARKS)
     // =========================================================================
     Tab {
         id: highlightTab
-        title: qsTr("Dấu trang & Ghi chú") + Retranslate.onLanguageChanged
+        title: qsTr("Ghi chú") + Retranslate.onLanguageChanged
         imageSource: "asset:///icons/ic_bookmarks.png"
 
         HighlightPage {
@@ -311,7 +269,7 @@ TabbedPane {
     }
 
     // =========================================================================
-    // TAB 5: DUYỆT THƯ MỤC (FILES) - Hierarchical SD Card & Storage Browser
+    // TAB 4: THƯ MỤC (FILES)
     // =========================================================================
     Tab {
         id: browserTab
@@ -320,6 +278,19 @@ TabbedPane {
 
         BrowserPage {
             id: browserPage
+        }
+    }
+
+    // =========================================================================
+    // TAB 5: NHẬP SÁCH (IMPORT HUB: Wi-Fi Drop, OPDS, FilePicker, Scan)
+    // =========================================================================
+    Tab {
+        id: importTab
+        title: qsTr("Nhập sách") + Retranslate.onLanguageChanged
+        imageSource: "asset:///icons/ic_import.png"
+
+        ImportPage {
+            id: importPage
         }
     }
 
@@ -337,7 +308,7 @@ TabbedPane {
         },
         SystemDialog {
             id: exitConfirmDialog
-            title: qsTr("Thoát BerryLeaf") + Retranslate.onLanguageChanged
+            title: qsTr("Thoát Libris") + Retranslate.onLanguageChanged
             body: qsTr("Bạn có muốn lưu tiến độ đọc và thoát hoàn toàn ứng dụng không?") + Retranslate.onLanguageChanged
             confirmButton.label: qsTr("Thoát") + Retranslate.onLanguageChanged
             cancelButton.label: qsTr("Hủy") + Retranslate.onLanguageChanged
@@ -351,7 +322,7 @@ TabbedPane {
             id: filePicker
             type: FileType.Other
             title: qsTr("Chọn sách để mở") + Retranslate.onLanguageChanged
-            filter: ["*.epub", "*.txt", "*.fb2", "*.pdf", "*.djvu"]
+            filter: ["*.epub", "*.txt", "*.fb2", "*.pdf", "*.djvu", "*.djv", "*.cbz", "*.mobi", "*.azw", "*.azw3", "*.kf8", "*.prc"]
             directories: [
                 "/accounts/1000/removable/sdcard2",
                 "/accounts/1000/removable/sdcard2/Book",
@@ -379,6 +350,12 @@ TabbedPane {
         },
         ReadingStatsSheet {
             id: readingStatsSheet
+        },
+        OpdsSheet {
+            id: opdsSheet
+        },
+        WiFiDropSheet {
+            id: wifiDropSheet
         },
         ComponentDefinition {
             id: readerDefinition

@@ -2,6 +2,7 @@
 #define APPLICATIONUI_HPP
 
 #include <QObject>
+#include <QTimer>
 #include <bb/system/InvokeManager>
 #include <bb/system/InvokeRequest>
 #include "BookManager.hpp"
@@ -26,10 +27,14 @@ public:
     Q_INVOKABLE void openSettings();
     Q_INVOKABLE void openReadingStats();
     Q_INVOKABLE void openFilePicker();
+    Q_INVOKABLE void openWifiDrop();
+    Q_INVOKABLE void openOpds();
     Q_INVOKABLE void sendLog();
     Q_INVOKABLE void switchToTab(const QString &tabName);
     Q_INVOKABLE void exitApp();
     Q_INVOKABLE void promptExit();
+    Q_INVOKABLE void shareFile(const QString &filePath, const QString &mimeType = "image/png");
+    Q_INVOKABLE void shareText(const QString &text);
 
 signals:
     void openBookRequested(const QString &filePath);
@@ -38,6 +43,8 @@ signals:
     void openSettingsRequested();
     void openReadingStatsRequested();
     void openFilePickerRequested();
+    void openWifiDropRequested();
+    void openOpdsRequested();
     void promptExitRequested();
 
 public slots:
@@ -48,12 +55,17 @@ public slots:
     void onAwake();
     void onInvisible();
     void onAboutToQuit();
+    void onHardExitTimeout();
+    void onDebugCaptureTimeout();
 
 private:
     BookManager m_bookManager;
     bb::system::InvokeManager m_invokeManager;
     bb::cascades::AbstractPane *m_rootPane;
+    QTimer *m_debugCaptureTimer;
     QString m_pendingInvokePath;
+    bool m_isForeground;
+    bool m_exitSaved;
 
     void initCover();
     void processInvokeRequest(const bb::system::InvokeRequest &request);

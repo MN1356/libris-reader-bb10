@@ -1,4 +1,5 @@
 import bb.cascades 1.3
+import bb.system 1.2
 
 Page {
     id: highlightPage
@@ -9,8 +10,7 @@ Page {
         title: qsTr("Dấu Trang & Ghi Chú") + Retranslate.onLanguageChanged
         appearance: TitleBarAppearance.Plain
         acceptAction: ActionItem {
-            title: ""
-            imageSource: "asset:///icons/ic_search.png"
+            title: (mainHighlightView.isSearching ? qsTr("Đóng") : qsTr("Tìm")) + Retranslate.onLanguageChanged
             onTriggered: {
                 mainHighlightView.toggleSearch();
             }
@@ -19,7 +19,7 @@ Page {
 
     Menu.definition: MenuDefinition {
         helpAction: HelpActionItem {
-            title: qsTr("Giới thiệu") + Retranslate.onLanguageChanged
+            title: qsTr("Giới Thiệu") + Retranslate.onLanguageChanged
             imageSource: "asset:///icons/ic_info.png"
             onTriggered: {
                 app.showAbout();
@@ -45,19 +45,27 @@ Page {
 
     actions: [
         ActionItem {
-            title: mainHighlightView.showCurrentBookOnly ? (qsTr("Tất cả sách") + Retranslate.onLanguageChanged) : (qsTr("Sách hiện tại") + Retranslate.onLanguageChanged)
-            imageSource: "asset:///icons/ic_library.png"
+            title: (mainHighlightView.showCurrentBookOnly ? qsTr("Tất cả sách") : qsTr("Sách hiện tại")) + Retranslate.onLanguageChanged
+            imageSource: "asset:///icons/ic_filter.png"
             ActionBar.placement: ActionBarPlacement.OnBar
             onTriggered: {
                 mainHighlightView.toggleScope();
             }
         },
         ActionItem {
+            title: qsTr("Xuất Markdown") + Retranslate.onLanguageChanged
+            imageSource: "asset:///icons/ic_download.png"
+            ActionBar.placement: ActionBarPlacement.OnBar
+            onTriggered: {
+                mainHighlightView.exportMarkdown();
+            }
+        },
+        ActionItem {
             title: bookManager.isCurrentChapterBookmarked ?
                    (qsTr("Bỏ dấu trang") + Retranslate.onLanguageChanged) :
                    (qsTr("Đánh dấu trang") + Retranslate.onLanguageChanged)
-            imageSource: bookManager.isCurrentChapterBookmarked ? "asset:///icons/ic_bookmarks.png" : "asset:///icons/ic_bookmark_add.png"
-            ActionBar.placement: ActionBarPlacement.OnBar
+            imageSource: bookManager.isCurrentChapterBookmarked ? "asset:///icons/ic_bookmark_filled.png" : "asset:///icons/ic_bookmark_add.png"
+            ActionBar.placement: ActionBarPlacement.InOverflow
             enabled: bookManager.currentFilePath !== ""
             onTriggered: {
                 bookManager.toggleBookmarkCurrentPosition();
@@ -66,28 +74,17 @@ Page {
         },
         ActionItem {
             title: qsTr("Tủ Sách") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_grid.png"
-            ActionBar.placement: ActionBarPlacement.OnBar
+            imageSource: "asset:///icons/ic_library.png"
+            ActionBar.placement: ActionBarPlacement.InOverflow
             onTriggered: {
                 app.switchToTab("shelf");
-            }
-        },
-        ActionItem {
-            title: qsTr("Thoát") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_exit.png"
-            ActionBar.placement: ActionBarPlacement.InOverflow
-            shortcuts: [
-                Shortcut { key: "Q" }
-            ]
-            onTriggered: {
-                app.promptExit();
             }
         }
     ]
 
     HighlightView {
         id: mainHighlightView
-        showCurrentBookOnly: (bookManager.currentFilePath !== "" && (bookManager.currentBookHighlightCount > 0 || bookManager.currentBookBookmarkCount > 0))
+        showInlineActions: false
 
         onJumpToHighlightTriggered: {
             if (filePath && filePath !== "") {
@@ -106,6 +103,10 @@ Page {
             }
             bookManager.jumpToBookmark(bookmarkId);
         }
+    }
+
+    onCreationCompleted: {
+        mainHighlightView.showCurrentBookOnly = (bookManager.currentFilePath !== "" && (bookManager.currentBookHighlightCount > 0 || bookManager.currentBookBookmarkCount > 0));
     }
 
     function reloadHighlights() {

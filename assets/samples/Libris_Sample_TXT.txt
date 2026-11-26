@@ -1,0 +1,15 @@
+Libris Sample (TXT)
+Tác giả: Libris Team
+
+Chương 1: Khởi đầu với văn bản thuần TXT
+
+Đây là tệp văn bản thuần UTF-8 mẫu dùng để kiểm tra bộ đọc TXT của Libris trên BlackBerry 10.
+Trình đọc tự động nhận diện mã hóa tiếng Việt (UTF-8, UTF-16, TCVN3, VNI, Windows-1258) và tự động tách mục lục theo tên chương.
+
+Chương 2: Tính năng đọc sách và từ điển
+
+Bạn có thể bôi đen từ vựng bất kỳ để tra từ điển ngoại tuyến, dịch câu, tô sáng (highlight) hoặc nghe đọc bằng giọng nói TTS.
+
+Chương 3: Kết luận
+
+Chúc bạn có trải nghiệm đọc sách mượt mà trên BlackBerry 10!

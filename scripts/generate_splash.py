@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-BerryReader Minimalist Splash Screen Generator
+Libris Minimalist Splash Screen Generator
 Creates clean, elegant splash screens with ONLY:
 - Logo (sharp book & ribbon emblem)
-- Application Name ('BerryReader')
+- Application Name ('Libris')
 - Native Loading Effect (smooth circular spinner)
 Target resolutions:
 - 720x720   (Classic, Q10, Q5)
@@ -105,7 +105,7 @@ def create_splash(width, height, emblem):
     # 2. Typography
     font_size = int(34 * scale)
     font = ImageFont.truetype(FONT_PATH, font_size)
-    app_name = "BerryReader"
+    app_name = "Libris"
 
     # Compute text bbox
     dummy_draw = ImageDraw.Draw(splash)

@@ -1,13 +1,13 @@
-#ifndef __INSRSETTINGS_H__
-#define __INSRSETTINGS_H__
+#ifndef __IPDFSETTINGS_H__
+#define __IPDFSETTINGS_H__
 
 /**
- * @file insrsettings.h
- * @author Alexander Saprykin
+ * @file ipdfsettings.h
+ * @author Libris Team
  * @brief Interface for rendering settings
  */
 
-#include "nsrreadercore_global.h"
+#include "pdfcore_global.h"
 
 #include <QString>
 
@@ -67,4 +67,4 @@ public:
 	virtual bool isStarting () const = 0;
 };
 
-#endif /* __INSRSETTINGS_H__ */
+#endif /* __IPDFSETTINGS_H__ */
