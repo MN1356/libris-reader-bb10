@@ -54,17 +54,21 @@ fi
 echo "=== Building Libris for $TARGET ($ARCH) using $CONTAINER_CLI ==="
 
 USERNS_FLAGS=()
+VOL_RO="ro"
+VOL_RW="rw"
 if [[ "$CONTAINER_CLI" == "podman" ]]; then
     USERNS_FLAGS=(--userns=keep-id)
+    VOL_RO="ro,z"
+    VOL_RW="rw,z"
 else
-    USERNS_FLAGS=(--user "$(id -u):$(id -g)")
+    USERNS_FLAGS=(--user "$(id -u):$(id -g)" -e HOME=/tmp)
 fi
 
 $CONTAINER_CLI run --rm --platform=linux/amd64 \
     "${USERNS_FLAGS[@]}" \
     --tmpfs /tmp:rw,exec,size=1024m,mode=1777 \
-    -v "$SCRIPT_DIR:/project:ro,z" \
-    -v "$BUILD_DIR:/output:rw,z" \
+    -v "$SCRIPT_DIR:/project:$VOL_RO" \
+    -v "$BUILD_DIR:/output:$VOL_RW" \
     --entrypoint /bin/bash "$IMAGE" -c "
         set -eo pipefail
         export QNX_CONFIGURATION=/tmp/qnx
