@@ -1,1 +1,32 @@
+# Local AI / Antigravity workspace rules, skills & ignore config
 .antigravityignore
+.agents/
+.agent/
+AGENTS.md
+
+# Local OS / IDE metadata
+.directory
+.DS_Store
+.vscode/
+.idea/
+
+# Build outputs, binaries, BAR packages & timestamps
+build/
+o.le-v7*/
+o-g/
+*.bar
+.last_build_ts
+
+# Device & runtime logs
+logs/
+*.log
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# BlackBerry signing keys / debug tokens (never commit)
+*.p12
+*.csk
+*.keystore
+debugtoken*.bar

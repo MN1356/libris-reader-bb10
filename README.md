@@ -2,8 +2,8 @@
 
 Libris is a native C++ / Qt 4.8 / Cascades e-book reader built for **BlackBerry 10** devices (Passport, Classic, Q10, Q5, Z10, Z30). It combines hardware-accelerated rendering, an integrated PDF/DjVu core, offline & online Text-to-Speech, wireless book transfer, and full physical keyboard navigation.
 
-* **Repository:** https://github.com/MN1356/Libris-bb10
-* **Current Version:** `2.3.0` (`Build 273`)
+* **Repository:** https://github.com/MN1356/libris-reader-bb10
+* **Current Version:** `2.3.1` (`Build 275`)
 * **License:** GNU General Public License v2.0 or later ([LICENSE](LICENSE))
 
 ---
@@ -138,7 +138,7 @@ Generated packages:
 Libris is made possible by the contributions of its author and the following open-source projects and communities:
 
 * **Author & Maintainer:**
-  * **NhatLee (`MN1356`)** — Application architecture, Cascades UI/UX, multi-format library engine, Wi-Fi Book Drop, OCR reader workflows, TTS integration, and BlackBerry 10 hardware optimizations ([GitHub](https://github.com/MN1356/Libris-bb10)).
+  * **NhatLee (`MN1356`)** — Application architecture, Cascades UI/UX, multi-format library engine, Wi-Fi Book Drop, OCR reader workflows, TTS integration, and BlackBerry 10 hardware optimizations ([GitHub](https://github.com/MN1356/libris-reader-bb10)).
 
 * **Open-Source Libraries & Engines:**
   * **NSR Reader Core (`src/pdfcore/`, `assets/lib/libnsrreadercore.so`):** Native BlackBerry 10 PDF and DjVu rendering backend (`NSRReaderCore`, `NSRPopplerDocument`, `NSRDjVuDocument`), built atop **Poppler** and **DjVuLibre** (**GPL**).

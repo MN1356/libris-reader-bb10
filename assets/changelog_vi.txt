@@ -1,3 +1,9 @@
+Phiên bản 2.3.1 (Build 276) - 2026-11-28:
+- Bổ sung kiểm tra & tải cập nhật trực tiếp qua GitHub Releases ngay trong Cài đặt (hỗ trợ BarInstaller và tự tắt app trước khi cài đặt), dùng client OpenSSL TLS 1.2 riêng vượt giới hạn Qt 4.8.6 trên BB10.
+- Bổ sung chọn thư mục quét tùy chỉnh trong Cài đặt, loại bỏ nút Chọn dư thừa trên từng dòng và tách quét ảnh bìa sang luồng nền để quét toàn bộ bộ nhớ & thẻ SD đầy đủ hơn.
+- Hỗ trợ chọn văn bản OCR trực tiếp trên PDF chưa reflow qua WebView và đánh dấu phần đang đọc TTS.
+- Tinh chỉnh giao diện: làm to các thẻ/dòng Kệ sách tự tạo, đổi tiêu đề sách sang font mảnh rõ ràng, thêm mã PIN bảo vệ 4 số cho Wi-Fi Book Drop và cho phép xóa sách ngay trong app.
+
 Phiên bản 2.3.0 (Build 273) - 2026-11-27:
 - Thiết kế lại toàn bộ Onboarding Guide (7 trang) theo chuẩn Native BlackBerry 10 Cascades (`RadioGroup`, `SegmentedControl`, `Button Primary`, thanh ActionBar tối, vuốt ngang chuyển trang, căn giữa màn hình vuông Passport).
 - Nâng cấp Trang 4 (Controls) thành màn hình đọc sách mô phỏng toàn khung kèm hộp thoại nổi và animation minh họa từng phím tắt; vẽ hình minh họa đúng dáng máy BlackBerry Passport cho trang Giao diện & Thêm sách.

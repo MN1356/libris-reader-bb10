@@ -16,9 +16,6 @@
 #include <bb/platform/PlatformInfo>
 #include <bb/system/Clipboard>
 #include <bb/multimedia/MediaKey>
-#include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QNetworkReply>
 #include "EpubParser.hpp"
 #include "TxtParser.hpp"
 #include "Fb2Parser.hpp"
@@ -42,6 +39,7 @@ namespace bb {
 class SearchWorker;
 class ScanWorker;
 class CoverExtractWorker;
+class TlsHttpWorker;
 class OpdsManager;
 class QSettings;
 class WiFiDropServer;
@@ -129,6 +127,18 @@ class BookManager : public QObject {
     Q_PROPERTY(QStringList customShelves READ customShelves NOTIFY customShelvesChanged)
     Q_PROPERTY(QStringList scanFolders READ scanFolders NOTIFY scanFoldersChanged)
     Q_PROPERTY(QString scanFoldersSummary READ scanFoldersSummary NOTIFY scanFoldersChanged)
+    Q_PROPERTY(bool updateChecking READ updateChecking NOTIFY updateStateChanged)
+    Q_PROPERTY(bool updateDownloading READ updateDownloading NOTIFY updateStateChanged)
+    Q_PROPERTY(int updateProgress READ updateProgress NOTIFY updateStateChanged)
+    Q_PROPERTY(bool updateAvailable READ updateAvailable NOTIFY updateStateChanged)
+    Q_PROPERTY(QString updateLatestVersion READ updateLatestVersion NOTIFY updateStateChanged)
+    Q_PROPERTY(QString updateReleaseNotes READ updateReleaseNotes NOTIFY updateStateChanged)
+    Q_PROPERTY(QString updateAssetName READ updateAssetName NOTIFY updateStateChanged)
+    Q_PROPERTY(QString updateAssetSizeStr READ updateAssetSizeStr NOTIFY updateStateChanged)
+    Q_PROPERTY(QString updateDownloadUrl READ updateDownloadUrl NOTIFY updateStateChanged)
+    Q_PROPERTY(QString updateStatusText READ updateStatusText NOTIFY updateStateChanged)
+    Q_PROPERTY(bool updateReadyToInstall READ updateReadyToInstall NOTIFY updateStateChanged)
+    Q_PROPERTY(QString updateTargetBarPath READ updateTargetBarPath NOTIFY updateStateChanged)
     Q_PROPERTY(QString searchQuery READ searchQuery WRITE setSearchQuery NOTIFY searchQueryChanged)
     Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY languageChanged)
     Q_PROPERTY(TtsManager* tts READ ttsManager CONSTANT)
@@ -669,6 +679,23 @@ public Q_SLOTS:
     Q_INVOKABLE bool isScanFolderSelected(const QString &folderPath) const;
     Q_INVOKABLE void toggleScanFolder(const QString &folderPath);
     Q_INVOKABLE void clearScanFolders();
+
+    bool updateChecking() const;
+    bool updateDownloading() const;
+    int updateProgress() const;
+    bool updateAvailable() const;
+    QString updateLatestVersion() const;
+    QString updateReleaseNotes() const;
+    QString updateAssetName() const;
+    QString updateAssetSizeStr() const;
+    QString updateDownloadUrl() const;
+    QString updateStatusText() const;
+    bool updateReadyToInstall() const;
+    QString updateTargetBarPath() const;
+    Q_INVOKABLE void checkForAppUpdate();
+    Q_INVOKABLE void downloadAppUpdate();
+    Q_INVOKABLE void cancelAppUpdateDownload();
+    Q_INVOKABLE void finalizeBarInstallAndQuit();
     Q_INVOKABLE void openInternalLink(const QString &href, const QString &refTitle = QString());
 
 public slots:
@@ -772,6 +799,9 @@ signals:
     void devServerIpChanged();
     void logSendCompleted(bool success, const QString &message, const QString &url);
     void persistentStorageStatusChanged();
+    void updateStateChanged();
+    void updateReadyForRestartDialog(const QString &version, const QString &targetPath);
+    void updateErrorOccurred(const QString &message);
 
 private slots:
     void onClockTick();
@@ -788,6 +818,9 @@ private slots:
     void onScanWatchdogTimeout();
     void onProgressSaveTimeout();
     void onPersistentSyncTimeout();
+    void onUpdateCheckFinished(bool ok, int httpStatus, const QByteArray &body, const QString &errorString);
+    void onUpdateDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
+    void onUpdateDownloadFinished(bool ok, int httpStatus, const QByteArray &body, const QString &errorString);
 
 private:
     void schedulePersistentSync();
@@ -935,6 +968,23 @@ private:
     ScanWorker *m_scanWorker;
     CoverExtractWorker *m_coverWorker;
     QStringList m_scanFolders;
+
+    TlsHttpWorker *m_updateCheckWorker;
+    TlsHttpWorker *m_updateDownloadWorker;
+    bool m_updateChecking;
+    bool m_updateDownloading;
+    int m_updateProgress;
+    bool m_updateAvailable;
+    QString m_updateLatestVersion;
+    QString m_updateReleaseNotes;
+    QString m_updateAssetName;
+    QString m_updateAssetSizeStr;
+    QString m_updateDownloadUrl;
+    QString m_updateStatusText;
+    bool m_updateReadyToInstall;
+    QString m_updateTargetBarPath;
+    QString m_updatePartPath;
+    QString resolveBarInstallerDir() const;
 
     void loadSettings();
     void loadSettingsFromQSettings(QSettings &settings);

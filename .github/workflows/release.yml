@@ -1,0 +1,89 @@
+name: Release BAR
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (defaults to v<LIBRIS_APP_VERSION> from src/BuildInfo.hpp)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build device BAR package
+        run: |
+          chmod +x build.sh
+          NO_BUMP=1 ./build.sh device all
+
+      - name: Prepare versioned BAR & release notes
+        id: meta
+        run: |
+          python3 - <<'PY'
+          import os, re, shutil
+
+          info = open("src/BuildInfo.hpp", encoding="utf-8").read()
+          ver = re.search(r'LIBRIS_APP_VERSION\s+"([^"]+)"', info).group(1)
+          bld = re.search(r'LIBRIS_BUILD_NUMBER\s+"([^"]+)"', info).group(1)
+
+          tag = os.environ.get("INPUT_TAG") or os.environ.get("GITHUB_REF_NAME", "")
+          if not tag.startswith("v"):
+              tag = f"v{ver}"
+
+          asset_name = f"Libris-v{ver}-b{bld}.bar"
+          asset_path = os.path.join("build", "device", asset_name)
+          shutil.copy2(os.path.join("build", "device", "Libris-unsigned.bar"), asset_path)
+
+          def top_section(path):
+              if not os.path.exists(path):
+                  return ""
+              lines = open(path, encoding="utf-8").read().splitlines()
+              out = []
+              started = False
+              for line in lines:
+                  if not started:
+                      if line.strip():
+                          started = True
+                          out.append(line)
+                  else:
+                      if not line.strip():
+                          break
+                      out.append(line)
+              return "\n".join(out)
+
+          en_notes = top_section("assets/changelog_en.txt")
+          vi_notes = top_section("assets/changelog_vi.txt")
+          with open("build/device/RELEASE_NOTES.md", "w", encoding="utf-8") as f:
+              f.write(f"## Libris {tag} (Build {bld})\n\n")
+              if en_notes:
+                  f.write("### English\n" + en_notes + "\n\n")
+              if vi_notes:
+                  f.write("### Tiếng Việt\n" + vi_notes + "\n")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as gho:
+              gho.write(f"tag={tag}\n")
+              gho.write(f"version={ver}\n")
+              gho.write(f"build={bld}\n")
+              gho.write(f"asset_path={asset_path}\n")
+          PY
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: Libris ${{ steps.meta.outputs.tag }} (Build ${{ steps.meta.outputs.build }})
+          body_path: build/device/RELEASE_NOTES.md
+          files: ${{ steps.meta.outputs.asset_path }}
+          draft: false
+          prerelease: false

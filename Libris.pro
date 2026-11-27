@@ -8,6 +8,7 @@ SOURCES += src/main.cpp \
            src/ApplicationUI.cpp \
            src/BookManager.cpp \
            src/BookWorkers.cpp \
+           src/TlsHttpClient.cpp \
            src/TtsManager.cpp \
            src/DictManager.cpp \
            src/OpdsManager.cpp \
@@ -25,6 +26,7 @@ SOURCES += src/main.cpp \
 HEADERS += src/ApplicationUI.hpp \
            src/BookManager.hpp \
            src/BookWorkers.hpp \
+           src/TlsHttpClient.hpp \
            src/BookChapter.hpp \
            src/TtsManager.hpp \
            src/DictManager.hpp \
@@ -56,7 +58,7 @@ CONFIG(simulator, device|simulator) {
     LIBS += -L$$quote($$_PRO_FILE_PWD_)/assets/lib -lnsrreadercore
 }
 
-LIBS += -lbbcascadespickers -lbb -lbbsystem -lbbmultimedia -lbps -lbbdevice -lbbplatform
+LIBS += -lbbcascadespickers -lbb -lbbsystem -lbbmultimedia -lbps -lbbdevice -lbbplatform -lsocket -lssl -lcrypto
 
 QMAKE_CXXFLAGS += -Wno-psabi
 

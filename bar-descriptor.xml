@@ -2,8 +2,8 @@
 <qnx xmlns="http://www.qnx.com/schemas/application/1.0">
     <id>com.nhatlee.libris</id>
     <name>Libris</name>
-    <versionNumber>2.3.0</versionNumber>
-    <buildId>273</buildId>
+    <versionNumber>2.3.1</versionNumber>
+    <buildId>276</buildId>
     <description>Libris - Native E-Book Reader for BlackBerry 10</description>
     <author>NhatLee</author>
 

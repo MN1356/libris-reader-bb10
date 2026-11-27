@@ -2168,6 +2168,37 @@ void AppTranslator::initTranslations()
     add("Chọn thư mục này", "Select This Folder", "Chọn thư mục này");
     add("Bỏ chọn thư mục này", "Deselect This Folder", "Bỏ chọn thư mục này");
     add("Đang quét thư viện sách...", "Scanning book library...", "Đang quét thư viện sách...");
+    add("Cập nhật ứng dụng", "App Update", "Cập nhật ứng dụng");
+    add("Có bản mới: ", "Update available: ", "Có bản mới: ");
+    add("PHIÊN BẢN HIỆN TẠI", "CURRENT VERSION", "PHIÊN BẢN HIỆN TẠI");
+    add("Nguồn cập nhật: GitHub (MN1356/libris-reader-bb10)", "Update source: GitHub (MN1356/libris-reader-bb10)", "Nguồn cập nhật: GitHub (MN1356/libris-reader-bb10)");
+    add("Cơ chế cài đặt: Tải tệp .bar đưa vào thư mục barinstaller, tự tắt app và chờ ~2 phút trước khi mở lại.", "Install flow: Downloads .bar into barinstaller folder, closes the app, wait ~2 minutes before reopening.", "Cơ chế cài đặt: Tải tệp .bar đưa vào thư mục barinstaller, tự tắt app và chờ ~2 phút trước khi mở lại.");
+    add("Đang kiểm tra...", "Checking...", "Đang kiểm tra...");
+    add("Kiểm tra cập nhật trên GitHub", "Check GitHub for Updates", "Kiểm tra cập nhật trên GitHub");
+    add("PHIÊN BẢN MỚI TRÊN GITHUB", "NEW GITHUB RELEASE", "PHIÊN BẢN MỚI TRÊN GITHUB");
+    add("Phiên bản mới: ", "New Version: ", "Phiên bản mới: ");
+    add("Tải về & Cài đặt qua BarInstaller", "Download & Install via BarInstaller", "Tải về & Cài đặt qua BarInstaller");
+    add("Hủy tải", "Cancel Download", "Hủy tải");
+    add("Đưa vào BarInstaller & Tự tắt app", "Move to BarInstaller & Quit", "Đưa vào BarInstaller & Tự tắt app");
+    add("Cập nhật qua BarInstaller", "Install via BarInstaller", "Cập nhật qua BarInstaller");
+    add("Đưa vào BarInstaller & Tắt app", "Move to BarInstaller & Quit", "Đưa vào BarInstaller & Tắt app");
+    add("Để sau", "Later", "Để sau");
+    add("Đã tải xong bản cập nhật %1 và sẵn sàng đưa vào BarInstaller:\n%2\n\nỨng dụng sẽ tự tắt ngay trước khi cài đặt.\nVui lòng CHỜ KHOẢNG 2 PHÚT trước khi mở lại Libris!", "Update %1 downloaded and ready for BarInstaller:\n%2\n\nThe app will close automatically before installation.\nPlease WAIT ABOUT 2 MINUTES before reopening Libris!", "Đã tải xong bản cập nhật %1 và sẵn sàng đưa vào BarInstaller:\n%2\n\nỨng dụng sẽ tự tắt ngay trước khi cài đặt.\nVui lòng CHỜ KHOẢNG 2 PHÚT trước khi mở lại Libris!");
+    add("Đang kiểm tra bản cập nhật trên GitHub...", "Checking GitHub for updates...", "Đang kiểm tra bản cập nhật trên GitHub...");
+    add("Hiện chưa có bản phát hành (Release) nào trên GitHub.", "No GitHub releases found yet.", "Hiện chưa có bản phát hành (Release) nào trên GitHub.");
+    add("Không kiểm tra được cập nhật: ", "Update check failed: ", "Không kiểm tra được cập nhật: ");
+    add("Phản hồi từ GitHub không hợp lệ.", "Invalid response from GitHub.", "Phản hồi từ GitHub không hợp lệ.");
+    add("Release mới nhất (%1) chưa đính kèm tệp .bar.", "Latest release (%1) has no .bar file attached.", "Release mới nhất (%1) chưa đính kèm tệp .bar.");
+    add("Đã có phiên bản mới: %1", "New version available: %1", "Đã có phiên bản mới: %1");
+    add("Bạn đang dùng phiên bản mới nhất (%1).", "You are on the latest version (%1).", "Bạn đang dùng phiên bản mới nhất (%1).");
+    add("Không thể ghi tệp vào thư mục BarInstaller.", "Cannot write file to BarInstaller folder.", "Không thể ghi tệp vào thư mục BarInstaller.");
+    add("Đang tải bản cập nhật...", "Downloading update...", "Đang tải bản cập nhật...");
+    add("Đang tải: %1%", "Downloading: %1%", "Đang tải: %1%");
+    add("Tải bản cập nhật thất bại: ", "Update download failed: ", "Tải bản cập nhật thất bại: ");
+    add("Tệp .bar tải về không hợp lệ hoặc bị hỏng.", "Downloaded .bar file is invalid or corrupted.", "Tệp .bar tải về không hợp lệ hoặc bị hỏng.");
+    add("Đã tải xong! Sẵn sàng đưa vào BarInstaller.", "Download complete! Ready for BarInstaller.", "Đã tải xong! Sẵn sàng đưa vào BarInstaller.");
+    add("Đã hủy tải bản cập nhật.", "Update download cancelled.", "Đã hủy tải bản cập nhật.");
+    add("Không thể chuyển tệp .bar vào thư mục BarInstaller.", "Failed to move .bar file into BarInstaller folder.", "Không thể chuyển tệp .bar vào thư mục BarInstaller.");
 }
 
 void AppTranslator::setLanguage(const QString &lang)

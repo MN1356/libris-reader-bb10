@@ -3,6 +3,7 @@
 #include "ImageUriUtil.hpp"
 #include "BuildInfo.hpp"
 #include "BookWorkers.hpp"
+#include "TlsHttpClient.hpp"
 #include "OpdsManager.hpp"
 #include "WiFiDropServer.hpp"
 #include "miniz.h"
@@ -429,6 +430,13 @@ BookManager::BookManager(QObject *parent)
     , m_searchWorker(NULL)
     , m_scanWorker(NULL)
     , m_coverWorker(NULL)
+    , m_updateCheckWorker(NULL)
+    , m_updateDownloadWorker(NULL)
+    , m_updateChecking(false)
+    , m_updateDownloading(false)
+    , m_updateProgress(0)
+    , m_updateAvailable(false)
+    , m_updateReadyToInstall(false)
     , m_isSendingLog(false)
     , m_lastLogStatus("")
     , m_devServerIp("192.168.0.108")
@@ -683,6 +691,14 @@ void BookManager::cancelWorkers()
 
 BookManager::~BookManager()
 {
+    cancelAppUpdateDownload();
+    if (m_updateCheckWorker) {
+        m_updateCheckWorker->disconnect(this);
+        m_updateCheckWorker->requestCancel();
+        m_updateCheckWorker->wait(2000);
+        delete m_updateCheckWorker;
+        m_updateCheckWorker = NULL;
+    }
     if (m_volUpWatcher) {
         delete m_volUpWatcher;
         m_volUpWatcher = NULL;
@@ -11200,6 +11216,350 @@ bool BookManager::restoreBackupArchive(const QString &archivePath)
     restoreFromPersistentStorage();
     m_dictManager.reloadVocab();
     return true;
+}
+
+// ============================================================================
+// GitHub Releases Auto-Update & BarInstaller Handoff
+// ============================================================================
+
+bool BookManager::updateChecking() const { return m_updateChecking; }
+bool BookManager::updateDownloading() const { return m_updateDownloading; }
+int BookManager::updateProgress() const { return m_updateProgress; }
+bool BookManager::updateAvailable() const { return m_updateAvailable; }
+QString BookManager::updateLatestVersion() const { return m_updateLatestVersion; }
+QString BookManager::updateReleaseNotes() const { return m_updateReleaseNotes; }
+QString BookManager::updateAssetName() const { return m_updateAssetName; }
+QString BookManager::updateAssetSizeStr() const { return m_updateAssetSizeStr; }
+QString BookManager::updateDownloadUrl() const { return m_updateDownloadUrl; }
+QString BookManager::updateStatusText() const { return m_updateStatusText; }
+bool BookManager::updateReadyToInstall() const { return m_updateReadyToInstall; }
+QString BookManager::updateTargetBarPath() const { return m_updateTargetBarPath; }
+
+static bool isRemoteVersionNewer(const QString &remoteTag, const QString &localVerStr, const QString &localBuildStr)
+{
+    QRegExp rx("(\\d+)\\.(\\d+)\\.(\\d+)(?:[\\.\\-bB]+(\\d+))?");
+    int rMaj = 0, rMin = 0, rPat = 0, rBld = 0;
+    if (rx.indexIn(remoteTag) != -1) {
+        rMaj = rx.cap(1).toInt();
+        rMin = rx.cap(2).toInt();
+        rPat = rx.cap(3).toInt();
+        rBld = rx.cap(4).isEmpty() ? 0 : rx.cap(4).toInt();
+    } else {
+        return false;
+    }
+
+    int cMaj = 0, cMin = 0, cPat = 0;
+    QRegExp lrx("(\\d+)\\.(\\d+)\\.(\\d+)");
+    if (lrx.indexIn(localVerStr) != -1) {
+        cMaj = lrx.cap(1).toInt();
+        cMin = lrx.cap(2).toInt();
+        cPat = lrx.cap(3).toInt();
+    }
+    int cBld = localBuildStr.toInt();
+
+    if (rMaj != cMaj) return rMaj > cMaj;
+    if (rMin != cMin) return rMin > cMin;
+    if (rPat != cPat) return rPat > cPat;
+    if (rBld > 0 && cBld > 0) return rBld > cBld;
+    return false;
+}
+
+QString BookManager::resolveBarInstallerDir() const
+{
+    if (QDir("/accounts/1000/shared/barinstaller").exists()) {
+        return "/accounts/1000/shared/barinstaller";
+    }
+    if (QDir("/accounts/1000/shared/misc/barinstaller").exists()) {
+        return "/accounts/1000/shared/misc/barinstaller";
+    }
+    if (QDir("/accounts/1000/shared").exists()) {
+        QString created = "/accounts/1000/shared/barinstaller";
+        if (QDir().mkpath(created)) {
+            return created;
+        }
+    }
+    QString homeBar = QDir::homePath() + "/barinstaller";
+    QDir().mkpath(homeBar);
+    return homeBar;
+}
+
+void BookManager::checkForAppUpdate()
+{
+    if (m_updateChecking || m_updateDownloading) return;
+
+    if (m_updateCheckWorker) {
+        m_updateCheckWorker->disconnect(this);
+        m_updateCheckWorker->requestCancel();
+        m_updateCheckWorker->wait(1500);
+        m_updateCheckWorker->deleteLater();
+        m_updateCheckWorker = NULL;
+    }
+
+    m_updateChecking = true;
+    m_updateAvailable = false;
+    m_updateReadyToInstall = false;
+    m_updateStatusText = tr("Đang kiểm tra bản cập nhật trên GitHub...");
+    emit updateStateChanged();
+
+    m_updateCheckWorker = new TlsHttpWorker(
+        "https://api.github.com/repos/MN1356/libris-reader-bb10/releases/latest",
+        "application/vnd.github+json",
+        QString(),
+        this);
+    connect(m_updateCheckWorker, SIGNAL(requestFinished(bool,int,QByteArray,QString)),
+            this, SLOT(onUpdateCheckFinished(bool,int,QByteArray,QString)),
+            Qt::QueuedConnection);
+    m_updateCheckWorker->start();
+}
+
+void BookManager::onUpdateCheckFinished(bool ok, int httpStatus, const QByteArray &body, const QString &errorString)
+{
+    if (m_updateCheckWorker) {
+        m_updateCheckWorker->deleteLater();
+        m_updateCheckWorker = NULL;
+    }
+
+    m_updateChecking = false;
+
+    if (httpStatus == 404) {
+        m_updateStatusText = tr("Hiện chưa có bản phát hành (Release) nào trên GitHub.");
+        emit updateStateChanged();
+        return;
+    }
+    if (!ok) {
+        m_updateStatusText = tr("Không kiểm tra được cập nhật: ") + errorString;
+        emit updateStateChanged();
+        emit updateErrorOccurred(m_updateStatusText);
+        return;
+    }
+
+    QScriptEngine engine;
+    QScriptValue root = engine.evaluate("(" + QString::fromUtf8(body.constData(), body.size()) + ")");
+    if (engine.hasUncaughtException() || !root.isObject()) {
+        m_updateStatusText = tr("Phản hồi từ GitHub không hợp lệ.");
+        emit updateStateChanged();
+        emit updateErrorOccurred(m_updateStatusText);
+        return;
+    }
+
+    QString tagName = root.property("tag_name").toString().trimmed();
+    QString relName = root.property("name").toString().trimmed();
+    QString notes = root.property("body").toString().trimmed();
+    QString verDisplay = !tagName.isEmpty() ? tagName : relName;
+
+    QString bestUrl;
+    QString bestName;
+    qint64 bestSize = 0;
+
+    QScriptValue assets = root.property("assets");
+    if (assets.isArray()) {
+        int len = assets.property("length").toInt32();
+        for (int i = 0; i < len; ++i) {
+            QScriptValue item = assets.property(i);
+            QString aName = item.property("name").toString().trimmed();
+            QString aUrl = item.property("browser_download_url").toString().trimmed();
+            qint64 aSize = (qint64)item.property("size").toNumber();
+            if (!aName.endsWith(".bar", Qt::CaseInsensitive) || aUrl.isEmpty()) continue;
+
+            if (bestUrl.isEmpty() || (bestName.contains("simulator", Qt::CaseInsensitive) && !aName.contains("simulator", Qt::CaseInsensitive))) {
+                bestUrl = aUrl;
+                bestName = aName;
+                bestSize = aSize;
+            }
+        }
+    }
+
+    m_updateLatestVersion = verDisplay;
+    m_updateReleaseNotes = notes;
+    m_updateAssetName = bestName;
+    m_updateDownloadUrl = bestUrl;
+    if (bestSize > 0) {
+        m_updateAssetSizeStr = QString("%1 MB").arg(QString::number(bestSize / (1024.0 * 1024.0), 'f', 1));
+    } else {
+        m_updateAssetSizeStr.clear();
+    }
+
+    bool newer = isRemoteVersionNewer(verDisplay, appVersion(), buildNumber());
+    if (!newer && !relName.isEmpty() && relName != verDisplay) {
+        newer = isRemoteVersionNewer(relName, appVersion(), buildNumber());
+    }
+
+    if (bestUrl.isEmpty()) {
+        m_updateAvailable = false;
+        m_updateStatusText = tr("Release mới nhất (%1) chưa đính kèm tệp .bar.").arg(verDisplay);
+    } else if (newer) {
+        m_updateAvailable = true;
+        m_updateStatusText = tr("Đã có phiên bản mới: %1").arg(verDisplay);
+    } else {
+        m_updateAvailable = false;
+        m_updateStatusText = tr("Bạn đang dùng phiên bản mới nhất (%1).").arg(appVersion() + " Build " + buildNumber());
+    }
+
+    emit updateStateChanged();
+}
+
+void BookManager::downloadAppUpdate()
+{
+    if (m_updateDownloading || m_updateDownloadUrl.isEmpty() || m_updateAssetName.isEmpty()) {
+        return;
+    }
+
+    QString destDir = resolveBarInstallerDir();
+    QString cleanFileName = QFileInfo(m_updateAssetName).fileName();
+    if (cleanFileName.isEmpty() || !cleanFileName.endsWith(".bar", Qt::CaseInsensitive)) {
+        cleanFileName = "Libris-update.bar";
+    }
+    m_updateTargetBarPath = destDir + "/" + cleanFileName;
+    m_updatePartPath = m_updateTargetBarPath + ".part";
+
+    if (QFile::exists(m_updatePartPath)) {
+        QFile::remove(m_updatePartPath);
+    }
+
+    // Quick writability check in target barinstaller folder
+    QFile testFile(m_updatePartPath);
+    if (!testFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        m_updateStatusText = tr("Không thể ghi tệp vào thư mục BarInstaller.");
+        emit updateStateChanged();
+        emit updateErrorOccurred(m_updateStatusText);
+        return;
+    }
+    testFile.close();
+
+    if (m_updateDownloadWorker) {
+        m_updateDownloadWorker->disconnect(this);
+        m_updateDownloadWorker->requestCancel();
+        m_updateDownloadWorker->wait(2000);
+        m_updateDownloadWorker->deleteLater();
+        m_updateDownloadWorker = NULL;
+    }
+
+    m_updateDownloading = true;
+    m_updateReadyToInstall = false;
+    m_updateProgress = 0;
+    m_updateStatusText = tr("Đang tải bản cập nhật...");
+    emit updateStateChanged();
+
+    m_updateDownloadWorker = new TlsHttpWorker(
+        m_updateDownloadUrl,
+        "application/octet-stream",
+        m_updatePartPath,
+        this);
+    connect(m_updateDownloadWorker, SIGNAL(progressChanged(qint64,qint64)),
+            this, SLOT(onUpdateDownloadProgress(qint64,qint64)),
+            Qt::QueuedConnection);
+    connect(m_updateDownloadWorker, SIGNAL(requestFinished(bool,int,QByteArray,QString)),
+            this, SLOT(onUpdateDownloadFinished(bool,int,QByteArray,QString)),
+            Qt::QueuedConnection);
+    m_updateDownloadWorker->start();
+}
+
+void BookManager::onUpdateDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
+{
+    if (bytesTotal <= 0) return;
+    int pct = qBound(0, (int)((bytesReceived * 100) / bytesTotal), 100);
+    if (pct != m_updateProgress) {
+        m_updateProgress = pct;
+        m_updateStatusText = tr("Đang tải: %1%").arg(pct);
+        emit updateStateChanged();
+    }
+}
+
+void BookManager::onUpdateDownloadFinished(bool ok, int httpStatus, const QByteArray &body, const QString &errorString)
+{
+    Q_UNUSED(httpStatus);
+    Q_UNUSED(body);
+    if (m_updateDownloadWorker) {
+        m_updateDownloadWorker->deleteLater();
+        m_updateDownloadWorker = NULL;
+    }
+
+    m_updateDownloading = false;
+
+    if (!ok) {
+        if (!m_updatePartPath.isEmpty() && QFile::exists(m_updatePartPath)) {
+            QFile::remove(m_updatePartPath);
+        }
+        m_updateStatusText = tr("Tải bản cập nhật thất bại: ") + errorString;
+        emit updateStateChanged();
+        emit updateErrorOccurred(m_updateStatusText);
+        return;
+    }
+
+    // Verify downloaded BAR file is a valid non-empty ZIP/BAR archive ("PK")
+    bool validBar = false;
+    QFile verifyFile(m_updatePartPath);
+    if (verifyFile.exists() && verifyFile.size() > 100 * 1024 && verifyFile.open(QIODevice::ReadOnly)) {
+        QByteArray magic = verifyFile.read(2);
+        verifyFile.close();
+        validBar = (magic.size() == 2 && magic.at(0) == 'P' && magic.at(1) == 'K');
+    }
+
+    if (!validBar) {
+        if (QFile::exists(m_updatePartPath)) {
+            QFile::remove(m_updatePartPath);
+        }
+        m_updateReadyToInstall = false;
+        m_updateStatusText = tr("Tệp .bar tải về không hợp lệ hoặc bị hỏng.");
+        emit updateStateChanged();
+        emit updateErrorOccurred(m_updateStatusText);
+        return;
+    }
+
+    m_updateProgress = 100;
+    m_updateReadyToInstall = true;
+    m_updateStatusText = tr("Đã tải xong! Sẵn sàng đưa vào BarInstaller.");
+    emit updateStateChanged();
+    emit updateReadyForRestartDialog(m_updateLatestVersion, m_updateTargetBarPath);
+}
+
+void BookManager::cancelAppUpdateDownload()
+{
+    if (m_updateDownloadWorker) {
+        m_updateDownloadWorker->disconnect(this);
+        m_updateDownloadWorker->requestCancel();
+        m_updateDownloadWorker->wait(2500);
+        m_updateDownloadWorker->deleteLater();
+        m_updateDownloadWorker = NULL;
+    }
+    if (!m_updatePartPath.isEmpty() && QFile::exists(m_updatePartPath)) {
+        QFile::remove(m_updatePartPath);
+    }
+    if (m_updateDownloading) {
+        m_updateDownloading = false;
+        m_updateProgress = 0;
+        m_updateStatusText = tr("Đã hủy tải bản cập nhật.");
+        emit updateStateChanged();
+    }
+}
+
+void BookManager::finalizeBarInstallAndQuit()
+{
+    if (!m_updateReadyToInstall || m_updatePartPath.isEmpty() || m_updateTargetBarPath.isEmpty()) {
+        return;
+    }
+
+    if (QFile::exists(m_updateTargetBarPath)) {
+        QFile::remove(m_updateTargetBarPath);
+    }
+    if (!QFile::rename(m_updatePartPath, m_updateTargetBarPath)) {
+        m_updateStatusText = tr("Không thể chuyển tệp .bar vào thư mục BarInstaller.");
+        emit updateStateChanged();
+        emit updateErrorOccurred(m_updateStatusText);
+        return;
+    }
+
+    // Persist reading state & release resources cleanly before BarInstaller installs over app
+    stopTts();
+    saveCurrentProgress();
+    saveSettings();
+    saveLibraryCache();
+    syncToPersistentStorage();
+    cancelWorkers();
+    m_shutdownSaved = true;
+
+    qDebug() << "[UpdateManager] Placed update BAR into BarInstaller:" << m_updateTargetBarPath << "-> quitting app";
+    QTimer::singleShot(350, QCoreApplication::instance(), SLOT(quit()));
 }
 
 

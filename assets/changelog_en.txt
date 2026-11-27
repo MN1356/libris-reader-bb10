@@ -1,3 +1,9 @@
+Version 2.3.1 (Build 276) - 2026-11-28:
+- Added in-app GitHub Releases updater in Settings with BarInstaller handoff (auto-quits before install) powered by a native OpenSSL TLS 1.2 client (`TlsHttpWorker`) to bypass BB10 Qt 4.8.6 cipher limits.
+- Added custom scan folder picker in Settings, removed redundant per-row Select buttons, and offloaded cover extraction so full internal + SD card library scans complete reliably.
+- Added embedded-OCR text selection & TTS reading-progress tracking on non-reflowed PDF pages.
+- UI & security polish: enlarged Custom Shelf chips/rows, refined book title typography to non-bold clean weight, added 4-digit PIN protection to Wi-Fi Book Drop, and added in-app book deletion with confirmation.
+
 Version 2.3.0 (Build 273) - 2026-11-27:
 - Rebuilt the 7-page Onboarding Guide with authentic Native BlackBerry 10 Cascades controls (`RadioGroup`, `SegmentedControl`, `Button Primary`, dark BB10 ActionBar chrome, horizontal swipe navigation, and centered Passport layout).
 - Upgraded Page 4 (Controls) into a full-stage realistic Libris Reader mockup with a floating callout dialog and tailored Cascades animations for each shortcut, plus authentic BlackBerry Passport device illustrations.
