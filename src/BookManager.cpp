@@ -274,7 +274,7 @@ static bool looksLikeGarbledTitle(const QString &title)
 static QString sanitizeStatsFormat(const QString &fmt, const QString &path)
 {
     static const char *known[] = {
-        "epub", "pdf", "djvu", "djv", "txt", "fb2", "cbz", "mobi", "azw3", "azw", "kf8", "prc"
+        "epub", "pdf", "djvu", "djv", "txt", "md", "markdown", "html", "htm", "fb2", "cbz", "mobi", "azw3", "azw", "kf8", "prc"
     };
     const int count = (int)(sizeof(known) / sizeof(known[0]));
 
@@ -424,6 +424,7 @@ BookManager::BookManager(QObject *parent)
     , m_isReaderActive(false)
     , m_isPdfReflow(false)
     , m_hasPdfText(false)
+    , m_pdfHasAnyOcr(false)
     , m_ttsAutoAdvance(false)
     , m_searchWorker(NULL)
     , m_scanWorker(NULL)
@@ -550,9 +551,11 @@ BookManager::BookManager(QObject *parent)
     // Ship bundled lightweight sample books once for immediate multi-format testing
     installBundledSamplesIfNeeded();
 
-    // Only run full library scan on startup if library cache was empty beforehand
+    // Run full library scan on startup: blocking overlay if empty, silent background refresh if cache existed
     if (hadEmptyLibrary) {
         QTimer::singleShot(300, this, SLOT(scanLibrary()));
+    } else {
+        QTimer::singleShot(800, this, SLOT(scanLibraryQuiet()));
     }
 }
 
@@ -1031,6 +1034,97 @@ void BookManager::removeBookFromLibrary(const QString &filePath)
     settings.sync();
     saveLibraryCache();
     syncToPersistentStorage();
+}
+
+static bool isAllowedUserStoragePath(const QString &p, const QString &homeDir)
+{
+    return !p.isEmpty() && (
+        p.startsWith("/accounts/1000/shared/") ||
+        p.startsWith("/accounts/1000/removable/") ||
+        (!homeDir.isEmpty() && p.startsWith(homeDir + "/"))
+    );
+}
+
+bool BookManager::deleteBookFile(const QString &filePath)
+{
+    if (filePath.isEmpty()) return false;
+    QFileInfo fi(filePath);
+    if (!fi.exists() || !fi.isFile()) return false;
+
+    QString absPath = fi.absoluteFilePath();
+    QString canonPath = fi.canonicalFilePath();
+    QString homeDir = QDir::homePath();
+    if (!isAllowedUserStoragePath(absPath, homeDir) && !isAllowedUserStoragePath(canonPath, homeDir)) {
+        qWarning() << "[BookManager] Refused deleting file outside user storage:" << filePath;
+        return false;
+    }
+
+    // Release any open parser/file handles if this book is currently active
+    QString curCanon = m_currentFilePath.isEmpty() ? QString() : QFileInfo(m_currentFilePath).canonicalFilePath();
+    if (m_currentFilePath == filePath || (!canonPath.isEmpty() && curCanon == canonPath)) {
+        stopTts();
+        m_epubParser.close();
+        m_txtParser.close();
+        m_fb2Parser.close();
+        m_cbzParser.close();
+        m_mobiParser.close();
+        if (m_pdfParser) {
+            m_pdfParser->close();
+        }
+        if (m_pdfPagesModel) {
+            m_pdfPagesModel->clear();
+        }
+        m_currentFilePath.clear();
+        m_currentFormat.clear();
+        m_cachedContentHtml.clear();
+        m_cachedContentChapter = -1;
+    }
+
+    if (!QFile::remove(filePath)) {
+        qWarning() << "[BookManager] QFile::remove failed for:" << filePath;
+        return false;
+    }
+
+    // Remove cached cover thumbnail if present
+    if (!m_cacheDir.isEmpty()) {
+        QString coverPng = m_cacheDir + "/" + QCryptographicHash::hash(filePath.toUtf8(), QCryptographicHash::Md5).toHex() + ".png";
+        if (QFile::exists(coverPng)) {
+            QFile::remove(coverPng);
+        }
+    }
+
+    for (int i = 0; i < m_allBooks.size(); ++i) {
+        if (m_allBooks[i].value("filePath").toString() == filePath) {
+            m_allBooks.removeAt(i);
+            break;
+        }
+    }
+
+    QSettings settings("Libris", "Libris");
+    settings.remove(QString("hidden/%1").arg(filePath));
+    settings.remove(QString("opened/%1").arg(filePath));
+    settings.remove(QString("progress/%1").arg(filePath));
+    settings.remove(QString("progressPct/%1").arg(filePath));
+    settings.remove(QString("pageInChapter/%1").arg(filePath));
+    settings.remove(QString("totalPagesInChapter/%1").arg(filePath));
+    settings.remove(QString("scrollPos/%1").arg(filePath));
+    settings.remove(QString("completed/%1").arg(filePath));
+    settings.remove(QString("favorite/%1").arg(filePath));
+    settings.remove(QString("readingList/%1").arg(filePath));
+    settings.remove(QString("rating/%1").arg(filePath));
+    settings.remove(QString("review/%1").arg(filePath));
+    settings.remove(QString("stats/bookSeconds/%1").arg(filePath));
+    settings.sync();
+
+    removeFromRecent(filePath);
+    applyFilterAndSort();
+    updateFolderList();
+    refreshStats();
+    refreshBrowser();
+    saveLibraryCache();
+    syncToPersistentStorage();
+    emit bookCountChanged();
+    return true;
 }
 
 void BookManager::removeFromRecent(const QString &filePath)
@@ -3205,18 +3299,27 @@ OpdsManager* BookManager::opdsManager()
 void BookManager::startTts()
 {
     if (!m_tts) return;
-    if ((isPdf() && !m_isPdfReflow) || m_currentFormat == "cbz") {
+    if (m_currentFormat == "cbz") {
         return;
     }
     m_pendingTtsAfterPdfRender = false;
     m_tts->setBookContext(m_currentBookTitle, m_currentBookAuthor);
 
-    if (isPdf() && m_isPdfReflow) {
+    if (isPdf()) {
+        refreshPdfPageText(m_currentChapterIndex);
+        if (m_currentPdfText.trimmed().isEmpty() && m_pdfParser) {
+            int nextOcrPg = m_pdfParser->findNextTextPage(m_currentChapterIndex, 25);
+            if (nextOcrPg > 0 && nextOcrPg != m_currentChapterIndex) {
+                goToChapter(nextOcrPg);
+                refreshPdfPageText(nextOcrPg);
+            }
+        }
+
         if (!m_currentPdfText.trimmed().isEmpty()) {
             m_tts->startWithText(m_currentPdfText, QString(), false);
             if (m_tts->totalSentences() > 0) {
                 int targetSentence = 0;
-                if (m_currentPageInChapter > 1 && m_totalPagesInChapter > 1) {
+                if (m_isPdfReflow && m_currentPageInChapter > 1 && m_totalPagesInChapter > 1) {
                     targetSentence = qBound(0, (int)((double)(m_currentPageInChapter - 1) / m_totalPagesInChapter * m_tts->totalSentences()), m_tts->totalSentences() - 1);
                 }
                 if (targetSentence > 0) {
@@ -3227,10 +3330,7 @@ void BookManager::startTts()
                 return;
             }
         }
-        if (m_currentChapterIndex < m_totalChapters) {
-            m_pendingTtsAfterPdfRender = true;
-            nextChapter();
-        }
+        QMetaObject::invokeMethod(m_tts, "errorOccurred", Qt::DirectConnection, Q_ARG(QString, tr("Trang PDF này chưa có lớp chữ OCR để đọc giọng nói.")));
         return;
     }
 
@@ -3287,8 +3387,19 @@ void BookManager::onTtsChapterFinished()
         return;
     }
     if (isPdf() && m_ttsAutoAdvance && m_currentChapterIndex < m_totalChapters) {
-        m_pendingTtsAfterPdfRender = true;
-        nextChapter();
+        int nextOcrPg = m_pdfParser ? m_pdfParser->findNextTextPage(m_currentChapterIndex + 1, 25) : -1;
+        if (nextOcrPg > 0 && nextOcrPg <= m_totalChapters) {
+            bool waitRender = m_pdfZoomMode;
+            if (waitRender) {
+                m_pendingTtsAfterPdfRender = true;
+            }
+            goToChapter(nextOcrPg);
+            if (!waitRender) {
+                startTts();
+            }
+        } else {
+            stopTts();
+        }
     } else if (!isPdf() && m_ttsAutoAdvance && m_currentChapterIndex < m_totalChapters - 1) {
         m_currentChapterIndex++;
         m_currentPageInChapter = 1;
@@ -3329,16 +3440,27 @@ void BookManager::toggleTts()
 void BookManager::nextChapter()
 {
     if (isPdf()) {
-        if (!m_isPdfReflow && !m_pdfZoomMode) {
+        if (!m_pdfZoomMode) {
             if (m_currentChapterIndex < m_totalChapters) {
+                bool wasTts = m_tts && m_tts->isActive();
                 m_currentChapterIndex++;
                 m_currentPageInChapter = m_currentChapterIndex;
                 m_totalPagesInChapter = m_totalChapters;
+                refreshPdfPageText(m_currentChapterIndex);
+                if (m_isPdfReflow) {
+                    updatePdfReflowContent();
+                } else {
+                    emit currentChapterChanged();
+                    emit pdfJumpToPageRequested(m_currentChapterIndex);
+                    requestPdfStreamPage(m_currentChapterIndex);
+                }
                 emit readingProgressChanged();
+                emit bookmarksChanged();
                 emit pagePositionChanged();
-                emit pdfJumpToPageRequested(m_currentChapterIndex);
-                requestPdfStreamPage(m_currentChapterIndex);
                 m_progressSaveTimer.start(1500);
+                if (wasTts) {
+                    startTts();
+                }
             }
             return;
         }
@@ -3365,16 +3487,27 @@ void BookManager::nextChapter()
 void BookManager::prevChapter()
 {
     if (isPdf()) {
-        if (!m_isPdfReflow && !m_pdfZoomMode) {
+        if (!m_pdfZoomMode) {
             if (m_currentChapterIndex > 1) {
+                bool wasTts = m_tts && m_tts->isActive();
                 m_currentChapterIndex--;
                 m_currentPageInChapter = m_currentChapterIndex;
                 m_totalPagesInChapter = m_totalChapters;
+                refreshPdfPageText(m_currentChapterIndex);
+                if (m_isPdfReflow) {
+                    updatePdfReflowContent();
+                } else {
+                    emit currentChapterChanged();
+                    emit pdfJumpToPageRequested(m_currentChapterIndex);
+                    requestPdfStreamPage(m_currentChapterIndex);
+                }
                 emit readingProgressChanged();
+                emit bookmarksChanged();
                 emit pagePositionChanged();
-                emit pdfJumpToPageRequested(m_currentChapterIndex);
-                requestPdfStreamPage(m_currentChapterIndex);
                 m_progressSaveTimer.start(1500);
+                if (wasTts) {
+                    startTts();
+                }
             }
             return;
         }
@@ -3402,15 +3535,29 @@ void BookManager::goToChapter(int index)
 {
     if (isPdf()) {
         if (index >= 1 && index <= m_totalChapters) {
-            if (!m_isPdfReflow && !m_pdfZoomMode) {
+            if (!m_pdfZoomMode) {
+                bool wasTts = m_tts && m_tts->isActive();
+                if (wasTts) {
+                    stopTts();
+                }
                 m_currentChapterIndex = index;
                 m_currentPageInChapter = index;
                 m_totalPagesInChapter = m_totalChapters;
+                refreshPdfPageText(index);
+                if (m_isPdfReflow) {
+                    updatePdfReflowContent();
+                } else {
+                    emit currentChapterChanged();
+                    emit pdfJumpToPageRequested(index);
+                    requestPdfStreamPage(index);
+                }
                 emit readingProgressChanged();
+                emit bookmarksChanged();
                 emit pagePositionChanged();
-                emit pdfJumpToPageRequested(index);
-                requestPdfStreamPage(index);
                 m_progressSaveTimer.start(1500);
+                if (wasTts) {
+                    startTts();
+                }
                 return;
             }
             if (m_pdfParser) {
@@ -4180,15 +4327,71 @@ void BookManager::cancelSearch()
     emit searchResultsChanged();
 }
 
+void BookManager::refreshPdfPageText(int pageNumber)
+{
+    if (!isPdf() || !m_pdfParser) return;
+    int pg = (pageNumber >= 1) ? pageNumber : m_currentChapterIndex;
+    if (pg < 1) pg = 1;
+    QString newText = m_pdfParser->pageText(pg);
+    bool newHasText = !newText.trimmed().isEmpty();
+    if (newHasText) {
+        m_pdfHasAnyOcr = true;
+    }
+    bool textChanged = (m_currentPdfText != newText);
+    bool flagChanged = (m_hasPdfText != newHasText);
+    m_currentPdfText = newText;
+    m_hasPdfText = newHasText;
+    if (textChanged) emit currentPdfTextChanged();
+    if (flagChanged) emit hasPdfTextChanged();
+}
+
+QString BookManager::getPdfPageText(int pageNumber)
+{
+    if (!isPdf() || !m_pdfParser) return QString();
+    int pg = (pageNumber >= 1) ? pageNumber : m_currentChapterIndex;
+    if (pg < 1) pg = 1;
+    QString raw = m_pdfParser->pageText(pg);
+    if (pg == m_currentChapterIndex) {
+        bool newHasText = !raw.trimmed().isEmpty();
+        if (newHasText) m_pdfHasAnyOcr = true;
+        if (m_currentPdfText != raw) {
+            m_currentPdfText = raw;
+            emit currentPdfTextChanged();
+        }
+        if (m_hasPdfText != newHasText) {
+            m_hasPdfText = newHasText;
+            emit hasPdfTextChanged();
+        }
+    }
+    raw.remove(QChar(0x0000));
+    raw.remove(QChar(0xFEFF));
+    raw.remove(QChar(0xFFFD));
+    raw.replace('\r', "");
+    QRegExp hyphenWrap("([\\w\\dÀ-ỹ])-\\s*\\n\\s*([\\w\\dÀ-ỹ])");
+    raw.replace(hyphenWrap, "\\1\\2");
+    return raw.trimmed();
+}
+
 void BookManager::setIsPdfReflow(bool reflow)
 {
     if (!isPdf()) return;
     if (m_isPdfReflow != reflow) {
         m_isPdfReflow = reflow;
         m_cachedContentHtml.clear();
-        emit isPdfReflowChanged();
         if (m_isPdfReflow) {
+            refreshPdfPageText(m_currentChapterIndex);
+            emit isPdfReflowChanged();
             updatePdfReflowContent();
+        } else {
+            m_currentPageInChapter = m_currentChapterIndex;
+            m_totalPagesInChapter = m_totalChapters;
+            emit isPdfReflowChanged();
+            emit readingProgressChanged();
+            emit pagePositionChanged();
+            if (!m_pdfZoomMode) {
+                emit pdfJumpToPageRequested(m_currentChapterIndex);
+                requestPdfStreamPage(m_currentChapterIndex);
+            }
         }
     }
 }
@@ -4244,6 +4447,7 @@ bool BookManager::openBook(const QString &filePath)
     m_currentBookGenre.clear();
     m_isPdfReflow = false;
     m_hasPdfText = false;
+    m_pdfHasAnyOcr = false;
     m_currentPdfText.clear();
     m_searchResults.clear();
     emit isPdfReflowChanged();
@@ -4514,6 +4718,8 @@ void BookManager::onPdfFileOpened(const QString &file)
         settings.setValue(QString("totalPages/%1").arg(m_currentFilePath), m_totalChapters);
         updateTocList();
         ensureBookInLibrary(m_currentFilePath);
+        m_pdfHasAnyOcr = m_pdfParser->hasEmbeddedOcr(15);
+        refreshPdfPageText(m_currentChapterIndex);
         if (m_totalChapters > 0 && m_pdfPagesModel && m_pdfPagesModel->size() != m_totalChapters) {
             rebuildPdfPagesModel(m_totalChapters);
             emit pdfJumpToPageRequested(m_currentChapterIndex);
@@ -4747,7 +4953,7 @@ void BookManager::onPdfPageRendered(int pageNumber)
     emit pagePositionChanged();
     saveSettings();
 
-    if (m_pendingTtsAfterPdfRender && m_isPdfReflow) {
+    if (m_pendingTtsAfterPdfRender) {
         m_pendingTtsAfterPdfRender = false;
         startTts();
     }
@@ -4882,13 +5088,16 @@ void BookManager::onPdfStreamPageRendered(int pageNumber)
     if (pageNumber < 1 || pageNumber > m_pdfPagesModel->size()) return;
 
     bb::ImageData imgData = m_pdfParser->streamPageImageData(pageNumber);
+    qDebug() << "[BookManager::onPdfStreamPageRendered] pg=" << pageNumber << "size=" << imgData.width() << "x" << imgData.height() << "modelSize=" << m_pdfPagesModel->size();
     if (imgData.width() <= 0 || imgData.height() <= 0) return;
 
     QVariantMap item = m_pdfPagesModel->value(pageNumber - 1).toMap();
     item["pageNumber"] = pageNumber;
     item["isLoaded"] = true;
     item["aspectRatio"] = (double)imgData.height() / (double)imgData.width();
-    item["image"] = QVariant::fromValue(bb::cascades::Image(imgData));
+    bb::cascades::Image cascadesImg(imgData);
+    qDebug() << "[BookManager::onPdfStreamPageRendered] cascadesImg isNull=" << cascadesImg.isNull();
+    item["image"] = QVariant::fromValue(cascadesImg);
     m_pdfPagesModel->replace(pageNumber - 1, item);
 }
 
@@ -4896,17 +5105,25 @@ void BookManager::requestPdfStreamPage(int pageNumber)
 {
     if (!isPdf() || !m_pdfParser || !m_pdfPagesModel || m_totalChapters <= 0) return;
     int pg = qBound(1, pageNumber, m_totalChapters);
+    int centerPg = (m_currentChapterIndex >= 1 && m_currentChapterIndex <= m_totalChapters) ? m_currentChapterIndex : pg;
 
-    m_pdfParser->requestStreamPage(pg, true);
-    if (pg + 1 <= m_totalChapters) m_pdfParser->requestStreamPage(pg + 1, false);
-    if (pg - 1 >= 1) m_pdfParser->requestStreamPage(pg - 1, false);
+    m_pdfParser->setStreamPriorityPage(centerPg);
+    if (qAbs(pg - centerPg) <= 4) {
+        m_pdfParser->requestStreamPage(pg, centerPg);
+    }
+    if (pg + 1 <= m_totalChapters && qAbs((pg + 1) - centerPg) <= 4) {
+        m_pdfParser->requestStreamPage(pg + 1, centerPg);
+    }
+    if (pg - 1 >= 1 && qAbs((pg - 1) - centerPg) <= 4) {
+        m_pdfParser->requestStreamPage(pg - 1, centerPg);
+    }
 
-    // Tight LRU memory eviction on model items far from current viewport (keep aspectRatio!)
+    // LRU memory eviction on model items far from current reading position (keep aspectRatio!)
     bb::cascades::Image emptyImg;
     QVariant emptyImgVar = QVariant::fromValue(emptyImg);
     int n = m_pdfPagesModel->size();
     for (int i = 0; i < n; ++i) {
-        if (qAbs((i + 1) - pg) > 2) {
+        if (qAbs((i + 1) - centerPg) > 4) {
             QVariantMap item = m_pdfPagesModel->value(i).toMap();
             if (item.value("isLoaded").toBool()) {
                 item["isLoaded"] = false;
@@ -4925,9 +5142,22 @@ void BookManager::setPdfVisiblePage(int pageNumber)
         m_currentChapterIndex = pg;
         m_currentPageInChapter = pg;
         m_totalPagesInChapter = m_totalChapters;
+        refreshPdfPageText(pg);
         emit readingProgressChanged();
         emit pagePositionChanged();
         m_progressSaveTimer.start(1500);
+    }
+    if (m_pdfParser && m_pdfPagesModel) {
+        m_pdfParser->setStreamPriorityPage(pg);
+        const int offsets[] = {0, 1, -1, 2};
+        for (int k = 0; k < 4; ++k) {
+            int t = pg + offsets[k];
+            if (t >= 1 && t <= m_pdfPagesModel->size()) {
+                if (!m_pdfPagesModel->value(t - 1).toMap().value("isLoaded").toBool()) {
+                    m_pdfParser->requestStreamPage(t, pg);
+                }
+            }
+        }
     }
 }
 
@@ -5299,26 +5529,54 @@ void BookManager::updateFolderList()
     emit folderModelChanged();
 }
 
-void BookManager::scanLibrary()
+void BookManager::scanLibraryQuiet()
+{
+    scanLibrary(true);
+}
+
+void BookManager::scanLibrary(bool quiet)
 {
     retireWorkerThread(m_scanWorker, this, false);
 
-    m_isScanning = true;
-    m_scanStatusText = "Đang nạp và quét thư viện sách...";
-    emit isScanningChanged();
-    emit scanStatusTextChanged();
+    if (!quiet) {
+        m_isScanning = true;
+        m_scanStatusText = "Đang nạp và quét thư viện sách...";
+        emit isScanningChanged();
+        emit scanStatusTextChanged();
+    }
 
     QStringList rawRoots;
-    // Removable MicroSD
-    rawRoots << "/accounts/1000/removable/sdcard2"
-             << "/accounts/1000/removable/sdcard"
-             << "/removable/sdcard2"
-             << "/removable/sdcard";
+    if (!m_scanFolders.isEmpty()) {
+        foreach (const QString &cf, m_scanFolders) {
+            if (QDir(cf).exists()) {
+                rawRoots << cf;
+            }
+        }
+    }
+    if (rawRoots.isEmpty()) {
+        // Dynamically discover all mounted removable volumes (SD cards / OTG)
+        QStringList remParents;
+        remParents << "/accounts/1000/removable" << "/removable";
+        foreach (const QString &rp, remParents) {
+            QDir rd(rp);
+            if (rd.exists()) {
+                foreach (const QFileInfo &vol, rd.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+                    rawRoots << vol.absoluteFilePath();
+                }
+            }
+        }
+        rawRoots << "/accounts/1000/removable/sdcard2"
+                 << "/accounts/1000/removable/sdcard"
+                 << "/removable/sdcard2"
+                 << "/removable/sdcard";
 
-    // Internal storage
-    rawRoots << "/accounts/1000/shared";
-    if (!QDir("/accounts/1000/shared").exists()) {
-        rawRoots << QDir::homePath();
+        // Internal shared storage & sandbox books fallback
+        rawRoots << "/accounts/1000/shared";
+        if (!QDir("/accounts/1000/shared").exists()) {
+            rawRoots << QDir::homePath();
+        } else if (QDir(QDir::homePath() + "/books").exists()) {
+            rawRoots << (QDir::homePath() + "/books");
+        }
     }
 
     // Deduplicate roots so parent and child directories do not scan redundantly
@@ -5439,6 +5697,28 @@ void BookManager::onScanCompleted(const QList<QVariantMap> &allBooks)
     emit isScanningChanged();
     emit scanStatusTextChanged();
     emit totalScannedBooksChanged();
+
+    // Queue asynchronous background cover extraction for uncached books so scanning never stalls
+    QStringList uncachedCovers;
+    for (int i = 0; i < m_allBooks.size(); ++i) {
+        if (!m_allBooks[i].value("cover").toString().isEmpty()) continue;
+        QString fmt = m_allBooks[i].value("format").toString().toLower();
+        if (fmt == "epub" || fmt == "fb2" || fmt == "cbz" ||
+            fmt == "mobi" || fmt == "azw" || fmt == "azw3" || fmt == "kf8" || fmt == "prc") {
+            QString fp = m_allBooks[i].value("filePath").toString();
+            QString hash = QString(QCryptographicHash::hash(fp.toUtf8(), QCryptographicHash::Md5).toHex());
+            if (!QFile::exists(m_cacheDir + "/" + hash + ".nocover")) {
+                uncachedCovers.append(fp);
+            }
+        }
+    }
+    if (!uncachedCovers.isEmpty()) {
+        retireWorkerThread(m_coverWorker, this, false);
+        m_coverWorker = new CoverExtractWorker(uncachedCovers, m_cacheDir, this);
+        connect(m_coverWorker, SIGNAL(coverExtracted(QString,QString)), this, SLOT(onCoverExtracted(QString,QString)));
+        connect(m_coverWorker, SIGNAL(finished()), this, SLOT(onBackgroundCoversFinished()));
+        m_coverWorker->start();
+    }
 }
 
 QString BookManager::libraryCacheFilePath() const
@@ -5530,10 +5810,8 @@ void BookManager::cancelScan()
 
 void BookManager::onScanWatchdogTimeout()
 {
-    qWarning() << "[BookManager] Scan watchdog timed out after 25s, flushing partial scan and unfreezing UI";
-    if (m_scanWorker && m_scanWorker->isRunning()) {
-        m_scanWorker->cancel(true);
-    }
+    // Unfreeze UI overlay after 25s, but let ScanWorker continue finishing all remaining folders in background!
+    qWarning() << "[BookManager] Scan watchdog timed out after 25s, unfreezing UI while ScanWorker continues in background";
     if (m_isScanning) {
         m_isScanning = false;
         m_scanStatusText.clear();
@@ -5811,6 +6089,7 @@ void BookManager::loadSettingsFromQSettings(QSettings &settings)
     m_focusModeEnabled = settings.value("reader/focusModeEnabled", false).toBool();
     m_volumeKeyTurnEnabled = settings.value("reader/volumeKeyTurn", false).toBool();
     loadCustomShelvesFromSettings(settings);
+    m_scanFolders = settings.value("scan/customFolders").toStringList();
     m_devServerIp = settings.value("dev/serverIp", "192.168.0.108").toString();
 
     loadReadingStatsFromSettings(settings);
@@ -6707,11 +6986,7 @@ void BookManager::openBrowserFolder(const QString &folderPath)
     // 1. Subfolders (Parent navigation uses native TitleBar dismiss/back action)
     QFileInfoList subDirs = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name | QDir::IgnoreCase);
     foreach (const QFileInfo &sub, subDirs) {
-        QString sName = sub.fileName().toLower();
-        if (sName.startsWith(".") || sName == "android" || sName == "lost.dir" ||
-            sName == "dcim" || sName == "camera" || sName == "photos" ||
-            sName == "music" || sName == "videos" || sName == "voice" ||
-            sName == "appdata" || sName == "cache" || sName == "system") {
+        if (shouldSkipScanDir(sub)) {
             continue;
         }
 
@@ -6760,10 +7035,14 @@ void BookManager::openBrowserFolder(const QString &folderPath)
         items.append(item);
     }
 
-    // 2. Book files
-    QStringList filters;
-    filters << "*.epub" << "*.txt" << "*.fb2" << "*.pdf" << "*.djvu" << "*.djv" << "*.cbz" << "*.mobi" << "*.azw" << "*.azw3" << "*.kf8" << "*.prc";
-    QFileInfoList bookFiles = dir.entryInfoList(filters, QDir::Files, QDir::Name | QDir::IgnoreCase);
+    // 2. Book files (case-insensitive extension matching)
+    QFileInfoList allDirFiles = dir.entryInfoList(QDir::Files, QDir::Name | QDir::IgnoreCase);
+    QFileInfoList bookFiles;
+    foreach (const QFileInfo &cand, allDirFiles) {
+        if (isSupportedBookExt(cand.suffix().toLower())) {
+            bookFiles.append(cand);
+        }
+    }
 
     // Fast O(1) in-memory lookup table for library books
     QHash<QString, const QVariantMap*> bookLookup;
@@ -6948,13 +7227,168 @@ void BookManager::onCoverExtracted(const QString &filePath, const QString &cover
         }
     }
 
-    // 3. Update in m_allBooks if present
+    // 3. Update in m_allBooks and m_model in-place if present
     for (int i = 0; i < m_allBooks.size(); ++i) {
         if (m_allBooks[i].value("filePath").toString() == filePath) {
             m_allBooks[i]["cover"] = coverPath;
             break;
         }
     }
+    if (m_model) {
+        QVariantList indexPath = m_model->first();
+        while (!indexPath.isEmpty()) {
+            QVariantMap item = m_model->data(indexPath).toMap();
+            if (item.value("filePath").toString() == filePath || item.value("path").toString() == filePath) {
+                item["cover"] = coverPath;
+                m_model->updateItem(indexPath, item);
+                break;
+            }
+            indexPath = m_model->after(indexPath);
+        }
+    }
+}
+
+void BookManager::onBackgroundCoversFinished()
+{
+    saveLibraryCache();
+}
+
+QStringList BookManager::scanFolders() const
+{
+    return m_scanFolders;
+}
+
+QString BookManager::scanFoldersSummary() const
+{
+    if (m_scanFolders.isEmpty()) {
+        return tr("Tự động (Bộ nhớ trong & Thẻ nhớ)");
+    }
+    QStringList names;
+    for (int i = 0; i < m_scanFolders.size(); ++i) {
+        QString n = QFileInfo(m_scanFolders.at(i)).fileName();
+        names.append(n.isEmpty() ? m_scanFolders.at(i) : n);
+    }
+    return QString("%1 %2: %3").arg(m_scanFolders.size()).arg(tr("thư mục"), names.join(", "));
+}
+
+bool BookManager::isScanFolderSelected(const QString &folderPath) const
+{
+    if (folderPath.isEmpty()) return false;
+    QString canon = QDir(folderPath).canonicalPath();
+    for (int i = 0; i < m_scanFolders.size(); ++i) {
+        const QString &f = m_scanFolders.at(i);
+        if (f == folderPath || (!canon.isEmpty() && QDir(f).canonicalPath() == canon)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void BookManager::toggleScanFolder(const QString &folderPath)
+{
+    if (folderPath.isEmpty() || !QDir(folderPath).exists()) return;
+    QString abs = QDir(folderPath).absolutePath();
+    QString canon = QDir(folderPath).canonicalPath();
+    int foundIdx = -1;
+    for (int i = 0; i < m_scanFolders.size(); ++i) {
+        const QString &f = m_scanFolders.at(i);
+        if (f == abs || f == folderPath || (!canon.isEmpty() && QDir(f).canonicalPath() == canon)) {
+            foundIdx = i;
+            break;
+        }
+    }
+    if (foundIdx >= 0) {
+        m_scanFolders.removeAt(foundIdx);
+    } else {
+        m_scanFolders.append(abs);
+    }
+    QSettings settings("Libris", "Libris");
+    settings.setValue("scan/customFolders", m_scanFolders);
+    settings.sync();
+    emit scanFoldersChanged();
+}
+
+void BookManager::clearScanFolders()
+{
+    if (m_scanFolders.isEmpty()) return;
+    m_scanFolders.clear();
+    QSettings settings("Libris", "Libris");
+    settings.remove("scan/customFolders");
+    settings.sync();
+    emit scanFoldersChanged();
+}
+
+QString BookManager::parentFolderForPicker(const QString &dirPath) const
+{
+    if (dirPath.isEmpty() || dirPath == "root") return "root";
+    QString clean = QDir(dirPath).absolutePath();
+    if (clean == "/accounts/1000/shared" || clean == QDir::homePath() ||
+        clean == "/accounts/1000/removable" || clean == "/removable") {
+        return "root";
+    }
+    if (clean.startsWith("/accounts/1000/removable/") || clean.startsWith("/removable/")) {
+        QDir upDir(clean);
+        if (!upDir.cdUp() || upDir.absolutePath() == "/accounts/1000/removable" || upDir.absolutePath() == "/removable") {
+            return "root";
+        }
+        return upDir.absolutePath();
+    }
+    QDir d(clean);
+    if (!d.cdUp() || d.absolutePath() == "/accounts/1000" || d.absolutePath() == "/") {
+        return "root";
+    }
+    return d.absolutePath();
+}
+
+QVariantList BookManager::listFoldersForPicker(const QString &dirPath) const
+{
+    QVariantList out;
+    if (dirPath.isEmpty() || dirPath == "root") {
+        QStringList remParents;
+        remParents << "/accounts/1000/removable" << "/removable";
+        QSet<QString> seenCanons;
+        foreach (const QString &rp, remParents) {
+            QDir rd(rp);
+            if (!rd.exists()) continue;
+            foreach (const QFileInfo &vol, rd.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name | QDir::IgnoreCase)) {
+                QString canon = QDir(vol.absoluteFilePath()).canonicalPath();
+                if (seenCanons.contains(canon)) continue;
+                seenCanons.insert(canon);
+                QVariantMap m;
+                m["name"] = tr("Thẻ nhớ ngoài (%1)").arg(vol.fileName());
+                m["path"] = vol.absoluteFilePath();
+                m["subtext"] = vol.absoluteFilePath();
+                m["isSelected"] = isScanFolderSelected(vol.absoluteFilePath());
+                out.append(m);
+            }
+        }
+        QString sharedPath = "/accounts/1000/shared";
+        if (!QDir(sharedPath).exists()) sharedPath = QDir::homePath();
+        if (QDir(sharedPath).exists()) {
+            QVariantMap m;
+            m["name"] = tr("Bộ nhớ trong");
+            m["path"] = sharedPath;
+            m["subtext"] = sharedPath;
+            m["isSelected"] = isScanFolderSelected(sharedPath);
+            out.append(m);
+        }
+        return out;
+    }
+
+    QDir d(dirPath);
+    if (!d.exists()) return out;
+    QFileInfoList subDirs = d.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name | QDir::IgnoreCase);
+    foreach (const QFileInfo &sub, subDirs) {
+        if (shouldSkipScanDir(sub)) continue;
+        QString p = sub.absoluteFilePath();
+        QVariantMap m;
+        m["name"] = sub.fileName();
+        m["path"] = p;
+        m["subtext"] = p;
+        m["isSelected"] = isScanFolderSelected(p);
+        out.append(m);
+    }
+    return out;
 }
 
 void BookManager::browserGoUp()

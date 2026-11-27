@@ -1,4 +1,4 @@
-Phiên bản 2.3.0 (Build 257) - 2026-11-27:
+Phiên bản 2.3.0 (Build 273) - 2026-11-27:
 - Thiết kế lại toàn bộ Onboarding Guide (7 trang) theo chuẩn Native BlackBerry 10 Cascades (`RadioGroup`, `SegmentedControl`, `Button Primary`, thanh ActionBar tối, vuốt ngang chuyển trang, căn giữa màn hình vuông Passport).
 - Nâng cấp Trang 4 (Controls) thành màn hình đọc sách mô phỏng toàn khung kèm hộp thoại nổi và animation minh họa từng phím tắt; vẽ hình minh họa đúng dáng máy BlackBerry Passport cho trang Giao diện & Thêm sách.
 - Chuẩn hóa toàn bộ phím tắt chỉ dùng phím chữ cái (`A–Z`, `Space`, `Backspace`) thuận tay cho bàn phím vật lý Passport (`Z / X` cỡ chữ, `N / P` chuyển chương, `W / Q` PDF, `O` bảng phím tắt).

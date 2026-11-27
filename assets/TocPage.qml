@@ -29,6 +29,13 @@ Page {
         }
         actions: [
             ActionItem {
+                title: qsTr("Trang chủ") + Retranslate.onLanguageChanged
+                imageSource: "asset:///icons/ic_home.png"
+                onTriggered: {
+                    app.switchToTab("home");
+                }
+            },
+            ActionItem {
                 title: qsTr("Thoát") + Retranslate.onLanguageChanged
                 imageSource: "asset:///icons/ic_exit.png"
                 onTriggered: {

@@ -169,7 +169,7 @@ void SearchWorker::run()
             }
             fb.close();
         }
-    } else if (m_params.format == "txt") {
+    } else if (m_params.format == "txt" || m_params.format == "md" || m_params.format == "markdown" || m_params.format == "html" || m_params.format == "htm") {
         TxtParser tp;
         if (tp.open(m_params.filePath)) {
             int startChapter = (isChapterScope && tp.chapterCount() > 0) ? qBound(0, m_params.currentChapterIndex, tp.chapterCount() - 1) : 0;
@@ -178,6 +178,10 @@ void SearchWorker::run()
             for (int i = startChapter; i < endChapter && totalFound < maxTotalResults; ++i) {
                 if (m_cancelled) break;
                 QString plain = tp.getChapterContent(i);
+                plain.remove(minimalRx("<style[^>]*>[\\s\\S]*</style>", Qt::CaseInsensitive));
+                plain.remove(minimalRx("<script[^>]*>[\\s\\S]*</script>", Qt::CaseInsensitive));
+                plain.remove(QRegExp("<[^>]*>"));
+                plain.replace("&nbsp;", " ").replace("&quot;", "\"").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">");
 
                 int pos = 0;
                 int foundInChapter = 0;
@@ -329,7 +333,7 @@ void ScanWorker::extractSeriesFromTitleOrFile(const QString &title, const QStrin
 
 void ScanWorker::scanDir(const QString &dirPath, int depth, QSet<QString> &visitedDirs, QSet<QString> &addedPaths, QList<QVariantMap> &books)
 {
-    if (depth > 8 || m_cancelled) return;
+    if (depth > 12 || m_cancelled) return;
 
     QDir dir(dirPath);
     if (!dir.exists()) return;
@@ -338,23 +342,12 @@ void ScanWorker::scanDir(const QString &dirPath, int depth, QSet<QString> &visit
     if (canon.isEmpty() || visitedDirs.contains(canon)) return;
     visitedDirs.insert(canon);
 
-    QStringList nameFilters;
-    nameFilters << "*.epub" << "*.EPUB"
-                << "*.txt"  << "*.TXT"
-                << "*.fb2"  << "*.FB2"
-                << "*.pdf"  << "*.PDF"
-                << "*.djvu" << "*.DJVU"
-                << "*.djv"  << "*.DJV"
-                << "*.cbz"  << "*.CBZ"
-                << "*.mobi" << "*.MOBI"
-                << "*.azw"  << "*.AZW"
-                << "*.azw3" << "*.AZW3"
-                << "*.kf8"  << "*.KF8"
-                << "*.prc"  << "*.PRC";
-
-    QFileInfoList fileEntries = dir.entryInfoList(nameFilters, QDir::Files, QDir::Time);
-    foreach (const QFileInfo &fi, fileEntries) {
+    QFileInfoList allFiles = dir.entryInfoList(QDir::Files, QDir::Time);
+    foreach (const QFileInfo &fi, allFiles) {
         if (m_cancelled) return;
+
+        QString ext = fi.suffix().toLower();
+        if (!isSupportedBookExt(ext)) continue;
 
         QString absPath = fi.absoluteFilePath();
         if (addedPaths.contains(absPath)) continue;
@@ -364,7 +357,6 @@ void ScanWorker::scanDir(const QString &dirPath, int depth, QSet<QString> &visit
             continue;
         }
 
-        QString ext = fi.suffix().toLower();
         QString rawName = fi.completeBaseName().replace('_', ' ');
         QString bookTitle = rawName;
         QString bookAuthor = (ext == "epub") ? "EPUB eBook" :
@@ -404,156 +396,10 @@ void ScanWorker::scanDir(const QString &dirPath, int depth, QSet<QString> &visit
         bool dirtyMeta = false;
         bool dirtySeries = false;
 
-        if (ext == "epub" && ((cover.isEmpty() && !QFile::exists(cachedNoCover)) || cachedTitle.isEmpty())) {
-            if (fi.size() <= 80 * 1024 * 1024) {
-                EpubParser ep;
-                if (ep.open(absPath)) {
-                    if (cover.isEmpty() && !QFile::exists(cachedNoCover)) {
-                        QString c = ep.extractCover(m_cacheDir);
-                        if (!c.isEmpty()) {
-                            cover = c;
-                        } else {
-                            QFile noCov(cachedNoCover);
-                            if (noCov.open(QIODevice::WriteOnly)) noCov.close();
-                        }
-                    }
-                    if (!ep.title().isEmpty()) {
-                        bookTitle = ep.title();
-                        dirtyMeta = true;
-                    }
-                    if (!ep.author().isEmpty() && ep.author() != "Unknown Author") {
-                        bookAuthor = ep.author();
-                        dirtyMeta = true;
-                    }
-                    if (!ep.series().isEmpty()) {
-                        bookSeries = ep.series();
-                        bookSeriesIndex = ep.seriesIndex();
-                        dirtySeries = true;
-                    }
-                    ep.close();
-                } else {
-                    QFile noCov(cachedNoCover);
-                    if (noCov.open(QIODevice::WriteOnly)) noCov.close();
-                    dirtyMeta = true;
-                }
-            } else {
-                QFile noCov(cachedNoCover);
-                if (noCov.open(QIODevice::WriteOnly)) noCov.close();
-            }
-        } else if (ext == "fb2" && ((cover.isEmpty() && !QFile::exists(cachedNoCover)) || cachedTitle.isEmpty())) {
-            if (fi.size() <= 80 * 1024 * 1024) {
-                Fb2Parser fb;
-                if (fb.open(absPath)) {
-                    if (cover.isEmpty() && !QFile::exists(cachedNoCover)) {
-                        QString c = fb.extractCover(m_cacheDir);
-                        if (!c.isEmpty()) {
-                            cover = c;
-                        } else {
-                            QFile noCov(cachedNoCover);
-                            if (noCov.open(QIODevice::WriteOnly)) noCov.close();
-                        }
-                    }
-                    if (!fb.title().isEmpty()) {
-                        bookTitle = fb.title();
-                        dirtyMeta = true;
-                    }
-                    if (!fb.author().isEmpty()) {
-                        bookAuthor = fb.author();
-                        dirtyMeta = true;
-                    }
-                    if (!fb.series().isEmpty()) {
-                        bookSeries = fb.series();
-                        bookSeriesIndex = fb.seriesIndex();
-                        dirtySeries = true;
-                    }
-                    fb.close();
-                } else {
-                    QFile noCov(cachedNoCover);
-                    if (noCov.open(QIODevice::WriteOnly)) noCov.close();
-                    dirtyMeta = true;
-                }
-            } else {
-                QFile noCov(cachedNoCover);
-                if (noCov.open(QIODevice::WriteOnly)) noCov.close();
-            }
-        } else if (ext == "cbz" && ((cover.isEmpty() && !QFile::exists(cachedNoCover)) || cachedTitle.isEmpty())) {
-            if (fi.size() <= 80 * 1024 * 1024) {
-                CbzParser cp;
-                if (cp.open(absPath)) {
-                    if (cover.isEmpty() && !QFile::exists(cachedNoCover)) {
-                        QString c = cp.extractCover(m_cacheDir);
-                        if (!c.isEmpty()) {
-                            cover = c;
-                        } else {
-                            QFile noCov(cachedNoCover);
-                            if (noCov.open(QIODevice::WriteOnly)) noCov.close();
-                        }
-                    }
-                    if (!cp.title().isEmpty()) {
-                        bookTitle = cp.title();
-                        dirtyMeta = true;
-                    }
-                    if (!cp.author().isEmpty()) {
-                        bookAuthor = cp.author();
-                        dirtyMeta = true;
-                    }
-                    if (!cp.series().isEmpty()) {
-                        bookSeries = cp.series();
-                        bookSeriesIndex = cp.seriesIndex();
-                        dirtySeries = true;
-                    }
-                    cp.close();
-                } else {
-                    QFile noCov(cachedNoCover);
-                    if (noCov.open(QIODevice::WriteOnly)) noCov.close();
-                    dirtyMeta = true;
-                }
-            } else {
-                QFile noCov(cachedNoCover);
-                if (noCov.open(QIODevice::WriteOnly)) noCov.close();
-            }
-        } else if ((ext == "mobi" || ext == "azw" || ext == "azw3" || ext == "kf8" || ext == "prc") && ((cover.isEmpty() && !QFile::exists(cachedNoCover)) || cachedTitle.isEmpty())) {
-            if (fi.size() <= 80 * 1024 * 1024) {
-                MobiParser mp;
-                if (mp.open(absPath)) {
-                    if (cover.isEmpty() && !QFile::exists(cachedNoCover)) {
-                        QString c = mp.extractCover(m_cacheDir);
-                        if (!c.isEmpty()) {
-                            cover = c;
-                        } else {
-                            QFile noCov(cachedNoCover);
-                            if (noCov.open(QIODevice::WriteOnly)) noCov.close();
-                        }
-                    }
-                    if (!mp.title().isEmpty()) {
-                        bookTitle = mp.title();
-                        dirtyMeta = true;
-                    }
-                    if (!mp.author().isEmpty()) {
-                        bookAuthor = mp.author();
-                        dirtyMeta = true;
-                    }
-                    if (!mp.series().isEmpty()) {
-                        bookSeries = mp.series();
-                        bookSeriesIndex = mp.seriesIndex();
-                        dirtySeries = true;
-                    }
-                    mp.close();
-                } else {
-                    QFile noCov(cachedNoCover);
-                    if (noCov.open(QIODevice::WriteOnly)) noCov.close();
-                    dirtyMeta = true;
-                }
-            } else {
-                QFile noCov(cachedNoCover);
-                if (noCov.open(QIODevice::WriteOnly)) noCov.close();
-            }
-        } else if (ext == "pdf" || ext == "djvu" || ext == "djv") {
-            // PDF/DjVu covers and metadata are handled on demand by dedicated reader core,
-            // never by instantiating PdfCore directly on a background QThread.
-            if (cachedTitle.isEmpty()) {
-                dirtyMeta = true;
-            }
+        // Keep ScanWorker pure filesystem + cache lookup (~1-2s for 1,000+ books);
+        // uncached covers are extracted asynchronously afterwards by CoverExtractWorker.
+        if (cachedTitle.isEmpty()) {
+            dirtyMeta = true;
         }
 
         // Only fallback to extracting Author from filename if no author or title was found from file metadata or cache
@@ -630,15 +476,7 @@ void ScanWorker::scanDir(const QString &dirPath, int depth, QSet<QString> &visit
     QFileInfoList dirEntries = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
     foreach (const QFileInfo &subDir, dirEntries) {
         if (m_cancelled) return;
-        if (subDir.isSymLink()) continue; // Skip symlinks to avoid recursion loops
-        QString sName = subDir.fileName().toLower();
-        if (sName.startsWith(".") || sName == "android" || sName == "lost.dir" ||
-            sName == "dcim" || sName == "camera" || sName == "photos" ||
-            sName == "music" || sName == "videos" || sName == "voice" ||
-            sName == "appdata" || sName == "cache" || sName == "system" ||
-            sName == "system volume information" || sName == "$recycle.bin" ||
-            sName == "recycle.bin" || sName == "nvram" || sName == "barinstaller" ||
-            sName == "logs" || sName == "tmp" || sName == "temp") {
+        if (shouldSkipScanDir(subDir)) {
             continue;
         }
         scanDir(subDir.absoluteFilePath(), depth + 1, visitedDirs, addedPaths, books);

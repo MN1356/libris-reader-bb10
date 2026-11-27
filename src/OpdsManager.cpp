@@ -370,7 +370,7 @@ void OpdsManager::prepareRequest(QNetworkRequest &req)
     req.setRawHeader("User-Agent", "Mozilla/5.0 (BlackBerry; U; BlackBerry 10; en-US) AppleWebKit/537.36 (KHTML, like Gecko) Libris/2.0");
     QSslConfiguration sslConfig = QSslConfiguration::defaultConfiguration();
     sslConfig.setProtocol(QSsl::AnyProtocol);
-    sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
+    sslConfig.setPeerVerifyMode(QSslSocket::defaultCaCertificates().isEmpty() ? QSslSocket::VerifyNone : QSslSocket::VerifyPeer);
     sslConfig.setSslOption(QSsl::SslOptionDisableServerNameIndication, false);
     req.setSslConfiguration(sslConfig);
 }
@@ -380,11 +380,9 @@ void OpdsManager::setupReply(QNetworkReply *reply)
     if (!reply) return;
     QSslConfiguration sslConfig = QSslConfiguration::defaultConfiguration();
     sslConfig.setProtocol(QSsl::AnyProtocol);
-    sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
+    sslConfig.setPeerVerifyMode(QSslSocket::defaultCaCertificates().isEmpty() ? QSslSocket::VerifyNone : QSslSocket::VerifyPeer);
     sslConfig.setSslOption(QSsl::SslOptionDisableServerNameIndication, false);
     reply->setSslConfiguration(sslConfig);
-    reply->ignoreSslErrors();
-    connect(reply, SIGNAL(sslErrors(QList<QSslError>)), reply, SLOT(ignoreSslErrors()));
     connect(reply, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(onSslErrors(QList<QSslError>)));
 
     QTimer *timeoutTimer = new QTimer(reply);
@@ -1878,21 +1876,15 @@ void OpdsManager::onCoverReplyFinished()
 void OpdsManager::onSslErrors(const QList<QSslError> &errors)
 {
     for (int i = 0; i < errors.size(); ++i) {
-        qDebug() << "[OpdsManager] Bypassing SSL error:" << errors.at(i).errorString();
-    }
-    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
-    if (reply) {
-        reply->ignoreSslErrors();
+        qWarning() << "[OpdsManager] SSL verification error:" << errors.at(i).errorString();
     }
 }
 
 void OpdsManager::onNamSslErrors(QNetworkReply *reply, const QList<QSslError> &errors)
 {
+    Q_UNUSED(reply);
     for (int i = 0; i < errors.size(); ++i) {
-        qDebug() << "[OpdsManager] NAM bypassing SSL error:" << errors.at(i).errorString();
-    }
-    if (reply) {
-        reply->ignoreSslErrors();
+        qWarning() << "[OpdsManager] NAM SSL verification error:" << errors.at(i).errorString();
     }
 }
 

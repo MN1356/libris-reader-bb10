@@ -195,38 +195,39 @@ Sheet {
 
                                 Container {
                                     horizontalAlignment: HorizontalAlignment.Fill
-                                    topPadding: bookManager.dp(14)
-                                    bottomPadding: bookManager.dp(14)
-                                    leftPadding: bookManager.dp(16)
-                                    rightPadding: bookManager.dp(16)
+                                    minHeight: bookManager.dp(80)
+                                    topPadding: bookManager.dp(18)
+                                    bottomPadding: bookManager.dp(18)
+                                    leftPadding: bookManager.dp(18)
+                                    rightPadding: bookManager.dp(18)
                                     layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
                                     ImageView {
-                                        preferredWidth: bookManager.dp(32)
-                                        preferredHeight: bookManager.dp(32)
+                                        preferredWidth: bookManager.dp(40)
+                                        preferredHeight: bookManager.dp(40)
                                         verticalAlignment: VerticalAlignment.Center
                                         scalingMethod: ScalingMethod.AspectFit
                                         imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_library.png" : "asset:///icons/ic_library_dark.png"
                                     }
 
                                     Container {
-                                        leftMargin: bookManager.dp(12)
+                                        leftMargin: bookManager.dp(14)
                                         verticalAlignment: VerticalAlignment.Center
                                         layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
 
                                         Label {
                                             text: ListItemData.name ? ListItemData.name : ""
-                                            textStyle.base: SystemDefaults.TextStyles.PrimaryText
-                                            textStyle.fontWeight: FontWeight.W500
+                                            textStyle.base: SystemDefaults.TextStyles.TitleText
+                                            textStyle.fontWeight: FontWeight.Bold
                                             textStyle.color: (ListItemData.isAssigned || ListItemData.isActiveFilter) ?
                                                              Color.create(bookManager.uiAccent) :
                                                              Color.create(bookManager.uiInk)
                                         }
 
                                         Label {
-                                            topMargin: bookManager.dp(2)
+                                            topMargin: bookManager.dp(3)
                                             text: ListItemData.count + " " + (qsTr("cuốn") + Retranslate.onLanguageChanged)
-                                            textStyle.base: SystemDefaults.TextStyles.SubtitleText
+                                            textStyle.base: SystemDefaults.TextStyles.BodyText
                                             textStyle.color: Color.create(bookManager.uiMuted)
                                         }
                                     }

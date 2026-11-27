@@ -24,6 +24,13 @@ Page {
         }
         actions: [
             ActionItem {
+                title: qsTr("Trang chủ") + Retranslate.onLanguageChanged
+                imageSource: "asset:///icons/ic_home.png"
+                onTriggered: {
+                    app.switchToTab("home");
+                }
+            },
+            ActionItem {
                 title: qsTr("Thoát") + Retranslate.onLanguageChanged
                 imageSource: "asset:///icons/ic_exit.png"
                 onTriggered: {
@@ -275,7 +282,7 @@ Page {
                         verticalAlignment: VerticalAlignment.Center
                         text: bookManager.currentBookTitle
                         textStyle.base: SystemDefaults.TextStyles.TitleText
-                        textStyle.fontWeight: FontWeight.Bold
+                        textStyle.fontWeight: FontWeight.W300
                         textStyle.textAlign: TextAlign.Center
                         textStyle.color: Color.create("#F5EFE6")
                         autoSize.maxLineCount: 1
@@ -662,6 +669,7 @@ Page {
                 ]
 
                 function jumpToPage(pageNum) {
+                    console.log("[ReaderPage] pdfListView.jumpToPage:", pageNum);
                     if (pageNum < 1) return;
                     suppressVisibleSync = true;
                     pdfJumpSyncGuardTimer.restart();
@@ -671,7 +679,30 @@ Page {
                     bookManager.stopWatchdog();
                 }
 
+                function fwd_openPdfOcrSheet(pg) {
+                    pdfOcrTextSheet.openForPage(pg);
+                }
+
+                function fwd_startTtsOnPage(pg) {
+                    if (pg && pg >= 1 && bookManager.currentChapterIndex !== pg) {
+                        bookManager.goToChapter(pg);
+                    }
+                    bookManager.startTts();
+                }
+
+                function fwd_togglePdfReflowPage(pg) {
+                    if (pg && pg >= 1 && bookManager.currentChapterIndex !== pg) {
+                        bookManager.goToChapter(pg);
+                    }
+                    bookManager.togglePdfReflow();
+                }
+
+                function fwd_enterPdfZoomPage(pg) {
+                    bookManager.enterPdfZoomMode(pg);
+                }
+
                 function handlePageItemBound(pageNum, isLoaded) {
+                    console.log("[ReaderPage] handlePageItemBound pg:", pageNum, "isLoaded:", isLoaded);
                     if (!pageNum || pageNum < 1) return;
                     if (!isLoaded) {
                         bookManager.requestPdfStreamPage(pageNum);
@@ -697,67 +728,124 @@ Page {
                 listItemComponents: [
                     ListItemComponent {
                         type: ""
-                        Container {
+                        CustomListItem {
                             id: pdfPageItem
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            preferredHeight: Math.round(bookManager.screenWidth * (ListItemData.aspectRatio > 0 ? ListItemData.aspectRatio : 1.414)) + bookManager.dp(8)
-                            bottomPadding: bookManager.dp(8)
-                            background: bookManager.theme === "dark" ? Color.create("#111111") :
-                                        (bookManager.theme === "sepia" ? Color.create("#EADFC4") : Color.create("#E0DDD6"))
+                            dividerVisible: false
+                            highlightAppearance: HighlightAppearance.None
 
                             property real downX: 0
                             property real downY: 0
                             property real downTime: 0
+                            property int lastBoundPage: -1
+
+                            contextActions: [
+                                ActionSet {
+                                    title: qsTr("Trang %1").replace("%1", ListItemData && ListItemData.pageNumber ? ListItemData.pageNumber : 1) + Retranslate.onLanguageChanged
+
+                                    ActionItem {
+                                        title: qsTr("Chọn chữ (OCR)") + Retranslate.onLanguageChanged
+                                        imageSource: "asset:///icons/ic_highlight.png"
+                                        onTriggered: {
+                                            if (ListItemData && ListItemData.pageNumber) {
+                                                pdfPageItem.ListItem.view.fwd_openPdfOcrSheet(ListItemData.pageNumber);
+                                            }
+                                        }
+                                    }
+
+                                    ActionItem {
+                                        title: qsTr("Đọc từ trang này (TTS)") + Retranslate.onLanguageChanged
+                                        imageSource: "asset:///icons/ic_tts.png"
+                                        onTriggered: {
+                                            if (ListItemData && ListItemData.pageNumber) {
+                                                pdfPageItem.ListItem.view.fwd_startTtsOnPage(ListItemData.pageNumber);
+                                            }
+                                        }
+                                    }
+
+                                    ActionItem {
+                                        title: qsTr("Dàn chữ (OCR)") + Retranslate.onLanguageChanged
+                                        imageSource: "asset:///icons/ic_text_mode.png"
+                                        onTriggered: {
+                                            if (ListItemData && ListItemData.pageNumber) {
+                                                pdfPageItem.ListItem.view.fwd_togglePdfReflowPage(ListItemData.pageNumber);
+                                            }
+                                        }
+                                    }
+
+                                    ActionItem {
+                                        title: qsTr("Phóng to trang") + Retranslate.onLanguageChanged
+                                        imageSource: "asset:///icons/ic_zoom_in.png"
+                                        onTriggered: {
+                                            if (ListItemData && ListItemData.pageNumber) {
+                                                pdfPageItem.ListItem.view.fwd_enterPdfZoomPage(ListItemData.pageNumber);
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
 
                             onCreationCompleted: {
-                                if (ListItemData && ListItemData.pageNumber) {
+                                if (ListItemData && ListItemData.pageNumber && lastBoundPage !== ListItemData.pageNumber) {
+                                    lastBoundPage = ListItemData.pageNumber;
                                     ListItem.view.handlePageItemBound(ListItemData.pageNumber, ListItemData.isLoaded);
                                 }
                             }
 
                             ListItem.onIndexPathChanged: {
-                                if (ListItemData && ListItemData.pageNumber) {
+                                if (ListItemData && ListItemData.pageNumber && lastBoundPage !== ListItemData.pageNumber) {
+                                    lastBoundPage = ListItemData.pageNumber;
                                     ListItem.view.handlePageItemBound(ListItemData.pageNumber, ListItemData.isLoaded);
-                                }
-                            }
-
-                            onTouch: {
-                                if (event.isDown()) {
-                                    downX = event.windowX;
-                                    downY = event.windowY;
-                                    downTime = new Date().getTime();
-                                } else if (event.isUp()) {
-                                    var dx = event.windowX - downX;
-                                    var dy = event.windowY - downY;
-                                    var dt = new Date().getTime() - downTime;
-                                    if (Math.abs(dx) < 25 && Math.abs(dy) < 25 && dt < 400 && ListItemData && ListItemData.pageNumber) {
-                                        ListItem.view.handlePageTap(ListItemData.pageNumber);
-                                    }
                                 }
                             }
 
                             Container {
                                 horizontalAlignment: HorizontalAlignment.Fill
-                                verticalAlignment: VerticalAlignment.Fill
+                                preferredWidth: bookManager.screenWidth > 0 ? bookManager.screenWidth : 720
+                                minWidth: bookManager.screenWidth > 0 ? bookManager.screenWidth : 720
+                                preferredHeight: Math.round((bookManager.screenWidth > 0 ? bookManager.screenWidth : 720) * (ListItemData.aspectRatio > 0 ? ListItemData.aspectRatio : 1.414)) + bookManager.dp(8)
+                                bottomPadding: bookManager.dp(8)
                                 layout: DockLayout {}
-                                background: bookManager.theme === "dark" ? Color.create("#1A1A1A") :
-                                            (bookManager.theme === "sepia" ? Color.create("#F4ECD8") : Color.create("#FFFFFF"))
+                                background: bookManager.theme === "dark" ? Color.create("#111111") :
+                                            (bookManager.theme === "sepia" ? Color.create("#EADFC4") : Color.create("#E0DDD6"))
 
-                                Label {
-                                    visible: !ListItemData.isLoaded
-                                    horizontalAlignment: HorizontalAlignment.Center
-                                    verticalAlignment: VerticalAlignment.Center
-                                    text: qsTr("Trang %1").arg(ListItemData.pageNumber) + Retranslate.onLanguageChanged
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                                    textStyle.color: Color.create(bookManager.uiMuted)
+                                onTouch: {
+                                    if (event.isDown()) {
+                                        pdfPageItem.downX = event.windowX;
+                                        pdfPageItem.downY = event.windowY;
+                                        pdfPageItem.downTime = new Date().getTime();
+                                    } else if (event.isUp()) {
+                                        var dx = event.windowX - pdfPageItem.downX;
+                                        var dy = event.windowY - pdfPageItem.downY;
+                                        var dt = new Date().getTime() - pdfPageItem.downTime;
+                                        if (Math.abs(dx) < 25 && Math.abs(dy) < 25 && dt < 400 && ListItemData && ListItemData.pageNumber) {
+                                            pdfPageItem.ListItem.view.handlePageTap(ListItemData.pageNumber);
+                                        }
+                                    }
                                 }
 
-                                ImageView {
-                                    visible: ListItemData.isLoaded
+                                Container {
                                     horizontalAlignment: HorizontalAlignment.Fill
                                     verticalAlignment: VerticalAlignment.Fill
-                                    image: ListItemData.image
-                                    scalingMethod: ScalingMethod.AspectFit
+                                    layout: DockLayout {}
+                                    background: bookManager.theme === "dark" ? Color.create("#1A1A1A") :
+                                                (bookManager.theme === "sepia" ? Color.create("#F4ECD8") : Color.create("#FFFFFF"))
+
+                                    Label {
+                                        visible: !ListItemData.isLoaded
+                                        horizontalAlignment: HorizontalAlignment.Center
+                                        verticalAlignment: VerticalAlignment.Center
+                                        text: qsTr("Trang %1").arg(ListItemData.pageNumber) + Retranslate.onLanguageChanged
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.color: Color.create(bookManager.uiMuted)
+                                    }
+
+                                    ImageView {
+                                        visible: ListItemData.isLoaded
+                                        horizontalAlignment: HorizontalAlignment.Fill
+                                        verticalAlignment: VerticalAlignment.Fill
+                                        image: ListItemData.image
+                                        scalingMethod: ScalingMethod.AspectFit
+                                    }
                                 }
                             }
                         }
@@ -806,6 +894,14 @@ Page {
                     }
                     return pdfScrollView.viewableArea.height;
                 }
+
+                gestureHandlers: [
+                    LongPressHandler {
+                        onLongPressed: {
+                            pdfOcrTextSheet.openForPage(bookManager.currentChapterIndex);
+                        }
+                    }
+                ]
 
                 onTouch: {
                     if (event.isDown()) {
@@ -1621,17 +1717,19 @@ Page {
                             text: ttsManager.loading ?
                                   (qsTr("Đang tải dữ liệu...") + Retranslate.onLanguageChanged) :
                                   (ttsManager.currentSentenceText !== "" ? ("\"" + ttsManager.currentSentenceText + "\"") : qsTr("Libris TTS"))
-                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.base: (bookManager.isPdf && !bookManager.isPdfReflow) ? SystemDefaults.TextStyles.BodyText : SystemDefaults.TextStyles.SmallText
                             textStyle.color: ttsManager.loading ? Color.create(bookManager.uiAccent) :
                                             (bookManager.theme === "dark" ? Color.create("#F5EFE6") :
                                              (bookManager.theme === "sepia" ? Color.create("#3E2D1D") : Color.create("#1C1916")))
-                            textStyle.fontStyle: FontStyle.Italic
-                            autoSize.maxLineCount: 1
+                            textStyle.fontStyle: (bookManager.isPdf && !bookManager.isPdfReflow) ? FontStyle.Normal : FontStyle.Italic
+                            multiline: (bookManager.isPdf && !bookManager.isPdfReflow)
+                            autoSize.maxLineCount: (bookManager.isPdf && !bookManager.isPdfReflow) ? 5 : 1
                         }
 
                         Label {
                             topMargin: bookManager.dp(2)
-                            text: (ttsManager.ttsProvider === "gemini" ?
+                            text: ((bookManager.isPdf && !bookManager.isPdfReflow) ? (qsTr("Trang %1/%2").replace("%1", bookManager.currentChapterIndex).replace("%2", Math.max(1, bookManager.totalChapters)) + " • ") : "") +
+                                  (ttsManager.ttsProvider === "gemini" ?
                                    (ttsManager.geminiVoice + " • " + ttsManager.geminiModel) :
                                    ttsManager.ttsProvider === "espeak" ? ttsManager.voiceDisplayName :
                                    (ttsManager.voiceDisplayName !== "" ? ttsManager.voiceDisplayName : (bookManager.language === "en" ? "Google Translate" : "Google Dịch"))) +
@@ -1641,6 +1739,17 @@ Page {
                             textStyle.color: bookManager.theme === "dark" ? Color.create("#9C9488") :
                                              (bookManager.theme === "sepia" ? Color.create("#665544") : Color.create("#635B51"))
                             autoSize.maxLineCount: 1
+                        }
+                    }
+
+                    Button {
+                        visible: bookManager.isPdf && !bookManager.isPdfReflow
+                        verticalAlignment: VerticalAlignment.Center
+                        leftMargin: bookManager.dp(6)
+                        preferredHeight: bookManager.dp(40)
+                        text: qsTr("OCR") + Retranslate.onLanguageChanged
+                        onClicked: {
+                            pdfOcrTextSheet.openForPage(bookManager.currentChapterIndex);
                         }
                     }
 
@@ -2003,7 +2112,9 @@ Page {
                 verticalAlignment: VerticalAlignment.Center
                 preferredWidth: bookManager.dp(20)
                 preferredHeight: bookManager.dp(20)
-                imageSource: bookManager.theme == "dark" ? "asset:///icons/ic_bat.png" : "asset:///icons/ic_bat_dark.png"
+                opacity: 0.75
+                imageSource: bookManager.theme === "dark" ? "asset:///icons/ic_bat.png" :
+                             (bookManager.theme === "sepia" ? "asset:///icons/ic_bat_sepia.png" : "asset:///icons/ic_bat_dark.png")
             }
 
             Label {
@@ -2161,7 +2272,7 @@ Page {
 
                     Button {
                         leftMargin: bookManager.dp(6)
-                        visible: bookManager.hasPdfText
+                        visible: bookManager.pdfHasOcr || bookManager.hasPdfText
                         layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
                         preferredHeight: bookManager.dp(44)
                         imageSource: bookManager.appTheme === "dark" ?
@@ -2169,6 +2280,32 @@ Page {
                         onClicked: {
                             readerPage.showDisplayHud = false;
                             bookManager.togglePdfReflow();
+                        }
+                    }
+
+                    Button {
+                        leftMargin: bookManager.dp(6)
+                        visible: bookManager.isPdf && !bookManager.isPdfReflow
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        preferredHeight: bookManager.dp(44)
+                        imageSource: bookManager.appTheme === "dark" ?
+                                     "asset:///icons/ic_highlight.png" : "asset:///icons/ic_highlight_dark.png"
+                        onClicked: {
+                            readerPage.showDisplayHud = false;
+                            pdfOcrTextSheet.openForPage(bookManager.currentChapterIndex);
+                        }
+                    }
+
+                    Button {
+                        leftMargin: bookManager.dp(6)
+                        visible: bookManager.pdfHasOcr || bookManager.hasPdfText
+                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        preferredHeight: bookManager.dp(44)
+                        imageSource: bookManager.appTheme === "dark" ?
+                                     "asset:///icons/ic_tts.png" : "asset:///icons/ic_tts_dark.png"
+                        onClicked: {
+                            readerPage.showDisplayHud = false;
+                            bookManager.toggleTts();
                         }
                     }
 
@@ -2434,8 +2571,7 @@ Page {
                  "    styleEl.id = 'dynamic-theme-style'; " +
                  "    document.head.appendChild(styleEl); " +
                  "  } " +
-                 "  styleEl.innerHTML = " + JSON.stringify(fontFaceCss + bodyCss + extra) + "; ";
-        // Also call applyBionicLive at end of applyStyleLive
+                 "  styleEl.innerHTML = " + JSON.stringify(fontFaceCss + bodyCss + extra) + "; " +
                  "  var vp = document.getElementById('reader-viewport'); " +
                  "  if (vp) { " +
                  "    vp.style.padding = '" + pTop + "px " + pRight + "px " + pBottom + "px " + pLeft + "px'; " +
@@ -2853,7 +2989,7 @@ Page {
 
         // 13. A: Toggle Text-to-Speech (TTS)
         if (u === "a" || k === 65 || k === 97) {
-            if (!bookManager.isPdf || bookManager.isPdfReflow) {
+            if (bookManager.currentFormat !== "cbz") {
                 bookManager.toggleTts();
             }
             return;
@@ -3053,6 +3189,12 @@ Page {
     function handleTtsCurrentSentenceChanged(index, text) {
         if (!bookManager.isPdf || bookManager.isPdfReflow) {
             webView.evaluateJavaScript("if (typeof highlightTtsSentence === 'function') highlightTtsSentence(" + JSON.stringify(text) + ");");
+        } else if (pdfOcrTextSheet && pdfOcrTextSheet.isOpen) {
+            if (pdfOcrTextSheet.pageNumber !== bookManager.currentChapterIndex) {
+                pdfOcrTextSheet.openForPage(bookManager.currentChapterIndex);
+            } else {
+                pdfOcrTextSheet.syncTtsSentence(text);
+            }
         }
     }
 
@@ -3194,6 +3336,10 @@ Page {
         rp.syncScrubberFromBookManager();
         rp.rebuildOverflowActions();
 
+        if (bookManager.isPdf && !bookManager.isPdfReflow && !bookManager.pdfZoomMode && bookManager.totalChapters > 0) {
+            pdfListView.jumpToPage(Math.max(1, bookManager.currentChapterIndex));
+        }
+
         ttsManager.currentSentenceChanged.connect(rp.handleTtsCurrentSentenceChanged);
         ttsManager.activeChanged.connect(rp.handleTtsActiveChanged);
         ttsManager.errorOccurred.connect(rp.handleTtsErrorOccurred);
@@ -3201,7 +3347,7 @@ Page {
 
     function rebuildOverflowActions() {
         var allOverflow = [
-            pdfReflowAction, pdfCropAction, pdfRotateAction, pdfInvertAction, pdfZoomToggleAction,
+            pdfReflowAction, pdfSelectTextAction, pdfCropAction, pdfRotateAction, pdfInvertAction, pdfZoomToggleAction,
             mangaModeActionItem, searchAction, highlightsAction, ttsAction, autoScrollAction,
             dictAction, focusModeActionItem, bionicAction, favActionItem, nextSeriesActionItem, infoAction
         ];
@@ -3219,13 +3365,17 @@ Page {
         var hasNextSeries = (nb && nb.filePath !== undefined && nb.filePath !== "");
 
         if (isPdfGraphic) {
-            if (bookManager.hasPdfText) {
+            readerPage.addAction(pdfSelectTextAction, ActionBarPlacement.InOverflow);
+            if (bookManager.pdfHasOcr || bookManager.hasPdfText) {
                 readerPage.addAction(pdfReflowAction, ActionBarPlacement.InOverflow);
             }
+            readerPage.addAction(ttsAction, ActionBarPlacement.InOverflow);
             readerPage.addAction(pdfCropAction, ActionBarPlacement.InOverflow);
             readerPage.addAction(pdfRotateAction, ActionBarPlacement.InOverflow);
             readerPage.addAction(pdfInvertAction, ActionBarPlacement.InOverflow);
             readerPage.addAction(pdfZoomToggleAction, ActionBarPlacement.InOverflow);
+            readerPage.addAction(searchAction, ActionBarPlacement.InOverflow);
+            readerPage.addAction(dictAction, ActionBarPlacement.InOverflow);
             readerPage.addAction(highlightsAction, ActionBarPlacement.InOverflow);
             readerPage.addAction(favActionItem, ActionBarPlacement.InOverflow);
             readerPage.addAction(infoAction, ActionBarPlacement.InOverflow);
@@ -3436,6 +3586,13 @@ Page {
             id: dictSheet
             onClosed: { readerRootContainer.requestFocus(); }
         },
+        PdfOcrTextSheet {
+            id: pdfOcrTextSheet
+            onClosed: { readerRootContainer.requestFocus(); }
+            onSwitchToReflowRequested: { bookManager.setIsPdfReflow(true); }
+            onLookupRequested: { dictSheet.openWithWord(word); }
+            onTranslateRequested: { dictSheet.openWithSentence(text); }
+        },
         HighlightSheet {
             id: highlightSheet
             onClosed: { readerRootContainer.requestFocus(); }
@@ -3470,9 +3627,18 @@ Page {
             id: pdfReflowAction
             title: (bookManager.isPdfReflow ? qsTr("PDF gốc") : qsTr("Dàn chữ (OCR)")) + Retranslate.onLanguageChanged
             imageSource: "asset:///icons/ic_text_mode.png"
-            enabled: bookManager.hasPdfText || bookManager.isPdfReflow
+            enabled: bookManager.pdfHasOcr || bookManager.hasPdfText || bookManager.isPdfReflow
             onTriggered: {
                 bookManager.togglePdfReflow();
+            }
+        },
+        ActionItem {
+            id: pdfSelectTextAction
+            title: qsTr("Chọn chữ (OCR)") + Retranslate.onLanguageChanged
+            imageSource: "asset:///icons/ic_highlight.png"
+            enabled: bookManager.isPdf
+            onTriggered: {
+                pdfOcrTextSheet.openForPage(bookManager.currentChapterIndex);
             }
         },
         ActionItem {
@@ -3494,7 +3660,7 @@ Page {
         ActionItem {
             id: pdfZoomToggleAction
             title: (bookManager.pdfZoomMode ? qsTr("Cuộn liên tục") : qsTr("Phóng to trang")) + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_search.png"
+            imageSource: "asset:///icons/ic_zoom_in.png"
             onTriggered: {
                 if (bookManager.pdfZoomMode) {
                     bookManager.exitPdfZoomMode();
@@ -3569,7 +3735,7 @@ Page {
         ActionItem {
             id: focusModeActionItem
             title: (bookManager.focusModeEnabled ? qsTr("Chế độ Tập trung (Đang bật)") : qsTr("Chế độ Tập trung")) + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_display_aa.png"
+            imageSource: "asset:///icons/ic_focus.png"
             onTriggered: {
                 bookManager.toggleFocusMode();
                 readerToast.body = (bookManager.focusModeEnabled ? qsTr("Đã bật Chế độ Tập trung") : qsTr("Đã tắt Chế độ Tập trung")) + Retranslate.onLanguageChanged;
@@ -3579,7 +3745,7 @@ Page {
         ActionItem {
             id: bionicAction
             title: (bookManager.bionicReading ? qsTr("Bionic Reading") + " ✓" : qsTr("Bionic Reading")) + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_display_aa.png"
+            imageSource: "asset:///icons/ic_bionic.png"
             onTriggered: {
                 bookManager.setBionicReading(!bookManager.bionicReading);
             }

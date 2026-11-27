@@ -61,11 +61,26 @@ void librisLogHandler(QtMsgType type, const QMessageLogContext &context, const Q
     // 1. Output to stderr / console (captured by slog2)
     fprintf(stderr, "%s", utf8.constData());
 
+    bool immediateFlush = (type != QtDebugMsg);
+    if (!immediateFlush && msg) {
+#if QT_VERSION < 0x050000
+        const char *flushCheck = msg;
+#else
+        QByteArray utf8Flush = msg.toUtf8();
+        const char *flushCheck = utf8Flush.constData();
+#endif
+        if (strstr(flushCheck, "[Pdf") != NULL ||
+            strstr(flushCheck, "PdfStream") != NULL ||
+            strstr(flushCheck, "[ReaderPage]") != NULL ||
+            strstr(flushCheck, "[ApplicationUI]") != NULL) {
+            immediateFlush = true;
+        }
+    }
+
     // 2. Output to shared documents folder (accessible via BB10 File Manager)
     if (s_sharedLogFile && s_sharedLogFile->isOpen()) {
         s_sharedLogFile->write(utf8);
-        // Only flush on critical/fatal errors to allow eMMC low-power sleep
-        if (type == QtCriticalMsg || type == QtFatalMsg) {
+        if (immediateFlush) {
             s_sharedLogFile->flush();
         }
     }
@@ -73,7 +88,7 @@ void librisLogHandler(QtMsgType type, const QMessageLogContext &context, const Q
     // 3. Output to internal sandbox data folder
     if (s_sandboxLogFile && s_sandboxLogFile->isOpen()) {
         s_sandboxLogFile->write(utf8);
-        if (type == QtCriticalMsg || type == QtFatalMsg) {
+        if (immediateFlush) {
             s_sandboxLogFile->flush();
         }
     }
@@ -190,17 +205,17 @@ Q_DECL_EXPORT int main(int argc, char **argv)
         }
 
         // Set AnyProtocol in Qt 4.8 so OpenSSL 1.0.1 can negotiate TLS 1.2
-        // (QSsl::SecureProtocols in Qt 4.8 forces TLSv1_client_method / TLS 1.0 which modern servers reject)
-        // Set PeerVerifyMode to VerifyNone as fallback so self-signed/untrusted certs never block the user
+        // (QSsl::SecureProtocols in Qt 4.8 forces TLSv1_client_method / TLS 1.0 which modern servers reject).
+        // VerifyPeer against bundled Mozilla cacert.pem protects API keys and credentials from MITM.
         QSslConfiguration defConfig = QSslConfiguration::defaultConfiguration();
         defConfig.setProtocol(QSsl::AnyProtocol);
-        defConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
+        defConfig.setPeerVerifyMode(caCerts.isEmpty() ? QSslSocket::VerifyNone : QSslSocket::VerifyPeer);
         defConfig.setSslOption(QSsl::SslOptionDisableServerNameIndication, false);
         if (!caCerts.isEmpty()) {
             defConfig.setCaCertificates(caCerts);
         }
         QSslConfiguration::setDefaultConfiguration(defConfig);
-        qDebug() << "[NetworkSecurity] Global SSL initialized with AnyProtocol (TLS 1.2 enabled), VerifyNone, and SNI enabled.";
+        qDebug() << "[NetworkSecurity] Global SSL initialized with AnyProtocol (TLS 1.2 enabled), VerifyPeer=" << !caCerts.isEmpty() << ", and SNI enabled.";
     } else {
         qWarning() << "[NetworkSecurity] QSslSocket::supportsSsl() returned false!";
     }

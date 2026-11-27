@@ -1,150 +1,149 @@
-# Libris - Native E-Book Reader for BlackBerry 10
+# Libris — Native E-Book Reader for BlackBerry 10
 
-Libris is a high-performance native e-book reader built for **BlackBerry 10 Cascades (C++ / Qt 4.8 / QML)**. It delivers a fluid 60fps reading experience, native Cascades gestures, real-time Active Frame cover display, and hardware keyboard shortcuts tailored for devices such as the BlackBerry Passport, Classic, Q10, Q5, Z10, and Z30.
+Libris is a native C++ / Qt 4.8 / Cascades e-book reader built for **BlackBerry 10** devices (Passport, Classic, Q10, Q5, Z10, Z30). It combines hardware-accelerated rendering, an integrated PDF/DjVu core, offline & online Text-to-Speech, wireless book transfer, and full physical keyboard navigation.
+
+* **Repository:** https://github.com/MN1356/Libris-bb10
+* **Current Version:** `2.3.0` (`Build 273`)
+* **License:** GNU General Public License v2.0 or later ([LICENSE](LICENSE))
 
 ---
 
 ## 1. Key Features
 
-* **Multi-Format Document Support:**
-  * Reads **EPUB**, **MOBI**, **CBZ**, **FB2**, **TXT**, **PDF**, and **DJVU** documents seamlessly (integrated Libris PDF/DjVu Core engine).
-  * Self-contained, lightweight architecture powered by `miniz` (in-memory ZIP extraction), `pugixml` (fast XML parsing), and native PalmDOC/HUFF decompression.
+### Multi-Format Reading Engine
+* **Reflowable Books:** **EPUB**, **MOBI / AZW / AZW3 / KF8 / PRC** (PalmDOC & HUFF/CDIC), **FB2**, **TXT**, **Markdown** (`.md`, `.markdown`), and **HTML** (`.html`, `.htm`).
+* **Fixed-Layout Documents & Comics:** **PDF** and **DJVU** via `libnsrreadercore.so` (`NSRPopplerDocument` / `NSRDjVuDocument`), plus **CBZ** comic archives with on-demand disk image caching and Manga Right-to-Left (RTL) reading mode.
+* **Vietnamese Legacy Encoding Support:** Automatic detection for **UTF-8**, **UTF-16**, **TCVN3**, **Windows-1258**, and **VNI** text files.
 
-* **Pure Cascades QML Experience:**
-  * Fully compliant with BlackBerry 10 Human Interface Guidelines (HIG).
-  * Native Left-Swipe Drawer sidebar combined with TabbedPane navigation: Recent, Library, Table of Contents, Bookmarks & Notes, and File Browser.
-  * System `FilePicker` integration alongside an in-app file browser to load books from internal storage or external SD Card.
+### Embedded-OCR PDF Reading, Selection & TTS
+* **Continuous Stream, Zoom & Reflow:** Scroll smoothly across rendered pages, pinch-to-zoom, crop white margins (`isPdfAutoCrop`), rotate 90°, invert colors for night reading, or switch to **OCR Text Reflow** mode.
+* **OCR Text Selection & Study Actions:** Long-press any PDF page (`ActionSet`) or tap **Chọn chữ (OCR)** to open [PdfOcrTextSheet.qml](assets/PdfOcrTextSheet.qml) — select text with native BB10 WebKit selection handles to **Copy**, **Look Up**, **Translate**, **Highlight**, or **Read aloud (TTS)**.
+* **Live OCR TTS Tracking:** Speaks embedded OCR text directly in both visual PDF mode and Reflow mode, displaying full spoken sentences (`BodyText`), page/sentence progress (`Trang X/Y • Câu i/n`), and live sentence highlighting inside the OCR viewer.
 
-* **Real-Time Active Frame (Application Cover):**
-  * Displays the book cover, title, current chapter, and reading progress (%) in real time when minimized to the home screen.
-
-* **Display & Battery Optimization:**
-  * **AMOLED Pure Black (`#000000`):** Maximizes battery life on Super AMOLED displays (Q10, Z30).
-  * 4 reading themes: AMOLED Black, Dark, Sepia, and Light.
-  * Customizable typography: font size, line spacing, margins, and status footer (battery, clock, progress).
-
-* **Reading & Study Tools:**
-  * **Text-to-Speech (TTS) with Sleep Timer:** Native BlackBerry 10 speech synthesis (and Google Cloud/Gemini TTS) with automatic sentence tracking, page turning, and built-in Sleep Timer (15m, 30m, 45m, 60m, or at end of chapter).
-  * **Footnote & Annotation Popup:** Instant footnote inspection in EPUB books via a floating card dialog without losing your reading position.
-  * **Markdown Export:** Export book highlights, annotations, and bookmarks to structured `.md` files for Obsidian, Notion, or personal archives.
-  * **Comic & Manga Reader (CBZ):** Optimized memory footprint via on-demand disk cache (eliminates Base64 RAM bloat) and Japanese Manga RTL (Right-to-Left) reading mode with inverted touch tap zones and swipe gestures.
-  * **Two-Column Reading Mode:** Native CSS multi-column book layout optimized for wide screens like the BlackBerry Passport (1440x1440).
-  * **Dictionary & Quick Translation:** Offline StarDict/BGL dictionary lookup and instant text translation.
-  * **TOC, Bookmarks & Highlights:** Hierarchical table of contents, color-coded highlights, personal notes, and bookmarks.
-  * **OPDS Catalog:** Browse and download books directly from online digital libraries and public OPDS feeds.
-  * **Reading Statistics & Streaks:** Tracks daily and cumulative reading time, completed books, and reading habits with a streak calendar.
-
-* **Hardware Keyboard Shortcuts (Passport, Classic, Q10):**
-  * `Space`: Cuộn / lật tiếp trang (Page down).
-  * `N` / `P`: Đến chương tiếp theo / chương trước (Next / Prev Chapter).
-  * `J` / `K`: Cuộn xuống / cuộn lên theo dòng.
-  * `T` / `B`: Về đầu sách / Đến cuối sách (Top / Bottom).
-  * `M` / `H`: Đánh dấu trang (Bookmark toggle) / Mở danh sách trích dẫn.
-  * `F` / `/`: Mở tìm kiếm từ khóa trong nội dung.
-  * `D`: Chuyển đổi nhanh giao diện Theme (Đen AMOLED / Tối / Sepia / Sáng).
-  * `A`: Bật / tắt đọc giọng nói (Toggle TTS Voice Reader).
-  * `C`: Đổi chế độ chuyển trang (Paged lật trang vs Scroll cuộn liên tục).
-  * `Z` / `+` / `=`: Phóng to cỡ chữ (Font size up).
-  * `W` / `-` / `_`: Thu nhỏ cỡ chữ (Font size down).
-  * `S`: Mở nhanh Cài đặt đọc sách.
-  * `G`: Mở Mục lục sách (TOC).
-  * `L`: Mở Từ điển & Tra cứu nhanh.
-  * `I`: Xem chi tiết thông tin sách hiện tại.
-  * `R` / `X`: Xoay trang PDF (Rotate 90°) / Chuyển chế độ PDF Reflow văn bản.
-  * `1` - `9`: Nhảy nhanh đến 10% – 90% tiến độ chương hiện tại.
-  * Hỗ trợ trượt cảm ứng trên bàn phím vật lý (Touch-enabled capacitive keyboard) của BlackBerry Passport.
+### Library Management, Transfer & Study Tools
+* **Fast Non-Blocking Scanner & Custom Scan Folders:** Rapid filesystem discovery across internal storage and external microSD cards (`sdcard` / `sdcard2`) with asynchronous background cover extraction (`CoverExtractWorker`), plus custom scan-folder selection in **Settings -> Tủ sách & Quản lý -> Chọn thư mục quét...** ([ScanFoldersSheet.qml](assets/settings/ScanFoldersSheet.qml)).
+* **In-App File Management:** Custom shelves, grouping (author/series), favorites, reading list, metadata editor, and safe in-app file deletion with confirmation dialogs across Library, File Browser, and Book Detail views.
+* **Wi-Fi Book Drop & Web Clipper:** Built-in LAN web portal (`WiFiDropServer`) secured by a per-session **4-digit access PIN** lock gate (`#pinGate`), supporting drag-and-drop book uploads, downloading books/notes/backups, and **Web Clipper** (saved as HTML under `/accounts/1000/shared/books/Clip_<timestamp>.html` and auto-indexed).
+* **Backup & Persistence:** Full `.librisbackup` archive export/import, automatic persistent state sync, and Markdown highlight/bookmark exports.
+* **TTS Hybrid Engine:** Offline **eSpeak-NG** synthesis alongside **Google Translate TTS** and **Gemini TTS**, complete with Sleep Timer and sentence tracking.
+* **Dictionary & OPDS:** Offline dictionary lookup, online translation, and OPDS digital library catalog browsing with verified TLS (`assets/certs/cacert.pem`).
+* **Cascades UI & BB10 Hardware Support:** AMOLED Pure Black (`#000000`), Dark, Sepia, and Light themes; Two-Column mode for wide screens (Passport `1440x1440`); Bionic Reading; Focus Mode; real-time **Active Frame** (`Cover.qml`); Streak & Reading Stats; and **Passport capacitive touch keyboard** scrolling.
 
 ---
 
-## 2. Project Structure
+## 2. Hardware Keyboard Shortcuts (Passport, Classic, Q10)
+
+* `Space`: Next page / scroll down
+* `N` / `P`: Next / Previous chapter (or PDF page)
+* `J` / `K`: Scroll down / up line by line
+* `T` / `B`: Jump to Top / Bottom of chapter
+* `M` / `H`: Toggle Bookmark / Open Highlights list
+* `F` / `/`: Search text inside current book
+* `D`: Cycle theme (AMOLED / Dark / Sepia / Light)
+* `A`: Toggle Text-to-Speech (TTS)
+* `C`: Toggle Paged vs. Continuous Scroll mode
+* `Z` / `+` / `=`: Increase font size
+* `W` / `-` / `_`: Decrease font size
+* `S`: Open Reader Settings
+* `G`: Open Table of Contents (TOC)
+* `L`: Open Dictionary & Translation
+* `I`: Open current Book Info
+* `R` / `X`: Rotate PDF 90° / Toggle PDF OCR Reflow
+* `1` – `9`: Jump to 10% – 90% of current chapter
+
+---
+
+## 3. Project Structure
 
 ```text
-BB10-Book-reader/
-├── bar-descriptor.xml         # BAR package manifest (metadata, permissions, MIME types, icons)
-├── Libris.pro                 # QMake project file (cascades10, Qt4, Libris Core)
-├── build.sh                   # Automated build script using containerized BBNDK
-├── deploy.sh                  # One-step device deployment script
-├── src/                       # Native C++ source code
-│   ├── main.cpp               # Application entry point
-│   ├── ApplicationUI.hpp/cpp  # QML scene initialization, Active Frame, event handling
-│   ├── BookManager.hpp/cpp    # Library manager, progress tracking, stats, bookmarks
-│   ├── BookWorkers.hpp/cpp    # Background worker threads for scanning and search
-│   ├── EpubParser.hpp/cpp     # EPUB parser (ZIP, OPF, NCX, HTML)
-│   ├── CbzParser.hpp/cpp      # Comic Book (CBZ) archive parser with ComicInfo metadata
-│   ├── MobiParser.hpp/cpp     # Mobipocket / Kindle (MOBI) parser with PalmDOC/HUFF engine
-│   ├── Fb2Parser.hpp/cpp      # FictionBook 2 (FB2) parser
-│   ├── TxtParser.hpp/cpp      # Plain text (TXT) parser with chapter detection
-│   ├── PdfParser.hpp/cpp      # PDF & DjVu parser and rendering controller
-│   ├── TtsManager.hpp/cpp     # Native Text-to-Speech (TTS) manager
-│   ├── DictManager.hpp/cpp    # Offline dictionary and translation manager
-│   ├── OpdsManager.hpp/cpp    # OPDS catalog client and download manager
-│   ├── AppTranslator.hpp/cpp  # Localization / multi-language engine
-│   ├── pdfcore/               # Libris PDF / DJVU rendering backend engine
-│   ├── miniz.c / miniz.h      # High-performance ZIP decompression library
-│   └── pugixml.cpp / .hpp     # Lightweight XML/OPF parsing library
-├── assets/                    # Cascades QML UI assets
-│   ├── main.qml               # Root TabbedPane and drawer navigation
-│   ├── RecentPage.qml         # Recent books & quick-resume dashboard
-│   ├── LibraryPage.qml        # Bookshelf view (grid / list modes)
-│   ├── BrowserPage.qml        # Hierarchical file browser for internal & SD card storage
-│   ├── ReaderPage.qml         # Main reading surface (WebView + keyboard controls)
-│   ├── TocPage.qml            # Table of contents navigation
-│   ├── HighlightPage.qml      # Bookmarks, highlights, and annotations manager
-│   ├── ReadingStatsSheet.qml  # Reading statistics and streak calendar
-│   ├── OpdsSheet.qml          # Online OPDS catalog browser
-│   ├── DictTranslateSheet.qml # Dictionary lookup and translation sheet
-│   ├── Cover.qml              # Active Frame Cover UI
-│   ├── settings/              # Settings pages (display, library, TTS, about)
-│   └── icons/                 # Application icon assets
-└── build/                     # Build artifacts and BAR packages
+BB10 Book reader/
+├── bar-descriptor.xml                 # BlackBerry 10 BAR manifest (app ID, permissions, invoke filters)
+├── Libris.pro                         # QMake configuration (Cascades 10, Qt 4.8, eSpeak-NG, nsrreadercore)
+├── build.sh                           # Containerized BBNDK build & BAR packager
+├── deploy.sh                          # USB / Wi-Fi deploy & launch helper via blackberry-deploy
+├── LICENSE                            # GPL v2 license and third-party notices
+├── src/                               # Native C++ backend
+│   ├── main.cpp                       # Entry point, logging, UTF-8 codec & TLS CA setup
+│   ├── ApplicationUI.hpp/cpp          # Cascades lifecycle, Active Frame, keyboard/trackpad handlers
+│   ├── BookManager.hpp/cpp            # Library, shelves, file deletion, scan folders & reader state
+│   ├── BookWorkers.hpp/cpp            # ScanWorker, CoverExtractWorker, SearchWorker threads
+│   ├── EpubParser.hpp/cpp             # EPUB parser (OPF, NCX, spine, covers)
+│   ├── MobiParser.hpp/cpp             # MOBI / AZW3 / KF8 / PRC parser (PalmDOC / HUFF)
+│   ├── Fb2Parser.hpp/cpp              # FictionBook 2 parser
+│   ├── CbzParser.hpp/cpp              # CBZ comic archive parser
+│   ├── TxtParser.hpp/cpp              # TXT / Markdown / HTML parser + Vietnamese legacy encodings
+│   ├── PdfParser.hpp/cpp              # PDF & DjVu controller, streaming worker & OCR text extraction
+│   ├── TtsManager.hpp/cpp             # Hybrid TTS orchestrator (eSpeak-NG, Google, Gemini)
+│   ├── EspeakEngine.hpp/cpp           # Native C++ wrapper around vendored eSpeak-NG
+│   ├── DictManager.hpp/cpp            # Dictionary lookup & online translation
+│   ├── OpdsManager.hpp/cpp            # OPDS feed client & downloader
+│   ├── WiFiDropServer.hpp/cpp         # HTTP server with PIN auth gate, upload & Web Clipper
+│   ├── AppTranslator.hpp/cpp          # Dynamic Vietnamese / English localization
+│   ├── pdfcore/                       # Interfaces & simulator stub for NSR Reader Core
+│   ├── espeak-ng/                     # Vendored eSpeak-NG C synthesizer + QNX compatibility shims
+│   ├── miniz.c / miniz.h              # Embedded ZIP / inflate library
+│   └── pugixml.cpp / .hpp             # Embedded XML DOM parser
+├── assets/                            # Cascades QML UI, bundled runtime data & certs
+│   ├── main.qml                       # Root TabbedPane & navigation drawer
+│   ├── RecentPage.qml                 # Dashboard & reading history
+│   ├── LibraryPage.qml                # Bookshelf (grid / list, custom shelves)
+│   ├── BrowserPage.qml                # Storage & SD card file browser
+│   ├── ReaderPage.qml                 # Reader viewport, PDF stream/zoom, TTS panel & shortcuts
+│   ├── PdfOcrTextSheet.qml            # Selectable PDF OCR text sheet with live TTS highlight
+│   ├── WiFiDropSheet.qml              # Wireless Drop server UI & access PIN display
+│   ├── BookDetailSheet.qml            # Metadata editor, reviews & file deletion
+│   ├── DictTranslateSheet.qml         # Dictionary & translation modal
+│   ├── OpdsSheet.qml                  # OPDS catalog browser
+│   ├── ReadingStatsSheet.qml          # Reading analytics & streak calendar
+│   ├── Cover.qml                      # Active Frame cover widget
+│   ├── settings/                      # Settings pages & ScanFoldersSheet.qml
+│   ├── lib/libnsrreadercore.so        # Precompiled ARMv7 PDF/DjVu core shared library
+│   ├── espeak-ng-data/                # Bundled eSpeak-NG language & voice dictionaries
+│   └── certs/cacert.pem               # Root CA bundle for TLS verification
+└── build/                             # Generated binaries & .bar packages
     ├── device/Libris-unsigned.bar
     └── simulator/Libris-simulator-unsigned.bar
 ```
 
 ---
 
-## 3. Building from Source
+## 4. Building & Deploying
 
-The project builds via the `accupara/bbndk:latest` container (BBNDK 10.3.1.995 / tools 10.3.1.12) using `podman` or `docker`:
+The project cross-compiles inside the containerized BlackBerry 10 NDK (`docker.io/accupara/bbndk:latest` — BBNDK `10.3.1.995`) via `podman` or `docker`.
 
-### Build for Physical Device (ARMv7 - Passport, Classic, Q10, Z30...):
+### Build
 ```bash
+# Physical BB10 device (ARMv7)
 ./build.sh device
-```
-*Output artifact:* `build/device/Libris-unsigned.bar`
 
-### Build for Simulator (x86):
-```bash
+# BB10 Simulator (x86)
 ./build.sh simulator
 ```
-*Output artifact:* `build/simulator/Libris-simulator-unsigned.bar`
+Generated packages:
+* `build/device/Libris-unsigned.bar`
+* `build/simulator/Libris-simulator-unsigned.bar`
+
+### Deploy to BlackBerry 10
+1. On your device, enable **Settings -> Security and Privacy -> Development Mode** and note the password and IP (`169.254.0.1` over USB, or your LAN Wi-Fi IP).
+2. Deploy and launch in one command:
+   ```bash
+   ./deploy.sh 169.254.0.1
+   ```
+   Alternatively, sideload `build/device/Libris-unsigned.bar` with Sachesi, DBBT, or `blackberry-deploy`.
 
 ---
 
-## 4. Installation on BlackBerry 10
+## 5. Credits & Acknowledgments
 
-### Step 1: Enable Development Mode on Device
-1. Open **Settings** -> **Security and Privacy** -> **Development Mode**.
-2. Switch Development Mode to **ON** and set a device password if prompted.
-3. Note the device IP address (e.g., `192.168.1.15` on Wi-Fi or `169.254.0.1` via USB).
+Libris is made possible by the contributions of its author and the following open-source projects and communities:
 
-### Step 2: Deploy to Device
+* **Author & Maintainer:**
+  * **NhatLee (`MN1356`)** — Application architecture, Cascades UI/UX, multi-format library engine, Wi-Fi Book Drop, OCR reader workflows, TTS integration, and BlackBerry 10 hardware optimizations ([GitHub](https://github.com/MN1356/Libris-bb10)).
 
-**Option 1: Using `deploy.sh` (Recommended)**
-```bash
-./deploy.sh <DEVICE_IP>
-# Example via USB connection:
-./deploy.sh 169.254.0.1
-```
-The script automatically builds the BAR package if needed, terminates older instances, installs, and launches the app.
-
-**Option 2: Using Sachesi or DBBT (GUI)**
-1. Connect your BlackBerry 10 device to your computer via USB or Wi-Fi.
-2. Open Sachesi or DBBT and navigate to the **Install** tab.
-3. Drag and drop `build/device/Libris-unsigned.bar` into the window to install.
-
-**Option 3: Manual Command-Line Deployment (`blackberry-deploy`)**
-```bash
-podman run --rm --net=host -v "$PWD/build/device:/output:ro,z" docker.io/accupara/bbndk:latest \
-    blackberry-deploy -installApp -launchApp -device <DEVICE_IP> -password <DEVICE_PASSWORD> /output/Libris-unsigned.bar
-```
+* **Open-Source Libraries & Engines:**
+  * **NSR Reader Core (`src/pdfcore/`, `assets/lib/libnsrreadercore.so`):** Native BlackBerry 10 PDF and DjVu rendering backend (`NSRReaderCore`, `NSRPopplerDocument`, `NSRDjVuDocument`), built atop **Poppler** and **DjVuLibre** (**GPL**).
+  * **eSpeak-NG (`src/espeak-ng/`, `assets/espeak-ng-data/`):** Open-source compact multilingual software speech synthesizer originally created by **Jonathan Duddington** and maintained by the **eSpeak NG** contributors (**GPL-3.0+**).
+  * **pugixml v1.16 (`src/pugixml.hpp`, `src/pugixml.cpp`, `src/pugiconfig.hpp`):** Light-weight, simple, and fast XML parser by **Arseny Kapoulkine** ([pugixml.org](https://pugixml.org/), **MIT License**).
+  * **miniz (`src/miniz.c`, `src/miniz.h`):** Single-file, public-domain/MIT-style Zlib-compatible compression library by **Rich Geldreich**, **Tenacious Software LLC**, **RAD Game Tools**, and **Valve Software** (**MIT License**).
+  * **Mozilla / curl CA Certificate Bundle (`assets/certs/cacert.pem`):** Trusted root certificates for TLS verification (**MPL-2.0**).
+  * **BlackBerry 10 Cascades SDK & `accupara/bbndk`:** Qt 4.8 / Cascades 10 APIs and containerized BB10 NDK `10.3.1.995` build toolchain.

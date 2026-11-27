@@ -24,6 +24,7 @@ class WiFiDropServer : public QObject
     Q_PROPERTY(int port READ port WRITE setPort NOTIFY portChanged)
     Q_PROPERTY(int sessionUploadCount READ sessionUploadCount NOTIFY sessionUploadCountChanged)
     Q_PROPERTY(QVariantList uploadedFiles READ uploadedFiles NOTIFY uploadedFilesChanged)
+    Q_PROPERTY(QString accessPin READ accessPin NOTIFY accessPinChanged)
 
 public:
     explicit WiFiDropServer(QObject *parent = 0);
@@ -36,6 +37,7 @@ public:
     void setPort(int port);
     int sessionUploadCount() const;
     QVariantList uploadedFiles() const;
+    QString accessPin() const;
 
     Q_INVOKABLE bool start();
     Q_INVOKABLE void stop();
@@ -49,6 +51,7 @@ signals:
     void portChanged();
     void sessionUploadCountChanged();
     void uploadedFilesChanged();
+    void accessPinChanged();
     void bookUploaded(const QString &filePath, const QString &fileName, qint64 fileSize);
 
 private slots:
@@ -70,6 +73,7 @@ private:
         QByteArray buffer;
         QString method;
         QString path;
+        QString providedPin;
         QString boundary;
         QByteArray endDelimiter;
         qint64 contentLength;
@@ -88,11 +92,15 @@ private:
 
         ~ClientContext() {
             if (file) {
+                bool removePartial = (state != STATE_DONE);
                 if (file->isOpen()) {
                     file->close();
                 }
                 delete file;
                 file = NULL;
+                if (removePartial && !filePath.isEmpty() && QFile::exists(filePath)) {
+                    QFile::remove(filePath);
+                }
             }
         }
     };
@@ -110,6 +118,9 @@ private:
     QString m_ipAddress;
     QMap<QTcpSocket*, ClientContext*> m_clients;
     QVariantList m_uploadedFiles;
+    QString m_accessPin;
+
+    bool isAuthorizedRequest(const ClientContext *ctx) const;
 };
 
 #endif // WIFIDROPSERVER_HPP

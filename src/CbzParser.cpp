@@ -409,8 +409,10 @@ QString CbzParser::getChapterContent(int index, const QString &cacheDir)
     html += ".comic-box { width: 100% !important; height: 100% !important; display: -webkit-box; display: flex; -webkit-box-pack: center; justify-content: center; -webkit-box-align: center; align-items: center; text-align: center; margin: 0 !important; padding: 0 !important; }";
     html += ".comic-img { max-width: 100vw !important; max-height: 98vh !important; width: auto !important; height: auto !important; object-fit: contain; margin: auto !important; display: block !important; -webkit-column-break-inside: avoid; page-break-inside: avoid; }";
     html += "</style></head><body>";
+    QString escapedAlt = m_chapters[index].title;
+    escapedAlt.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     html += QString("<div class=\"comic-box\"><img class=\"comic-img\" src=\"%1\" alt=\"%2\"/></div>")
-            .arg(imgSrc).arg(m_chapters[index].title);
+            .arg(imgSrc).arg(escapedAlt);
     html += "</body></html>";
 
     // Manage LRU cache of 6 pages in memory

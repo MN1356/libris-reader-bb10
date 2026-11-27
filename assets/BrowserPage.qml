@@ -7,6 +7,8 @@ Page {
     actionBarVisibility: ChromeVisibility.Visible
 
     property bool isSearchAndFilterVisible: false
+    property string pendingDeletePath: ""
+    property string pendingDeleteTitle: ""
 
     onIsSearchAndFilterVisibleChanged: {
         if (isSearchAndFilterVisible) {
@@ -23,6 +25,14 @@ Page {
     function showBookDetail(item) {
         if (!item) return;
         bookDetailSheet.openWithBook(item);
+    }
+
+    function confirmDeleteFile(filePath, title) {
+        if (!filePath) return;
+        pendingDeletePath = filePath;
+        pendingDeleteTitle = title ? title : filePath;
+        browserDeleteDialog.body = qsTr("Tệp \"%1\" sẽ bị xóa vĩnh viễn khỏi bộ nhớ máy. Bạn có chắc chắn?").replace("%1", pendingDeleteTitle) + Retranslate.onLanguageChanged;
+        browserDeleteDialog.show();
     }
 
     function formatDisplayPath(raw) {
@@ -70,6 +80,13 @@ Page {
             }
         }
         actions: [
+            ActionItem {
+                title: qsTr("Trang chủ") + Retranslate.onLanguageChanged
+                imageSource: "asset:///icons/ic_home.png"
+                onTriggered: {
+                    app.switchToTab("home");
+                }
+            },
             ActionItem {
                 title: qsTr("Thoát") + Retranslate.onLanguageChanged
                 imageSource: "asset:///icons/ic_exit.png"
@@ -329,6 +346,7 @@ Page {
                 id: fileBrowserDetailedListView
                 function fwd_showBookDetail() { return browserPage.showBookDetail.apply(browserPage, arguments); }
                 function fwd_showToast() { return browserPage.showToast.apply(browserPage, arguments); }
+                function fwd_confirmDeleteFile() { return browserPage.confirmDeleteFile.apply(browserPage, arguments); }
 
                 visible: bookManager.browserItemCount > 0 && bookManager.libraryViewMode === "detailed"
                 horizontalAlignment: HorizontalAlignment.Fill
@@ -401,6 +419,16 @@ Page {
                                             ctxCell284.ListItem.view.fwd_showToast(isCompleted ? (qsTr("Đã đánh dấu đã đọc xong: ") + (ListItemData.title ? ListItemData.title : ListItemData.name)) : (qsTr("Đã đánh dấu chưa đọc: ") + (ListItemData.title ? ListItemData.title : ListItemData.name)));
                                         }
                                     }
+
+                                    DeleteActionItem {
+                                        title: qsTr("Xóa file khỏi máy") + Retranslate.onLanguageChanged
+                                        enabled: ListItemData.path !== "__UP__" && !ListItemData.isDir && ListItemData.itemType !== "folder"
+                                        onTriggered: {
+                                            var path = ListItemData.filePath ? ListItemData.filePath : ListItemData.path;
+                                            var label = ListItemData.title ? ListItemData.title : ListItemData.name;
+                                            ctxCell284.ListItem.view.fwd_confirmDeleteFile(path, label);
+                                        }
+                                    }
                                 }
                             ]
 
@@ -434,6 +462,9 @@ Page {
                                         preferredHeight: bookManager.dp(32)
                                         imageSource: {
                                             if (bookManager.appTheme === "dark") {
+                                                if (ListItemData.path === "__UP__" || ListItemData.folderType === "up") return "asset:///icons/ic_previous.png";
+                                                if (ListItemData.folderType === "sdcard") return "asset:///icons/ic_sdcard.png";
+                                                if (ListItemData.folderType === "internal") return "asset:///icons/ic_storage.png";
                                                 return ListItemData.icon ? ListItemData.icon : "asset:///icons/ic_folder.png";
                                             }
                                             if (ListItemData.path === "__UP__" || ListItemData.folderType === "up") return "asset:///icons/ic_previous_dark.png";
@@ -476,7 +507,7 @@ Page {
                                     Label {
                                         text: ListItemData.name ? ListItemData.name : (ListItemData.title ? ListItemData.title : "")
                                         textStyle.base: SystemDefaults.TextStyles.TitleText
-                                        textStyle.fontWeight: (ListItemData.itemType === "folder" || ListItemData.isDir) ? FontWeight.Bold : FontWeight.Normal
+                                        textStyle.fontWeight: (ListItemData.itemType === "folder" || ListItemData.isDir) ? FontWeight.Bold : FontWeight.W300
                                         textStyle.color: Color.create(bookManager.uiInk)
                                         multiline: true
                                         autoSize.maxLineCount: 2
@@ -585,6 +616,7 @@ Page {
                 id: fileBrowserMosaicListView
                 function fwd_showBookDetail() { return browserPage.showBookDetail.apply(browserPage, arguments); }
                 function fwd_showToast() { return browserPage.showToast.apply(browserPage, arguments); }
+                function fwd_confirmDeleteFile() { return browserPage.confirmDeleteFile.apply(browserPage, arguments); }
 
                 visible: bookManager.browserItemCount > 0 && bookManager.libraryViewMode === "mosaic"
                 horizontalAlignment: HorizontalAlignment.Fill
@@ -659,6 +691,16 @@ Page {
                                             var path = ListItemData.filePath ? ListItemData.filePath : ListItemData.path;
                                             var isCompleted = bookManager.toggleBookCompleted(path);
                                             ctxCell563.ListItem.view.fwd_showToast(isCompleted ? (qsTr("Đã đánh dấu đã đọc xong: ") + (ListItemData.title ? ListItemData.title : ListItemData.name)) : (qsTr("Đã đánh dấu chưa đọc: ") + (ListItemData.title ? ListItemData.title : ListItemData.name)));
+                                        }
+                                    }
+
+                                    DeleteActionItem {
+                                        title: qsTr("Xóa file khỏi máy") + Retranslate.onLanguageChanged
+                                        enabled: ListItemData.path !== "__UP__" && !ListItemData.isDir && ListItemData.itemType !== "folder"
+                                        onTriggered: {
+                                            var path = ListItemData.filePath ? ListItemData.filePath : ListItemData.path;
+                                            var label = ListItemData.title ? ListItemData.title : ListItemData.name;
+                                            ctxCell563.ListItem.view.fwd_confirmDeleteFile(path, label);
                                         }
                                     }
                                 }
@@ -770,6 +812,8 @@ Page {
                                                 opacity: 0.55
                                                 imageSource: {
                                                     if (bookManager.appTheme === "dark") {
+                                                        if (ListItemData.folderType === "sdcard") return "asset:///icons/ic_sdcard.png";
+                                                        if (ListItemData.folderType === "internal") return "asset:///icons/ic_storage.png";
                                                         return ListItemData.icon ? ListItemData.icon : "asset:///icons/ic_folder.png";
                                                     }
                                                     if (ListItemData.folderType === "sdcard") return "asset:///icons/ic_sdcard_dark.png";
@@ -1028,7 +1072,7 @@ Page {
                                                 horizontalAlignment: HorizontalAlignment.Center
                                                 text: ListItemData.title ? ListItemData.title : (ListItemData.name ? ListItemData.name : "")
                                                 textStyle.base: SystemDefaults.TextStyles.BodyText
-                                                textStyle.fontWeight: FontWeight.Bold
+                                                textStyle.fontWeight: FontWeight.Normal
                                                 textStyle.textAlign: TextAlign.Center
                                                 textStyle.color: Color.create(bookManager.uiInk)
                                                 multiline: true
@@ -1120,6 +1164,20 @@ Page {
         SystemToast {
             id: browserToast
             body: ""
+        },
+        SystemDialog {
+            id: browserDeleteDialog
+            title: qsTr("Xóa file khỏi máy?") + Retranslate.onLanguageChanged
+            confirmButton.label: qsTr("Xóa vĩnh viễn") + Retranslate.onLanguageChanged
+            cancelButton.label: qsTr("Hủy") + Retranslate.onLanguageChanged
+            onFinished: {
+                if (result === SystemUiResult.ConfirmButtonSelection && browserPage.pendingDeletePath !== "") {
+                    var ok = bookManager.deleteBookFile(browserPage.pendingDeletePath);
+                    browserPage.showToast(ok ? (qsTr("Đã xóa file: ") + browserPage.pendingDeleteTitle) : qsTr("Không thể xóa file khỏi bộ nhớ."));
+                    browserPage.pendingDeletePath = "";
+                    browserPage.pendingDeleteTitle = "";
+                }
+            }
         }
     ]
 }

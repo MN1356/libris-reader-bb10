@@ -30,6 +30,13 @@ TabbedPane {
         }
         actions: [
             ActionItem {
+                title: qsTr("Trang chủ") + Retranslate.onLanguageChanged
+                imageSource: "asset:///icons/ic_home.png"
+                onTriggered: {
+                    rootTabbedPane.switchToTab("home");
+                }
+            },
+            ActionItem {
                 title: qsTr("Thoát") + Retranslate.onLanguageChanged
                 imageSource: "asset:///icons/ic_exit.png"
                 onTriggered: {
@@ -146,7 +153,16 @@ TabbedPane {
     function switchToTab(tabName) {
         if (tabName === "stats" || tabName === "progress") {
             rootTabbedPane.openReadingStats();
-        } else if (tabName === "reading" || tabName === "recent" || tabName === "home") {
+        } else if (tabName === "home") {
+            if (navPane.count() > 1) {
+                if (navPane.top && typeof navPane.top.dismissOpeningBook === "function") {
+                    navPane.top.dismissOpeningBook();
+                } else {
+                    navPane.pop();
+                }
+            }
+            rootTabbedPane.activeTab = recentTab;
+        } else if (tabName === "reading" || tabName === "recent") {
             rootTabbedPane.activeTab = recentTab;
         } else if (tabName === "highlight" || tabName === "highlights" || tabName === "bookmark" || tabName === "bookmarks") {
             rootTabbedPane.activeTab = highlightTab;
@@ -388,7 +404,7 @@ TabbedPane {
             id: filePicker
             type: FileType.Other
             title: qsTr("Chọn sách để mở") + Retranslate.onLanguageChanged
-            filter: ["*.epub", "*.txt", "*.fb2", "*.pdf", "*.djvu", "*.djv", "*.cbz", "*.mobi", "*.azw", "*.azw3", "*.kf8", "*.prc"]
+            filter: ["*.epub", "*.txt", "*.md", "*.markdown", "*.html", "*.htm", "*.fb2", "*.pdf", "*.djvu", "*.djv", "*.cbz", "*.mobi", "*.azw", "*.azw3", "*.kf8", "*.prc"]
             directories: [
                 "/accounts/1000/removable/sdcard2",
                 "/accounts/1000/removable/sdcard2/Book",

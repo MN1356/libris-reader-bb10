@@ -67,7 +67,7 @@ Container {
                     verticalAlignment: VerticalAlignment.Center
                     text: bookTitle
                     textStyle.base: SystemDefaults.TextStyles.TitleText
-                    textStyle.fontWeight: FontWeight.Bold
+                    textStyle.fontWeight: FontWeight.W300
                     textStyle.textAlign: TextAlign.Center
                     textStyle.color: Color.create("#F5EFE6")
                     multiline: true
@@ -96,7 +96,7 @@ Container {
                     verticalAlignment: VerticalAlignment.Center
                     text: bookTitle
                     textStyle.base: SystemDefaults.TextStyles.SubtitleText
-                    textStyle.fontWeight: FontWeight.Bold
+                    textStyle.fontWeight: FontWeight.Normal
                     textStyle.color: Color.create("#F5EFE6")
                     multiline: true
                     autoSize.maxLineCount: 2

@@ -1,4 +1,4 @@
-Version 2.3.0 (Build 257) - 2026-11-27:
+Version 2.3.0 (Build 273) - 2026-11-27:
 - Rebuilt the 7-page Onboarding Guide with authentic Native BlackBerry 10 Cascades controls (`RadioGroup`, `SegmentedControl`, `Button Primary`, dark BB10 ActionBar chrome, horizontal swipe navigation, and centered Passport layout).
 - Upgraded Page 4 (Controls) into a full-stage realistic Libris Reader mockup with a floating callout dialog and tailored Cascades animations for each shortcut, plus authentic BlackBerry Passport device illustrations.
 - Standardized all physical keyboard shortcuts to ergonomic letter-only keys for BlackBerry Passport (`Z / X` font size, `N / P` chapters, `W / Q` PDF, `O` shortcuts overlay).

@@ -1567,7 +1567,7 @@ Sheet {
                         preferredWidth: bookManager.dp(38)
                         preferredHeight: bookManager.dp(38)
                         imageSource: onboardingSheet.currentStep === (onboardingSheet.totalSteps - 1)
-                            ? "asset:///icons/ic_done.png"
+                            ? (bookManager.appTheme === "dark" ? "asset:///icons/ic_done_dark.png" : "asset:///icons/ic_done.png")
                             : "asset:///icons/ic_next.png"
                     }
                 }

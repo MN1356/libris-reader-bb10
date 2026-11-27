@@ -25,7 +25,7 @@ COLOR_DARK_MODE = (255, 255, 255)   # #FFFFFF
 COLOR_LIGHT_MODE = (26, 26, 26)     # #1A1A1A
 COLOR_SEPIA_MODE = (62, 45, 29)     # #3E2D1D
 
-SEPIA_ICONS = {"previous", "next", "clear", "search", "settings", "display_aa", "crop"}
+SEPIA_ICONS = {"bat", "previous", "next", "clear", "search", "settings", "display_aa", "crop"}
 
 
 def _star_polygon_path(cx=12.0, cy=12.35, outer_r=8.2, inner_r=3.65):
@@ -43,6 +43,16 @@ STAR_PATH = _star_polygon_path()
 
 ICONS = {
     "add": '<path d="M12 5v14M5 12h14"/>',
+    "bat": (
+        '<rect x="3.5" y="7" width="15" height="10" rx="1.8"/>'
+        '<path d="M18.5 10.2h1.6a.9.9 0 0 1 .9.9v1.8a.9.9 0 0 1-.9.9h-1.6"/>'
+        '<rect x="6" y="9.5" width="9.5" height="5" rx="0.7" fill="#FFFFFF" stroke="none"/>'
+    ),
+    "bionic": (
+        '<rect x="4" y="4.5" width="16" height="15" rx="2"/>'
+        '<path d="M7.2 8.8h4.3M7.2 12h3.6M7.2 15.2h4.6" stroke-width="2.4"/>'
+        '<path d="M13.6 8.8h3.2M13 12h3.8M14 15.2h2.8" stroke-width="1.35"/>'
+    ),
     "book": (
         '<path d="M5 18.5V5.5A2 2 0 0 1 7 3.5h11.5a.5.5 0 0 1 .5.5v13H7a2 2 0 0 0-2 2z"/>'
         '<path d="M5 18.5A2 2 0 0 0 7 20.5h12v-3.5"/>'
@@ -78,6 +88,11 @@ ICONS = {
         '<path d="M4.5 17.5L8.2 6.5l3.7 11M5.8 14h4.8"/>'
         '<path d="M18.8 11.5v6M18.8 14.5a2.6 2.6 0 1 1-5.2 0 2.6 2.6 0 0 1 5.2 0z"/>'
     ),
+    "display_panel": (
+        '<path d="M4.2 6.8h2.6M11.2 6.8h8.6"/><circle cx="9" cy="6.8" r="2.2"/>'
+        '<path d="M4.2 12h8.6M17.2 12h2.6"/><circle cx="15" cy="12" r="2.2"/>'
+        '<path d="M4.2 17.2h4.1M12.7 17.2h7.1"/><circle cx="10.5" cy="17.2" r="2.2"/>'
+    ),
     "done": '<path d="M4.5 12.5l5 5 10-10.5"/>',
     "download": '<path d="M12 4v11M7.5 11l4.5 4.5L16.5 11M4.5 16.5V18a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1.5"/>',
     "exit": '<path d="M10.5 4.5H6A1.5 1.5 0 0 0 4.5 6v12A1.5 1.5 0 0 0 6 19.5h4.5M15 8l4.5 4-4.5 4M9.5 12h10"/>',
@@ -86,7 +101,20 @@ ICONS = {
         '<path d="M4.5 14.5V18a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5"/>'
     ),
     "filter": '<path d="M4 5h16l-6.2 7.3v5.4l-3.6 1.8v-7.2L4 5z"/>',
+    "focus": (
+        '<path d="M4.5 8.5V5.5A1 1 0 0 1 5.5 4.5h3M15.5 4.5h3a1 1 0 0 1 1 1v3'
+        'M19.5 15.5v3a1 1 0 0 1-1 1h-3M8.5 19.5h-3a1 1 0 0 1-1-1v-3"/>'
+        '<path d="M8.5 10.2h7M9.5 13.8h5"/>'
+    ),
     "folder": '<path d="M3.5 7A1.5 1.5 0 0 1 5 5.5h4.2l1.8 2H19A1.5 1.5 0 0 1 20.5 9v9A1.5 1.5 0 0 1 19 19.5H5A1.5 1.5 0 0 1 3.5 18V7z"/>',
+    "font_dec": (
+        '<path d="M4.5 17.5L8.3 6.5l3.8 11M5.8 14h5"/>'
+        '<path d="M14.5 12.5h5.5"/>'
+    ),
+    "font_inc": (
+        '<path d="M4.2 17.5L8 6.5l3.8 11M5.5 14h5"/>'
+        '<path d="M16.8 9.7v5.6M14 12.5h5.6"/>'
+    ),
     "grid": (
         '<rect x="4" y="4" width="6.5" height="6.5" rx="1.4"/>'
         '<rect x="13.5" y="4" width="6.5" height="6.5" rx="1.4"/>'
@@ -111,6 +139,10 @@ ICONS = {
         '<circle cx="12" cy="12" r="8.5"/>'
         '<path d="M12 11.5v4.5"/>'
         '<circle cx="12" cy="8.2" r="1.0" fill="#FFFFFF" stroke="none"/>'
+    ),
+    "layout": (
+        '<rect x="4" y="4.5" width="16" height="15" rx="1.8"/>'
+        '<path d="M12 4.5v15M7 8.5h2.5M7 12h2.5M7 15.5h2.5M14.5 8.5H17M14.5 12H17M14.5 15.5H17"/>'
     ),
     "library": (
         '<path d="M3.5 19.5h17"/>'
@@ -154,6 +186,14 @@ ICONS = {
         '<rect x="5" y="4.5" width="14" height="15" rx="1.5"/>'
         '<path d="M10.2 10L8 12l2.2 2M13.8 10L16 12l-2.2 2M8.5 12h7"/>'
     ),
+    "palette": (
+        '<path d="M12 3.8a8.2 8.2 0 0 0-8.2 8.2c0 4.3 3.4 7.7 7.6 7.7 1.2 0 2-.8 2-1.9 '
+        '0-.5-.2-.9-.5-1.3-.3-.4-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6h1.9a4.2 4.2 0 0 0 4.2-4.2'
+        'C20.2 6.8 16.5 3.8 12 3.8z"/>'
+        '<circle cx="8" cy="10.5" r="1.15" fill="#FFFFFF" stroke="none"/>'
+        '<circle cx="11" cy="7.6" r="1.15" fill="#FFFFFF" stroke="none"/>'
+        '<circle cx="15" cy="8.5" r="1.15" fill="#FFFFFF" stroke="none"/>'
+    ),
     "previous": '<path d="M15 5.5L8.5 12 15 18.5"/>',
     "reading": (
         '<path d="M12 6.5c-1.8-1.5-4.5-2-7.5-1.8v12.8c3-.2 5.7.3 7.5 1.8'
@@ -167,6 +207,12 @@ ICONS = {
     "refresh": (
         '<path d="M18.5 15.75A7.5 7.5 0 1 1 18.5 8.25"/>'
         '<path d="M19 5.2v3.3h-3.3"/>'
+    ),
+    "rotate": (
+        '<path d="M14.5 4.2a6.2 6.2 0 0 1 5.3 5.3"/>'
+        '<path d="M20.3 6.8l-.5 3-3-.5"/>'
+        '<rect x="4.5" y="9" width="10.5" height="10.8" rx="1.5"/>'
+        '<path d="M7.5 13h4.5M7.5 16h3"/>'
     ),
     "scroll": (
         '<rect x="5" y="7" width="14" height="10" rx="1.5"/>'
@@ -219,11 +265,23 @@ ICONS = {
         '<path d="M15.5 9.2a4 4 0 0 1 0 5.6"/>'
         '<path d="M18 6.8a7.4 7.4 0 0 1 0 10.4"/>'
     ),
+    "typo": '<path d="M5.5 7.2V5.5h13v1.7M12 5.5v13M9.5 18.5h5"/>',
+    "warm_sun": (
+        '<circle cx="12" cy="12" r="4.2"/>'
+        '<circle cx="12" cy="12" r="1.5" fill="#FFFFFF" stroke="none"/>'
+        '<path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2'
+        'M6 6l1.4 1.4M16.6 16.6L18 18M18 6l-1.4 1.4M7.4 16.6L6 18"/>'
+    ),
     "wifi": (
         '<circle cx="12" cy="18" r="1.2" fill="#FFFFFF" stroke="none"/>'
         '<path d="M9.03 15.03a4.2 4.2 0 0 1 5.94 0"/>'
         '<path d="M6.34 12.34a8 8 0 0 1 11.32 0"/>'
         '<path d="M3.66 9.66a11.8 11.8 0 0 1 16.68 0"/>'
+    ),
+    "zoom_in": (
+        '<circle cx="10.5" cy="10.5" r="6.2"/>'
+        '<path d="M15.2 15.2l4.5 4.5"/>'
+        '<path d="M10.5 8v5M8 10.5h5"/>'
     ),
 }
 

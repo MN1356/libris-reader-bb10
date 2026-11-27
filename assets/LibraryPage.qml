@@ -55,6 +55,13 @@ Page {
 
         actions: [
             ActionItem {
+                title: qsTr("Trang chủ") + Retranslate.onLanguageChanged
+                imageSource: "asset:///icons/ic_home.png"
+                onTriggered: {
+                    app.switchToTab("home");
+                }
+            },
+            ActionItem {
                 title: qsTr("Thoát") + Retranslate.onLanguageChanged
                 imageSource: "asset:///icons/ic_exit.png"
                 onTriggered: {
@@ -163,8 +170,19 @@ Page {
         bookDetailSheet.openWithBook(item);
     }
 
+    property string pendingDeletePath: ""
+    property string pendingDeleteTitle: ""
+
     function openShelfAssign(filePath, title) {
         shelfManagerSheet.openForBook(filePath, title);
+    }
+
+    function confirmDeleteFile(filePath, title) {
+        if (!filePath) return;
+        pendingDeletePath = filePath;
+        pendingDeleteTitle = title ? title : filePath;
+        deleteFileDialog.body = qsTr("Tệp \"%1\" sẽ bị xóa vĩnh viễn khỏi bộ nhớ máy. Bạn có chắc chắn?").replace("%1", pendingDeleteTitle) + Retranslate.onLanguageChanged;
+        deleteFileDialog.show();
     }
 
     titleBar: TitleBar {
@@ -302,12 +320,12 @@ Page {
                     id: customShelvesBar
                     visible: libraryPage.hasCustomShelves
                     horizontalAlignment: HorizontalAlignment.Fill
-                    topMargin: bookManager.dp(8)
+                    topMargin: bookManager.dp(10)
 
                     ListView {
                         id: customShelvesListView
                         horizontalAlignment: HorizontalAlignment.Fill
-                        preferredHeight: bookManager.dp(38)
+                        preferredHeight: bookManager.dp(58)
                         layout: StackListLayout {
                             orientation: LayoutOrientation.LeftToRight
                         }
@@ -317,7 +335,7 @@ Page {
                             ListItemComponent {
                                 type: ""
                                 Container {
-                                    rightPadding: bookManager.dp(8)
+                                    rightPadding: bookManager.dp(10)
                                     verticalAlignment: VerticalAlignment.Center
 
                                     Container {
@@ -325,16 +343,21 @@ Page {
                                         topPadding: 1; bottomPadding: 1; leftPadding: 1; rightPadding: 1
 
                                         Container {
+                                            minHeight: bookManager.dp(50)
+                                            minWidth: ListItemData.isAdd ? bookManager.dp(52) : 0
                                             background: Color.create(ListItemData.isActive ? bookManager.uiActive : bookManager.uiSurface)
-                                            topPadding: bookManager.dp(6)
-                                            bottomPadding: bookManager.dp(6)
-                                            leftPadding: bookManager.dp(12)
-                                            rightPadding: bookManager.dp(12)
+                                            topPadding: bookManager.dp(10)
+                                            bottomPadding: bookManager.dp(10)
+                                            leftPadding: bookManager.dp(18)
+                                            rightPadding: bookManager.dp(18)
+                                            layout: DockLayout {}
 
                                             Label {
+                                                horizontalAlignment: HorizontalAlignment.Center
+                                                verticalAlignment: VerticalAlignment.Center
                                                 text: ListItemData.isAdd ? "+" : (ListItemData.name + " (" + ListItemData.count + ")")
-                                                textStyle.base: SystemDefaults.TextStyles.SmallText
-                                                textStyle.fontWeight: ListItemData.isActive || ListItemData.isAdd ? FontWeight.Bold : FontWeight.Normal
+                                                textStyle.base: ListItemData.isAdd ? SystemDefaults.TextStyles.TitleText : SystemDefaults.TextStyles.BodyText
+                                                textStyle.fontWeight: ListItemData.isActive || ListItemData.isAdd ? FontWeight.Bold : FontWeight.W500
                                                 textStyle.color: Color.create(ListItemData.isActive || ListItemData.isAdd ? bookManager.uiAccent : bookManager.uiInk)
                                             }
                                         }
@@ -531,6 +554,7 @@ Page {
                     function fwd_showBookDetail() { return libraryPage.showBookDetail.apply(libraryPage, arguments); }
                     function fwd_showToast() { return libraryPage.showToast.apply(libraryPage, arguments); }
                     function fwd_openShelfAssign() { return libraryPage.openShelfAssign.apply(libraryPage, arguments); }
+                    function fwd_confirmDeleteFile() { return libraryPage.confirmDeleteFile.apply(libraryPage, arguments); }
 
                     visible: bookManager.bookCount > 0 && bookManager.libraryViewMode === "mosaic"
                     horizontalAlignment: HorizontalAlignment.Fill
@@ -612,12 +636,20 @@ Page {
                                                 ctxCell427.ListItem.view.fwd_showToast(isCompleted ? (qsTr("Đã đánh dấu đã đọc xong: ") + ListItemData.title) : (qsTr("Đã đánh dấu chưa đọc: ") + ListItemData.title));
                                             }
                                         }
-                                        DeleteActionItem {
+                                        ActionItem {
                                             title: qsTr("Xóa khỏi thư viện") + Retranslate.onLanguageChanged
+                                            imageSource: "asset:///icons/ic_clear.png"
                                             onTriggered: {
                                                 var path = ListItemData.filePath ? ListItemData.filePath : ListItemData.path;
                                                 bookManager.removeBookFromLibrary(path);
                                                 ctxCell427.ListItem.view.fwd_showToast(qsTr("Đã xóa khỏi thư viện: ") + ListItemData.title);
+                                            }
+                                        }
+                                        DeleteActionItem {
+                                            title: qsTr("Xóa file khỏi máy") + Retranslate.onLanguageChanged
+                                            onTriggered: {
+                                                var path = ListItemData.filePath ? ListItemData.filePath : ListItemData.path;
+                                                ctxCell427.ListItem.view.fwd_confirmDeleteFile(path, ListItemData.title);
                                             }
                                         }
                                     }
@@ -793,7 +825,7 @@ Page {
                                                 horizontalAlignment: HorizontalAlignment.Center
                                                 text: ListItemData.title
                                                 textStyle.base: SystemDefaults.TextStyles.BodyText
-                                                textStyle.fontWeight: FontWeight.Bold
+                                                textStyle.fontWeight: FontWeight.Normal
                                                 textStyle.textAlign: TextAlign.Center
                                                 textStyle.color: Color.create(bookManager.uiInk)
                                                 multiline: true
@@ -882,6 +914,7 @@ Page {
                     function fwd_showBookDetail() { return libraryPage.showBookDetail.apply(libraryPage, arguments); }
                     function fwd_showToast() { return libraryPage.showToast.apply(libraryPage, arguments); }
                     function fwd_openShelfAssign() { return libraryPage.openShelfAssign.apply(libraryPage, arguments); }
+                    function fwd_confirmDeleteFile() { return libraryPage.confirmDeleteFile.apply(libraryPage, arguments); }
 
                     visible: bookManager.bookCount > 0 && bookManager.libraryViewMode === "detailed"
                     horizontalAlignment: HorizontalAlignment.Fill
@@ -959,12 +992,20 @@ Page {
                                                 ctxCell819.ListItem.view.fwd_showToast(isCompleted ? (qsTr("Đã đánh dấu đã đọc xong: ") + ListItemData.title) : (qsTr("Đã đánh dấu chưa đọc: ") + ListItemData.title));
                                             }
                                         }
-                                        DeleteActionItem {
+                                        ActionItem {
                                             title: qsTr("Xóa khỏi thư viện") + Retranslate.onLanguageChanged
+                                            imageSource: "asset:///icons/ic_clear.png"
                                             onTriggered: {
                                                 var path = ListItemData.filePath ? ListItemData.filePath : ListItemData.path;
                                                 bookManager.removeBookFromLibrary(path);
                                                 ctxCell819.ListItem.view.fwd_showToast(qsTr("Đã xóa khỏi thư viện: ") + ListItemData.title);
+                                            }
+                                        }
+                                        DeleteActionItem {
+                                            title: qsTr("Xóa file khỏi máy") + Retranslate.onLanguageChanged
+                                            onTriggered: {
+                                                var path = ListItemData.filePath ? ListItemData.filePath : ListItemData.path;
+                                                ctxCell819.ListItem.view.fwd_confirmDeleteFile(path, ListItemData.title);
                                             }
                                         }
                                     }
@@ -1032,7 +1073,7 @@ Page {
                                                 layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
                                                 text: ListItemData.title
                                                 textStyle.base: SystemDefaults.TextStyles.TitleText
-                                                textStyle.fontWeight: FontWeight.Normal
+                                                textStyle.fontWeight: FontWeight.W300
                                                 textStyle.color: Color.create(bookManager.uiInk)
                                                 multiline: true
                                                 autoSize.maxLineCount: 2
@@ -1248,6 +1289,20 @@ Page {
         SystemToast {
             id: libraryToast
             body: ""
+        },
+        SystemDialog {
+            id: deleteFileDialog
+            title: qsTr("Xóa file khỏi máy?") + Retranslate.onLanguageChanged
+            confirmButton.label: qsTr("Xóa vĩnh viễn") + Retranslate.onLanguageChanged
+            cancelButton.label: qsTr("Hủy") + Retranslate.onLanguageChanged
+            onFinished: {
+                if (result === SystemUiResult.ConfirmButtonSelection && libraryPage.pendingDeletePath !== "") {
+                    var ok = bookManager.deleteBookFile(libraryPage.pendingDeletePath);
+                    libraryPage.showToast(ok ? (qsTr("Đã xóa file: ") + libraryPage.pendingDeleteTitle) : qsTr("Không thể xóa file khỏi bộ nhớ."));
+                    libraryPage.pendingDeletePath = "";
+                    libraryPage.pendingDeleteTitle = "";
+                }
+            }
         },
         FilterSortSheet {
             id: filterSortSheet

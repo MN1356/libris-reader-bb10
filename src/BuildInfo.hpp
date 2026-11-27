@@ -2,6 +2,6 @@
 #define BUILDINFO_HPP
 
 #define LIBRIS_APP_VERSION "2.3.0"
-#define LIBRIS_BUILD_NUMBER "257"
+#define LIBRIS_BUILD_NUMBER "273"
 
 #endif // BUILDINFO_HPP

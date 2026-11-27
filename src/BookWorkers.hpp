@@ -21,6 +21,36 @@
 #include "MobiParser.hpp"
 #include "PdfParser.hpp"
 
+inline bool isSupportedBookExt(const QString &extLower)
+{
+    return (extLower == "epub" || extLower == "txt"  || extLower == "md"   ||
+            extLower == "markdown" || extLower == "html" || extLower == "htm" ||
+            extLower == "fb2"  || extLower == "pdf"  || extLower == "djvu" ||
+            extLower == "djv"  || extLower == "cbz"  || extLower == "mobi" ||
+            extLower == "azw"  || extLower == "azw3" || extLower == "kf8"  ||
+            extLower == "prc");
+}
+
+inline bool shouldSkipScanDir(const QFileInfo &subDir)
+{
+    QString sName = subDir.fileName().toLower();
+    if (sName.startsWith(".") || sName == "lost.dir" ||
+        sName == "dcim" || sName == "camera" || sName == "photos" ||
+        sName == "music" || sName == "videos" || sName == "voice" ||
+        sName == "appdata" || sName == "cache" || sName == "system" ||
+        sName == "system volume information" || sName == "$recycle.bin" ||
+        sName == "recycle.bin" || sName == "nvram" || sName == "barinstaller" ||
+        sName == "logs" || sName == "tmp" || sName == "temp" ||
+        sName == "obb") {
+        return true;
+    }
+    QString absLower = subDir.absoluteFilePath().toLower();
+    if (absLower.endsWith("/android/data") || absLower.endsWith("/android/obb")) {
+        return true;
+    }
+    return false;
+}
+
 struct SearchParams {
     QString query;
     QString format;

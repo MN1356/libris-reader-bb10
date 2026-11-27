@@ -6,6 +6,19 @@ Page {
     id: librarySettingsPage
 
     signal backRequested()
+    property bool pendingScanToast: false
+
+    onCreationCompleted: {
+        bookManager.isScanningChanged.connect(librarySettingsPage.onScanningStateChanged);
+    }
+
+    function onScanningStateChanged() {
+        if (pendingScanToast && !bookManager.isScanning) {
+            pendingScanToast = false;
+            scanToast.body = (qsTr("Đã quét xong! Tổng cộng: %1 cuốn sách.").replace("%1", bookManager.bookCount)) + Retranslate.onLanguageChanged;
+            scanToast.show();
+        }
+    }
 
     titleBar: TitleBar {
         title: qsTr("Tủ sách & Quản lý") + Retranslate.onLanguageChanged
@@ -70,15 +83,53 @@ Page {
                     rightPadding: bookManager.dp(16)
                     topPadding: bookManager.dp(10)
                     bottomPadding: bookManager.dp(16)
+                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                    Container {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        background: Color.create(bookManager.uiCard)
+                        topPadding: bookManager.dp(12)
+                        bottomPadding: bookManager.dp(12)
+                        leftPadding: bookManager.dp(14)
+                        rightPadding: bookManager.dp(14)
+                        layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                        Label {
+                            text: qsTr("Thư mục quét sách") + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.SubtitleText
+                            textStyle.fontWeight: FontWeight.W500
+                            textStyle.color: Color.create(bookManager.uiInk)
+                        }
+
+                        Label {
+                            topMargin: bookManager.dp(4)
+                            multiline: true
+                            text: bookManager.scanFoldersSummary
+                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                            textStyle.color: bookManager.scanFolders.length > 0 ? Color.create(bookManager.uiAccent) : Color.create(bookManager.uiMuted)
+                        }
+
+                        Button {
+                            topMargin: bookManager.dp(10)
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_folder.png" : "asset:///icons/ic_folder_dark.png"
+                            text: qsTr("Chọn thư mục quét...") + Retranslate.onLanguageChanged
+                            onClicked: {
+                                scanFoldersSheet.openPicker();
+                            }
+                        }
+                    }
 
                     Button {
+                        topMargin: bookManager.dp(10)
                         text: qsTr("Quét lại bộ nhớ & thẻ nhớ") + Retranslate.onLanguageChanged
                         horizontalAlignment: HorizontalAlignment.Fill
                         appearance: ControlAppearance.Primary
                         onClicked: {
-                            bookManager.scanLibrary();
-                            scanToast.body = (qsTr("Đã quét xong! Tổng cộng: %1 cuốn sách.").arg(bookManager.bookCount)) + Retranslate.onLanguageChanged;
+                            librarySettingsPage.pendingScanToast = true;
+                            scanToast.body = qsTr("Đang quét thư viện sách...") + Retranslate.onLanguageChanged;
                             scanToast.show();
+                            bookManager.scanLibrary();
                         }
                     }
                 }
@@ -239,6 +290,15 @@ Page {
         SystemToast {
             id: scanToast
             body: ""
+        },
+        ScanFoldersSheet {
+            id: scanFoldersSheet
+            onApplyScanRequested: {
+                librarySettingsPage.pendingScanToast = true;
+                scanToast.body = qsTr("Đang quét thư viện sách...") + Retranslate.onLanguageChanged;
+                scanToast.show();
+                bookManager.scanLibrary();
+            }
         },
         SystemToast {
             id: clearHistoryToast

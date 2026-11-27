@@ -20,18 +20,16 @@ static void setupReplyBypass(QNetworkReply *reply)
     if (!reply) return;
     QSslConfiguration sslConfig = QSslConfiguration::defaultConfiguration();
     sslConfig.setProtocol(QSsl::AnyProtocol);
-    sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
+    sslConfig.setPeerVerifyMode(QSslSocket::defaultCaCertificates().isEmpty() ? QSslSocket::VerifyNone : QSslSocket::VerifyPeer);
     sslConfig.setSslOption(QSsl::SslOptionDisableServerNameIndication, false);
     reply->setSslConfiguration(sslConfig);
-    reply->ignoreSslErrors();
-    QObject::connect(reply, SIGNAL(sslErrors(QList<QSslError>)), reply, SLOT(ignoreSslErrors()));
 }
 
 static void setupReplyBypassReq(QNetworkRequest &req)
 {
     QSslConfiguration sslConfig = QSslConfiguration::defaultConfiguration();
     sslConfig.setProtocol(QSsl::AnyProtocol);
-    sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
+    sslConfig.setPeerVerifyMode(QSslSocket::defaultCaCertificates().isEmpty() ? QSslSocket::VerifyNone : QSslSocket::VerifyPeer);
     sslConfig.setSslOption(QSsl::SslOptionDisableServerNameIndication, false);
     req.setSslConfiguration(sslConfig);
 }

@@ -91,6 +91,13 @@ Page {
         }
         actions: [
             ActionItem {
+                title: qsTr("Trang chủ") + Retranslate.onLanguageChanged
+                imageSource: "asset:///icons/ic_home.png"
+                onTriggered: {
+                    app.switchToTab("home");
+                }
+            },
+            ActionItem {
                 title: qsTr("Thoát") + Retranslate.onLanguageChanged
                 imageSource: "asset:///icons/ic_exit.png"
                 onTriggered: {
@@ -484,7 +491,7 @@ Page {
                                             horizontalAlignment: HorizontalAlignment.Center
                                             text: bookManager.lastBookTitle ? bookManager.lastBookTitle : ""
                                             textStyle.base: SystemDefaults.TextStyles.SmallText
-                                            textStyle.fontWeight: FontWeight.Bold
+                                            textStyle.fontWeight: FontWeight.Normal
                                             textStyle.textAlign: TextAlign.Center
                                             textStyle.color: Color.create("#F5EFE6")
                                             multiline: true
@@ -536,7 +543,7 @@ Page {
                                     topMargin: bookManager.dp(4)
                                     text: bookManager.lastBookTitle
                                     textStyle.base: SystemDefaults.TextStyles.TitleText
-                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.fontWeight: FontWeight.W300
                                     textStyle.color: Color.create(bookManager.uiInk)
                                     multiline: true
                                     autoSize.maxLineCount: 2
@@ -885,7 +892,7 @@ Page {
                                             horizontalAlignment: HorizontalAlignment.Center
                                             text: ListItemData.title ? ListItemData.title : ""
                                             textStyle.base: SystemDefaults.TextStyles.SmallText
-                                            textStyle.fontWeight: FontWeight.Bold
+                                            textStyle.fontWeight: FontWeight.Normal
                                             textStyle.textAlign: TextAlign.Center
                                             textStyle.color: Color.create("#F5EFE6")
                                             multiline: true
@@ -904,7 +911,7 @@ Page {
                                 Label {
                                     text: ListItemData.title ? ListItemData.title : (qsTr("Chưa có tiêu đề") + Retranslate.onLanguageChanged)
                                     textStyle.base: SystemDefaults.TextStyles.TitleText
-                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.fontWeight: FontWeight.W300
                                     textStyle.color: Color.create(bookManager.uiInk)
                                     multiline: true
                                     autoSize.maxLineCount: 2

@@ -216,7 +216,7 @@ Sheet {
                                                 verticalAlignment: VerticalAlignment.Center
                                                 text: bookDetailSheet.displayTitle
                                                 textStyle.base: SystemDefaults.TextStyles.SmallText
-                                                textStyle.fontWeight: FontWeight.W500
+                                                textStyle.fontWeight: FontWeight.Normal
                                                 textStyle.color: Color.create("#F5EFE6")
                                                 multiline: true
                                                 autoSize.maxLineCount: 3
@@ -235,7 +235,7 @@ Sheet {
                                     Label {
                                         text: bookDetailSheet.displayTitle
                                         textStyle.base: SystemDefaults.TextStyles.TitleText
-                                        textStyle.fontWeight: FontWeight.W500
+                                        textStyle.fontWeight: FontWeight.W300
                                         textStyle.color: Color.create(bookManager.uiInk)
                                         multiline: true
                                         autoSize.maxLineCount: 3
@@ -634,6 +634,27 @@ Sheet {
                                 }
                             }
                         }
+
+                        // Danger Zone: Delete File from Device
+                        Container {
+                            visible: !bookDetailSheet.hideReadButton && bookDetailSheet.displayRawPath !== ""
+                            topMargin: bookManager.dp(12)
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            background: Color.create(bookManager.uiCard)
+                            topPadding: bookManager.dp(12)
+                            bottomPadding: bookManager.dp(12)
+                            leftPadding: bookManager.dp(16)
+                            rightPadding: bookManager.dp(16)
+
+                            Button {
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                text: qsTr("Xóa file khỏi máy") + Retranslate.onLanguageChanged
+                                onClicked: {
+                                    detailDeleteDialog.body = qsTr("Tệp \"%1\" sẽ bị xóa vĩnh viễn khỏi bộ nhớ máy. Bạn có chắc chắn?").replace("%1", bookDetailSheet.displayTitle) + Retranslate.onLanguageChanged;
+                                    detailDeleteDialog.show();
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -644,6 +665,22 @@ Sheet {
         SystemToast {
             id: detailToast
             body: ""
+        },
+        SystemDialog {
+            id: detailDeleteDialog
+            title: qsTr("Xóa file khỏi máy?") + Retranslate.onLanguageChanged
+            confirmButton.label: qsTr("Xóa vĩnh viễn") + Retranslate.onLanguageChanged
+            cancelButton.label: qsTr("Hủy") + Retranslate.onLanguageChanged
+            onFinished: {
+                if (result === SystemUiResult.ConfirmButtonSelection && bookDetailSheet.displayRawPath !== "") {
+                    var ok = bookManager.deleteBookFile(bookDetailSheet.displayRawPath);
+                    detailToast.body = (ok ? (qsTr("Đã xóa file: ") + bookDetailSheet.displayTitle) : qsTr("Không thể xóa file khỏi bộ nhớ.")) + Retranslate.onLanguageChanged;
+                    detailToast.show();
+                    if (ok) {
+                        bookDetailSheet.close();
+                    }
+                }
+            }
         }
     ]
 }

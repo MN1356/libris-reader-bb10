@@ -111,6 +111,25 @@ QVariantList WiFiDropServer::uploadedFiles() const
     return m_uploadedFiles;
 }
 
+QString WiFiDropServer::accessPin() const
+{
+    return m_accessPin;
+}
+
+bool WiFiDropServer::isAuthorizedRequest(const ClientContext *ctx) const
+{
+    if (m_accessPin.isEmpty() || !ctx) return false;
+    if (ctx->providedPin == m_accessPin) return true;
+    int qIdx = ctx->path.indexOf('?');
+    if (qIdx != -1) {
+        QUrl url = QUrl::fromEncoded(("http://localhost" + ctx->path).toUtf8());
+        if (url.queryItemValue("pin").trimmed() == m_accessPin) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void WiFiDropServer::clearHistory()
 {
     m_uploadedFiles.clear();
@@ -149,8 +168,11 @@ bool WiFiDropServer::start()
         return false;
     }
 
+    qsrand(static_cast<uint>(QDateTime::currentMSecsSinceEpoch() & 0xFFFFFFFFu));
+    m_accessPin = QString("%1").arg(1000 + (qrand() % 9000));
     m_running = true;
     qDebug() << "[WiFiDropServer] Listening on" << serverUrl() << "(ip=" << m_ipAddress << "port=" << m_port << ")";
+    emit accessPinChanged();
     emit runningChanged();
     emit serverUrlChanged();
     return true;
@@ -293,6 +315,8 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
                 QString val = line.mid(colon + 1).trimmed();
                 if (name == "content-length") {
                     ctx->contentLength = val.toLongLong();
+                } else if (name == "x-libris-pin") {
+                    ctx->providedPin = val.trimmed();
                 } else if (name == "content-type") {
                     int bIdx = val.indexOf("boundary=", 0, Qt::CaseInsensitive);
                     if (bIdx != -1) {
@@ -309,14 +333,25 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
             }
         }
 
+        QString routePath = ctx->path;
+        int routeQueryPos = routePath.indexOf('?');
+        if (routeQueryPos != -1) {
+            routePath = routePath.left(routeQueryPos);
+        }
+
         if (ctx->method == "GET") {
-            if (ctx->path == "/" || ctx->path == "/index.html") {
+            if (routePath == "/" || routePath == "/index.html") {
                 sendResponse(socket, 200, "OK", "text/html; charset=utf-8", getHtmlPage().toUtf8());
-            } else if (ctx->path == "/api/status") {
-                QString json = QString("{\"status\":\"running\",\"device\":\"BlackBerry 10\",\"ip\":\"%1\",\"port\":%2,\"uploaded\":%3}")
+            } else if (routePath == "/api/status") {
+                QString json = QString("{\"status\":\"running\",\"device\":\"BlackBerry 10\",\"ip\":\"%1\",\"port\":%2,\"uploaded\":%3,\"pinRequired\":true}")
                     .arg(escapeWifiJson(m_ipAddress)).arg(m_port).arg(m_uploadedFiles.size());
                 sendResponse(socket, 200, "OK", "application/json; charset=utf-8", json.toUtf8());
-            } else if (ctx->path == "/api/books") {
+            } else if (!isAuthorizedRequest(ctx)) {
+                sendResponse(socket, 401, "Unauthorized", "application/json; charset=utf-8",
+                             "{\"success\":false,\"error\":\"Invalid or missing PIN\"}");
+            } else if (routePath == "/api/auth") {
+                sendResponse(socket, 200, "OK", "application/json; charset=utf-8", "{\"authenticated\":true}");
+            } else if (routePath == "/api/books") {
                 BookManager *bm = qobject_cast<BookManager*>(parent());
                 QVariantList books = bm ? bm->allBooksSnapshot() : QVariantList();
                 QString out = "[";
@@ -334,7 +369,7 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
                 }
                 out += "]";
                 sendResponse(socket, 200, "OK", "application/json; charset=utf-8", out.toUtf8());
-            } else if (ctx->path == "/api/backup") {
+            } else if (routePath == "/api/backup") {
                 BookManager *bm = qobject_cast<BookManager*>(parent());
                 QString bPath = bm ? bm->createBackupArchive() : QString();
                 QFile bf(bPath);
@@ -344,7 +379,7 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
                 } else {
                     sendResponse(socket, 500, "Internal Server Error", "text/plain", "Backup creation failed");
                 }
-            } else if (ctx->path == "/api/highlights.md") {
+            } else if (routePath == "/api/highlights.md") {
                 BookManager *bm = qobject_cast<BookManager*>(parent());
                 QString mdPath = bm ? bm->exportAllHighlightsToMarkdown() : QString();
                 QFile hf(mdPath);
@@ -354,7 +389,7 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
                 } else {
                     sendResponse(socket, 404, "Not Found", "text/plain", "No highlights available");
                 }
-            } else if (ctx->path == "/api/stats") {
+            } else if (routePath == "/api/stats") {
                 BookManager *bm = qobject_cast<BookManager*>(parent());
                 QString json = QString("{\"totalReadingTime\":\"%1\",\"todayReadingTime\":\"%2\",\"todaySeconds\":%3,\"dailyGoalMinutes\":%4,\"currentStreak\":%5,\"totalBooks\":%6,\"completedBooks\":%7,\"readingBooks\":%8}")
                     .arg(escapeWifiJson(bm ? bm->totalReadingTimeStr() : "0m"))
@@ -366,7 +401,7 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
                     .arg(bm ? bm->completedBooksCount() : 0)
                     .arg(bm ? bm->readingBooksCount() : 0);
                 sendResponse(socket, 200, "OK", "application/json; charset=utf-8", json.toUtf8());
-            } else if (ctx->path.startsWith("/download?")) {
+            } else if (routePath == "/download") {
                 QUrl reqUrl = QUrl::fromEncoded(("http://localhost" + ctx->path).toUtf8());
                 QString reqPath = reqUrl.queryItemValue("path");
                 QString canon = QFileInfo(reqPath).canonicalFilePath();
@@ -393,7 +428,14 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
             socket->disconnectFromHost();
             ctx->state = ClientContext::STATE_DONE;
             return;
-        } else if (ctx->method == "POST" && ctx->path == "/api/clip") {
+        } else if (ctx->method == "POST" && routePath == "/api/clip") {
+            if (!isAuthorizedRequest(ctx)) {
+                sendResponse(socket, 401, "Unauthorized", "application/json; charset=utf-8",
+                             "{\"success\":false,\"error\":\"Invalid or missing PIN\"}");
+                socket->disconnectFromHost();
+                ctx->state = ClientContext::STATE_DONE;
+                return;
+            }
             if (ctx->contentLength <= 0 || ctx->contentLength > 2 * 1024 * 1024) {
                 sendResponse(socket, 400, "Bad Request", "application/json; charset=utf-8",
                              "{\"success\":false,\"error\":\"Invalid clip size\"}");
@@ -402,7 +444,14 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
                 return;
             }
             ctx->state = ClientContext::STATE_CLIP_BODY;
-        } else if (ctx->method == "POST" && ctx->path == "/upload") {
+        } else if (ctx->method == "POST" && routePath == "/upload") {
+            if (!isAuthorizedRequest(ctx)) {
+                sendResponse(socket, 401, "Unauthorized", "application/json; charset=utf-8",
+                             "{\"success\":false,\"error\":\"Invalid or missing PIN\"}");
+                socket->disconnectFromHost();
+                ctx->state = ClientContext::STATE_DONE;
+                return;
+            }
             if (ctx->boundary.isEmpty()) {
                 sendResponse(socket, 400, "Bad Request", "text/plain", "Missing multipart boundary");
                 socket->disconnectFromHost();
@@ -647,7 +696,7 @@ void WiFiDropServer::sendResponse(QTcpSocket *socket, int statusCode, const QStr
     resp.append(QString("Content-Length: %1\r\n").arg(body.size()).toAscii());
     resp.append("Access-Control-Allow-Origin: *\r\n");
     resp.append("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n");
-    resp.append("Access-Control-Allow-Headers: Content-Type, Content-Length\r\n");
+    resp.append("Access-Control-Allow-Headers: Content-Type, Content-Length, X-Libris-Pin\r\n");
     resp.append("Connection: close\r\n");
     resp.append("\r\n");
     if (!body.isEmpty()) {
@@ -988,14 +1037,29 @@ QString WiFiDropServer::getHtmlPage() const
 "    </div>\n"
 "    <h1>Libris Wireless Drop</h1>\n"
 "    <div class=\"device-badge\">BlackBerry 10 &bull; __L_READY__</div>\n"
+"    <div id=\"pinUnlockedBar\" style=\"margin-top:10px;display:none;align-items:center;gap:10px;\">\n"
+"      <span style=\"font-size:12px;color:var(--success);font-weight:600;\">&#10003; __L_PIN_UNLOCKED__</span>\n"
+"      <button type=\"button\" onclick=\"lockToGate('')\" style=\"background:transparent;border:1px solid var(--card-border);color:var(--text-muted);padding:3px 10px;border-radius:999px;font-size:11px;cursor:pointer;\">__L_PIN_LOCK__</button>\n"
+"    </div>\n"
 "  </div>\n"
 "\n"
+"  <div id=\"pinGate\" class=\"uploads-card\" style=\"padding:30px 22px;text-align:center;\">\n"
+"    <div style=\"font-size:18px;font-weight:700;margin-bottom:8px;\">__L_PIN_TITLE__</div>\n"
+"    <div style=\"font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;\">__L_PIN_SUB__</div>\n"
+"    <form id=\"pinForm\" onsubmit=\"submitPin(event);return false;\" style=\"display:flex;flex-direction:column;align-items:center;gap:14px;\">\n"
+"      <input id=\"pinGateInput\" type=\"password\" inputmode=\"numeric\" maxlength=\"8\" autocomplete=\"one-time-code\" placeholder=\"••••\" autofocus style=\"width:200px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--card-border);background:rgba(128,128,128,0.12);color:var(--text);text-align:center;font-size:26px;font-weight:700;letter-spacing:10px;outline:none;\"/>\n"
+"      <button type=\"submit\" id=\"pinSubmitBtn\" class=\"btn-select\" style=\"min-width:160px;\">__L_PIN_BTN__</button>\n"
+"      <div id=\"pinGateErr\" style=\"min-height:18px;font-size:13px;color:var(--danger);font-weight:600;\"></div>\n"
+"    </form>\n"
+"  </div>\n"
+"\n"
+"  <div id=\"appContent\" style=\"display:none;\">\n"
 "  <div class=\"dropzone\" id=\"dropzone\">\n"
 "    <svg class=\"drop-icon\" viewBox=\"0 0 24 24\"><path d=\"M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z\"/></svg>\n"
 "    <div class=\"drop-title\">__L_DROP_TITLE__</div>\n"
 "    <div class=\"drop-sub\">__L_DROP_SUB__</div>\n"
 "    <button type=\"button\" class=\"btn-select\" id=\"btnSelect\">__L_BTN_SELECT__</button>\n"
-"    <input type=\"file\" id=\"fileInput\" multiple accept=\".epub,.pdf,.mobi,.azw,.azw3,.kf8,.prc,.fb2,.txt,.cbz,.djvu,.djv\" style=\"display:none;\">\n"
+"    <input type=\"file\" id=\"fileInput\" multiple accept=\".epub,.pdf,.mobi,.azw,.azw3,.kf8,.prc,.fb2,.txt,.md,.markdown,.html,.htm,.cbz,.djvu,.djv\" style=\"display:none;\">\n"
 "    <div class=\"format-pills\">\n"
 "      <span class=\"pill\">EPUB</span>\n"
 "      <span class=\"pill\">PDF</span>\n"
@@ -1022,8 +1086,8 @@ QString WiFiDropServer::getHtmlPage() const
 "    <div class=\"uploads-header\">\n"
 "      <span>__L_LIB_HEADER__</span>\n"
 "      <div style=\"display:flex; gap:8px;\">\n"
-"        <a href=\"/api/highlights.md\" style=\"background:rgba(212,163,89,0.16);color:var(--primary);border:1px solid rgba(212,163,89,0.4);padding:6px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;\">Notes (.md)</a>\n"
-"        <a href=\"/api/backup\" style=\"background:var(--primary);color:#0D0B09;padding:6px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;\">__L_BTN_BACKUP__</a>\n"
+"        <a href=\"#\" onclick=\"downloadProtected('/api/highlights.md');return false;\" style=\"background:rgba(212,163,89,0.16);color:var(--primary);border:1px solid rgba(212,163,89,0.4);padding:6px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;\">Notes (.md)</a>\n"
+"        <a href=\"#\" onclick=\"downloadProtected('/api/backup');return false;\" style=\"background:var(--primary);color:#0D0B09;padding:6px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;\">__L_BTN_BACKUP__</a>\n"
 "        <button type=\"button\" onclick=\"loadBooks()\" style=\"background:rgba(212,163,89,0.16);color:var(--primary);border:1px solid rgba(212,163,89,0.4);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;\">__L_BTN_LOAD__</button>\n"
 "      </div>\n"
 "    </div>\n"
@@ -1039,10 +1103,10 @@ QString WiFiDropServer::getHtmlPage() const
 "      <span id=\"clipStatus\" style=\"margin-left:10px;font-size:12px;color:var(--text-muted);\"></span>\n"
 "    </div>\n"
 "  </div>\n"
-"  <script>function sendClip(){var t=document.getElementById('clipTitle').value,b=document.getElementById('clipBody').value,st=document.getElementById('clipStatus');if(!b.trim()){st.textContent='Empty text';return;}st.textContent='Saving...';fetch('/api/clip',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'title='+encodeURIComponent(t)+'&body='+encodeURIComponent(b)}).then(r=>r.json()).then(d=>{st.textContent=d.success?('Saved '+d.fileName):(d.error||'Error');if(d.success){document.getElementById('clipTitle').value='';document.getElementById('clipBody').value='';}}).catch(()=>{st.textContent='Network error';});}</script>\n"
 "  <div class=\"footer\">\n"
 "    __L_FOOTER_1__ <code>/accounts/1000/shared/books</code><br>\n"
 "    __L_FOOTER_2__\n"
+"  </div>\n"
 "  </div>\n"
 "</div>\n"
 "\n"
@@ -1057,8 +1121,101 @@ QString WiFiDropServer::getHtmlPage() const
 "  loadingBooks: '__L_LOADING_BOOKS__',\n"
 "  emptyBooks: '__L_EMPTY_BOOKS__',\n"
 "  download: '__L_DOWNLOAD__',\n"
-"  errLoadBooks: '__L_ERR_LOAD_BOOKS__'\n"
+"  errLoadBooks: '__L_ERR_LOAD_BOOKS__',\n"
+"  pinChecking: '__L_PIN_CHECKING__',\n"
+"  pinWrong: '__L_PIN_WRONG__',\n"
+"  pinExpired: '__L_PIN_EXPIRED__',\n"
+"  pinBtn: '__L_PIN_BTN__'\n"
 "};\n"
+"let activePin = sessionStorage.getItem('librisPin') || '';\n"
+"function getPin() {\n"
+"  return activePin;\n"
+"}\n"
+"function unlockApp(pin) {\n"
+"  activePin = pin;\n"
+"  sessionStorage.setItem('librisPin', pin);\n"
+"  document.getElementById('pinGate').style.display = 'none';\n"
+"  document.getElementById('appContent').style.display = 'block';\n"
+"  const bar = document.getElementById('pinUnlockedBar');\n"
+"  if (bar) bar.style.display = 'inline-flex';\n"
+"  const err = document.getElementById('pinGateErr');\n"
+"  if (err) err.textContent = '';\n"
+"}\n"
+"function lockToGate(msg) {\n"
+"  activePin = '';\n"
+"  sessionStorage.removeItem('librisPin');\n"
+"  document.getElementById('appContent').style.display = 'none';\n"
+"  document.getElementById('pinGate').style.display = 'block';\n"
+"  const bar = document.getElementById('pinUnlockedBar');\n"
+"  if (bar) bar.style.display = 'none';\n"
+"  const err = document.getElementById('pinGateErr');\n"
+"  if (err) err.textContent = msg || '';\n"
+"  const inp = document.getElementById('pinGateInput');\n"
+"  if (inp) { inp.value = ''; inp.focus(); }\n"
+"}\n"
+"function verifyAndUnlock(pin, silent) {\n"
+"  const cleanPin = (pin || '').trim();\n"
+"  const err = document.getElementById('pinGateErr');\n"
+"  const btn = document.getElementById('pinSubmitBtn');\n"
+"  if (!cleanPin) {\n"
+"    if (!silent && err) err.textContent = I18N.pinWrong;\n"
+"    return;\n"
+"  }\n"
+"  if (!silent && btn) { btn.disabled = true; btn.textContent = I18N.pinChecking; }\n"
+"  fetch('/api/auth', { headers: { 'X-Libris-Pin': cleanPin } })\n"
+"    .then(r => {\n"
+"      if (btn) { btn.disabled = false; btn.textContent = I18N.pinBtn; }\n"
+"      if (r.ok) {\n"
+"        unlockApp(cleanPin);\n"
+"      } else {\n"
+"        if (silent) {\n"
+"          lockToGate('');\n"
+"        } else {\n"
+"          if (err) err.textContent = I18N.pinWrong;\n"
+"          const inp = document.getElementById('pinGateInput');\n"
+"          if (inp) { inp.focus(); inp.select(); }\n"
+"        }\n"
+"      }\n"
+"    })\n"
+"    .catch(() => {\n"
+"      if (btn) { btn.disabled = false; btn.textContent = I18N.pinBtn; }\n"
+"      if (!silent && err) err.textContent = I18N.errConn;\n"
+"    });\n"
+"}\n"
+"function submitPin(e) {\n"
+"  if (e) e.preventDefault();\n"
+"  const inp = document.getElementById('pinGateInput');\n"
+"  verifyAndUnlock(inp ? inp.value : '', false);\n"
+"}\n"
+"function downloadProtected(u) {\n"
+"  const p = getPin();\n"
+"  if (!p) { lockToGate(I18N.pinExpired); return; }\n"
+"  const sep = u.indexOf('?') >= 0 ? '&' : '?';\n"
+"  window.location.href = u + sep + 'pin=' + encodeURIComponent(p);\n"
+"}\n"
+"function sendClip() {\n"
+"  const p = getPin();\n"
+"  const t = document.getElementById('clipTitle').value;\n"
+"  const b = document.getElementById('clipBody').value;\n"
+"  const st = document.getElementById('clipStatus');\n"
+"  if (!p) { lockToGate(I18N.pinExpired); return; }\n"
+"  if (!b.trim()) { st.textContent = 'Empty text'; return; }\n"
+"  st.textContent = 'Saving...';\n"
+"  fetch('/api/clip', {\n"
+"    method: 'POST',\n"
+"    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Libris-Pin': p },\n"
+"    body: 'title=' + encodeURIComponent(t) + '&body=' + encodeURIComponent(b)\n"
+"  }).then(r => {\n"
+"    if (r.status === 401) { lockToGate(I18N.pinExpired); throw new Error('auth'); }\n"
+"    return r.json();\n"
+"  }).then(d => {\n"
+"    st.textContent = d.success ? ('Saved ' + d.fileName) : (d.error || 'Error');\n"
+"    if (d.success) { document.getElementById('clipTitle').value = ''; document.getElementById('clipBody').value = ''; }\n"
+"  }).catch(err => {\n"
+"    if (err && err.message === 'auth') return;\n"
+"    st.textContent = I18N.errConn;\n"
+"  });\n"
+"}\n"
 "const dropzone = document.getElementById('dropzone');\n"
 "const fileInput = document.getElementById('fileInput');\n"
 "const btnSelect = document.getElementById('btnSelect');\n"
@@ -1177,6 +1334,8 @@ QString WiFiDropServer::getHtmlPage() const
 "\n"
 "  const xhr = new XMLHttpRequest();\n"
 "  xhr.open('POST', '/upload', true);\n"
+"  const pin = getPin();\n"
+"  if (pin) xhr.setRequestHeader('X-Libris-Pin', pin);\n"
 "\n"
 "  xhr.upload.onprogress = (e) => {\n"
 "    if (e.lengthComputable) {\n"
@@ -1194,6 +1353,12 @@ QString WiFiDropServer::getHtmlPage() const
 "        statusTag.innerHTML = '&#10003; ' + I18N.saved;\n"
 "      }\n"
 "      totalCompleted++;\n"
+"    } else if (xhr.status === 401) {\n"
+"      if (statusTag) {\n"
+"        statusTag.className = 'status-tag status-error';\n"
+"        statusTag.innerHTML = '&#10007; ' + I18N.pinExpired;\n"
+"      }\n"
+"      lockToGate(I18N.pinExpired);\n"
 "    } else {\n"
 "      if (statusTag) {\n"
 "        statusTag.className = 'status-tag status-error';\n"
@@ -1221,8 +1386,10 @@ QString WiFiDropServer::getHtmlPage() const
 "function loadBooks() {\n"
 "  const ul = document.getElementById('deviceBookList');\n"
 "  if (!ul) return;\n"
+"  const pin = getPin();\n"
+"  if (!pin) { lockToGate(I18N.pinExpired); return; }\n"
 "  ul.innerHTML = '<li class=\"file-item\" style=\"color:var(--text-muted);font-size:13px;\">' + I18N.loadingBooks + '</li>';\n"
-"  fetch('/api/books').then(r => r.json()).then(list => {\n"
+"  fetch('/api/books', { headers: { 'X-Libris-Pin': pin } }).then(r => { if (r.status === 401) { lockToGate(I18N.pinExpired); throw new Error('auth'); } if (!r.ok) throw new Error('err'); return r.json(); }).then(list => {\n"
 "    if (!list || list.length === 0) {\n"
 "      ul.innerHTML = '<li class=\"file-item\" style=\"color:var(--text-muted);font-size:13px;\">' + I18N.emptyBooks + '</li>';\n"
 "      return;\n"
@@ -1233,13 +1400,15 @@ QString WiFiDropServer::getHtmlPage() const
 "      li.className = 'file-item';\n"
 "      li.innerHTML = '<div class=\"file-info\"><div class=\"file-name\">' + escapeHtml(b.title || 'Untitled') + '</div>' +\n"
 "        '<div class=\"file-size\">' + escapeHtml((b.format || '').toUpperCase() + (b.size ? ' • ' + b.size : '') + (b.author ? ' • ' + b.author : '')) + '</div></div>' +\n"
-"        '<a href=\"/download?path=' + encodeURIComponent(b.path || '') + '\" style=\"color:var(--primary);font-size:12px;font-weight:700;text-decoration:none;\">' + I18N.download + '</a>';\n"
+"        '<a href=\"/download?path=' + encodeURIComponent(b.path || '') + '&pin=' + encodeURIComponent(pin) + '\" style=\"color:var(--primary);font-size:12px;font-weight:700;text-decoration:none;\">' + I18N.download + '</a>';\n"
 "      ul.appendChild(li);\n"
 "    });\n"
-"  }).catch(() => {\n"
+"  }).catch(err => {\n"
+"    if (err && err.message === 'auth') return;\n"
 "    ul.innerHTML = '<li class=\"file-item\" style=\"color:var(--danger);font-size:13px;\">' + I18N.errLoadBooks + '</li>';\n"
 "  });\n"
 "}\n"
+"(function(){ if (activePin) { verifyAndUnlock(activePin, true); } else { const inp = document.getElementById('pinGateInput'); if (inp) inp.focus(); } })();\n"
 "</script>\n"
 "</body>\n"
 "</html>";
@@ -1270,7 +1439,15 @@ QString WiFiDropServer::getHtmlPage() const
         { "__L_LOADING_BOOKS__", "Đang tải danh sách...", "Loading books..." },
         { "__L_EMPTY_BOOKS__", "Chưa có sách nào trong thư viện.", "No books found in library." },
         { "__L_DOWNLOAD__", "Tải về", "Download" },
-        { "__L_ERR_LOAD_BOOKS__", "Không thể tải danh sách sách.", "Failed to load book list." }
+        { "__L_ERR_LOAD_BOOKS__", "Không thể tải danh sách sách.", "Failed to load book list." },
+        { "__L_PIN_TITLE__", "Nhập mã PIN truy cập Book Drop", "Enter Book Drop Access PIN" },
+        { "__L_PIN_SUB__", "Xem mã PIN 4 số đang hiển thị trên màn hình BlackBerry 10.", "Enter the 4-digit PIN displayed on your BlackBerry 10 screen." },
+        { "__L_PIN_BTN__", "Mở khóa", "Unlock" },
+        { "__L_PIN_CHECKING__", "Đang kiểm tra...", "Checking..." },
+        { "__L_PIN_WRONG__", "Sai mã PIN. Vui lòng kiểm tra lại trên điện thoại.", "Incorrect PIN. Please check your device screen." },
+        { "__L_PIN_EXPIRED__", "Phiên PIN đã thay đổi hoặc hết hạn. Vui lòng nhập lại.", "PIN session changed or expired. Please unlock again." },
+        { "__L_PIN_UNLOCKED__", "Đã xác thực PIN", "PIN unlocked" },
+        { "__L_PIN_LOCK__", "Khóa lại", "Lock" }
     };
 
     QString html = QString::fromUtf8(page);

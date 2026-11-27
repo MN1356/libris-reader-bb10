@@ -1224,6 +1224,16 @@ QString EpubParser::extractChapterTitle(int chapterIndex, const QString &anchor)
     return extractTitleFromHtml(text, m_title, QString());
 }
 
+static QString escapeEpubHtml(const QString &text)
+{
+    QString out = text;
+    out.replace("&", "&amp;");
+    out.replace("<", "&lt;");
+    out.replace(">", "&gt;");
+    out.replace("\"", "&quot;");
+    return out;
+}
+
 QString EpubParser::getChapterContent(int index, const QString &cacheDir)
 {
     if (index < 0 || index >= m_chapters.size()) {
@@ -1260,8 +1270,8 @@ QString EpubParser::getChapterContent(int index, const QString &cacheDir)
             coverHtml += QString("<img class=\"cover-img\" src=\"%1\" alt=\"Cover\"/>").arg(coverSrc);
         } else {
             coverHtml += "<div class=\"cover-card\">";
-            coverHtml += QString("<h1 style=\"font-size: 1.8em; margin-bottom: 12px;\">%1</h1>").arg(m_title);
-            coverHtml += QString("<h3 style=\"font-size: 1.2em; font-weight: normal; opacity: 0.85;\">%1</h3>").arg(m_author);
+            coverHtml += QString("<h1 style=\"font-size: 1.8em; margin-bottom: 12px;\">%1</h1>").arg(escapeEpubHtml(m_title));
+            coverHtml += QString("<h3 style=\"font-size: 1.2em; font-weight: normal; opacity: 0.85;\">%1</h3>").arg(escapeEpubHtml(m_author));
             coverHtml += "</div>";
         }
         coverHtml += "</div></body></html>";

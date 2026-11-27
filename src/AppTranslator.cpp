@@ -2122,6 +2122,52 @@ void AppTranslator::initTranslations()
     add("Độ sáng", "Brightness", "Độ sáng");
     add("Độ sáng màn hình đọc", "Reader Screen Brightness", "Độ sáng màn hình đọc");
     add("Lưu riêng cho từng định dạng sách (EPUB, PDF, CBZ...)", "Saved independently per book format (EPUB, PDF, CBZ...)", "Lưu riêng cho từng định dạng sách (EPUB, PDF, CBZ...)");
+
+    // --- PDF OCR Text Selection, OCR TTS & Wi-Fi Drop PIN ---
+    add("Mã PIN truy cập: ", "Access PIN: ", "Mã PIN truy cập: ");
+    add("Văn bản OCR", "OCR Text", "Văn bản OCR");
+    add("Chọn chữ (OCR)", "Select Text (OCR)", "Chọn chữ (OCR)");
+    add("Dàn chữ", "Reflow", "Dàn chữ");
+    add("Trang PDF này chưa có lớp chữ OCR.", "This PDF page has no OCR text layer.", "Trang PDF này chưa có lớp chữ OCR.");
+    add("Trang PDF này chưa có lớp chữ OCR để đọc giọng nói.", "This PDF page has no OCR text layer for text-to-speech.", "Trang PDF này chưa có lớp chữ OCR để đọc giọng nói.");
+    add("Đã chọn %1 ký tự", "%1 characters selected", "Đã chọn %1 ký tự");
+    add("Nhấn giữ vào chữ để bôi đen chọn đoạn, hoặc dùng thao tác bên dưới.", "Long-press text to select a passage, or use an action below.", "Nhấn giữ vào chữ để bôi đen chọn đoạn, hoặc dùng thao tác bên dưới.");
+    add("Chép cả trang", "Copy Page", "Chép cả trang");
+    add("Đọc (TTS)", "Read (TTS)", "Đọc (TTS)");
+    add("Tra từ", "Dictionary", "Tra từ");
+    add("Dịch", "Translate", "Dịch");
+    add("Highlight", "Highlight", "Highlight");
+    add("Đã lưu highlight", "Highlight saved", "Đã lưu highlight");
+    add("MÃ PIN TRUY CẬP", "ACCESS PIN", "MÃ PIN TRUY CẬP");
+    add("Nhập mã này trên trình duyệt để mở khóa", "Enter this code in your browser to unlock", "Nhập mã này trên trình duyệt để mở khóa");
+    add("Xóa file khỏi máy", "Delete File from Device", "Xóa file khỏi máy");
+    add("Xóa file khỏi máy?", "Delete file from device?", "Xóa file khỏi máy?");
+    add("Xóa vĩnh viễn", "Delete Permanently", "Xóa vĩnh viễn");
+    add("Tệp \"%1\" sẽ bị xóa vĩnh viễn khỏi bộ nhớ máy. Bạn có chắc chắn?", "The file \"%1\" will be permanently deleted from device storage. Are you sure?", "Tệp \"%1\" sẽ bị xóa vĩnh viễn khỏi bộ nhớ máy. Bạn có chắc chắn?");
+    add("Đã xóa file: ", "Deleted file: ", "Đã xóa file: ");
+    add("Không thể xóa file khỏi bộ nhớ.", "Failed to delete file from storage.", "Không thể xóa file khỏi bộ nhớ.");
+    add("Đọc từ trang này (TTS)", "Read from this page (TTS)", "Đọc từ trang này (TTS)");
+    add("Trang %1/%2", "Page %1/%2", "Trang %1/%2");
+    add("OCR", "OCR", "OCR");
+    add("Tự động (Bộ nhớ trong & Thẻ nhớ)", "Auto (Internal & SD Card)", "Tự động (Bộ nhớ trong & Thẻ nhớ)");
+    add("thư mục", "folders", "thư mục");
+    add("Thẻ nhớ ngoài (%1)", "External SD (%1)", "Thẻ nhớ ngoài (%1)");
+    add("Thư mục quét sách", "Scan Folders", "Thư mục quét sách");
+    add("Chọn thư mục quét...", "Choose Scan Folders...", "Chọn thư mục quét...");
+    add("Chọn thư mục quét sách", "Choose Book Scan Folders", "Chọn thư mục quét sách");
+    add("Quét ngay", "Scan Now", "Quét ngay");
+    add("Chế độ tự động: Đang quét toàn bộ bộ nhớ & thẻ nhớ", "Auto mode: Scanning all internal & SD storage", "Chế độ tự động: Đang quét toàn bộ bộ nhớ & thẻ nhớ");
+    add("Đang chỉ quét %1 thư mục đã chọn:", "Scanning %1 selected folders:", "Đang chỉ quét %1 thư mục đã chọn:");
+    add("Tự động", "Auto", "Tự động");
+    add("Bỏ", "Remove", "Bỏ");
+    add("Chọn ổ nhớ để duyệt thư mục", "Select storage volume to browse folders", "Chọn ổ nhớ để duyệt thư mục");
+    add("✓ Đang chọn", "✓ Selected", "✓ Đang chọn");
+    add("+ Chọn mục này", "+ Select This", "+ Chọn mục này");
+    add("✓ Đã chọn", "✓ Selected", "✓ Đã chọn");
+    add("Chọn", "Select", "Chọn");
+    add("Chọn thư mục này", "Select This Folder", "Chọn thư mục này");
+    add("Bỏ chọn thư mục này", "Deselect This Folder", "Bỏ chọn thư mục này");
+    add("Đang quét thư viện sách...", "Scanning book library...", "Đang quét thư viện sách...");
 }
 
 void AppTranslator::setLanguage(const QString &lang)

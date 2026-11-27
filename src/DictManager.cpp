@@ -196,7 +196,7 @@ void DictManager::lookupOnline(const QString &word, const QString &targetLang)
 
     QSslConfiguration sslConfig = QSslConfiguration::defaultConfiguration();
     sslConfig.setProtocol(QSsl::AnyProtocol);
-    sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
+    sslConfig.setPeerVerifyMode(QSslSocket::defaultCaCertificates().isEmpty() ? QSslSocket::VerifyNone : QSslSocket::VerifyPeer);
     sslConfig.setSslOption(QSsl::SslOptionDisableServerNameIndication, false);
     req.setSslConfiguration(sslConfig);
 
@@ -204,8 +204,6 @@ void DictManager::lookupOnline(const QString &word, const QString &targetLang)
     quint64 reqSeq = ++s_lookupSeq;
     QNetworkReply *reply = m_nam->get(req);
     reply->setProperty("reqSeq", qulonglong(reqSeq));
-    reply->ignoreSslErrors();
-    connect(reply, SIGNAL(sslErrors(QList<QSslError>)), reply, SLOT(ignoreSslErrors()));
     connect(reply, SIGNAL(finished()), this, SLOT(onOnlineLookupFinished()));
 
     QTimer *timeoutTimer = new QTimer(reply);
@@ -375,7 +373,7 @@ void DictManager::translateText(const QString &text, const QString &sourceLang, 
 
     QSslConfiguration sslConfig = QSslConfiguration::defaultConfiguration();
     sslConfig.setProtocol(QSsl::AnyProtocol);
-    sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
+    sslConfig.setPeerVerifyMode(QSslSocket::defaultCaCertificates().isEmpty() ? QSslSocket::VerifyNone : QSslSocket::VerifyPeer);
     sslConfig.setSslOption(QSsl::SslOptionDisableServerNameIndication, false);
     req.setSslConfiguration(sslConfig);
 
@@ -383,8 +381,6 @@ void DictManager::translateText(const QString &text, const QString &sourceLang, 
     quint64 trSeq = ++s_translateSeq;
     QNetworkReply *reply = m_nam->get(req);
     reply->setProperty("trSeq", qulonglong(trSeq));
-    reply->ignoreSslErrors();
-    connect(reply, SIGNAL(sslErrors(QList<QSslError>)), reply, SLOT(ignoreSslErrors()));
     connect(reply, SIGNAL(finished()), this, SLOT(onTranslationFinished()));
 
     QTimer *timeoutTimer = new QTimer(reply);

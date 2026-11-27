@@ -127,6 +127,8 @@ class BookManager : public QObject {
     Q_PROPERTY(QString formatFilter READ formatFilter WRITE setFormatFilter NOTIFY formatFilterChanged)
     Q_PROPERTY(QString categoryFilter READ categoryFilter WRITE setCategoryFilter NOTIFY categoryFilterChanged)
     Q_PROPERTY(QStringList customShelves READ customShelves NOTIFY customShelvesChanged)
+    Q_PROPERTY(QStringList scanFolders READ scanFolders NOTIFY scanFoldersChanged)
+    Q_PROPERTY(QString scanFoldersSummary READ scanFoldersSummary NOTIFY scanFoldersChanged)
     Q_PROPERTY(QString searchQuery READ searchQuery WRITE setSearchQuery NOTIFY searchQueryChanged)
     Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY languageChanged)
     Q_PROPERTY(TtsManager* tts READ ttsManager CONSTANT)
@@ -141,6 +143,7 @@ class BookManager : public QObject {
     Q_PROPERTY(bool isSearching READ isSearching NOTIFY isSearchingChanged)
     Q_PROPERTY(bool isPdfReflow READ isPdfReflow WRITE setIsPdfReflow NOTIFY isPdfReflowChanged)
     Q_PROPERTY(bool hasPdfText READ hasPdfText NOTIFY hasPdfTextChanged)
+    Q_PROPERTY(bool pdfHasOcr READ pdfHasOcr NOTIFY hasPdfTextChanged)
     Q_PROPERTY(QString currentPdfText READ currentPdfText NOTIFY currentPdfTextChanged)
 
     // Highlights & Notes
@@ -299,6 +302,7 @@ public:
     Q_INVOKABLE bool toggleReadingList(const QString &filePath);
     Q_INVOKABLE bool toggleBookCompleted(const QString &filePath);
     Q_INVOKABLE void removeBookFromLibrary(const QString &filePath);
+    Q_INVOKABLE bool deleteBookFile(const QString &filePath);
     Q_INVOKABLE void removeFromRecent(const QString &filePath);
     Q_INVOKABLE void clearReadingHistory();
     Q_INVOKABLE void markAsUnread(const QString &filePath);
@@ -557,7 +561,9 @@ public Q_SLOTS:
     bool isPdfReflow() const { return m_isPdfReflow; }
     void setIsPdfReflow(bool reflow);
     bool hasPdfText() const { return m_hasPdfText; }
+    bool pdfHasOcr() const { return m_hasPdfText || m_pdfHasAnyOcr; }
     QString currentPdfText() const { return m_currentPdfText; }
+    Q_INVOKABLE QString getPdfPageText(int pageNumber = -1);
 
     Q_INVOKABLE void jumpToToc(int chapterIndex, int page = 0, const QString &anchor = QString());
     Q_INVOKABLE QString consumePendingScrollAnchor();
@@ -656,12 +662,20 @@ public Q_SLOTS:
     Q_INVOKABLE QString createBackupArchive();
     Q_INVOKABLE bool restoreBackupArchive(const QString &archivePath);
     Q_INVOKABLE void cancelScan();
+    Q_INVOKABLE QStringList scanFolders() const;
+    Q_INVOKABLE QString scanFoldersSummary() const;
+    Q_INVOKABLE QVariantList listFoldersForPicker(const QString &dirPath) const;
+    Q_INVOKABLE QString parentFolderForPicker(const QString &dirPath) const;
+    Q_INVOKABLE bool isScanFolderSelected(const QString &folderPath) const;
+    Q_INVOKABLE void toggleScanFolder(const QString &folderPath);
+    Q_INVOKABLE void clearScanFolders();
     Q_INVOKABLE void openInternalLink(const QString &href, const QString &refTitle = QString());
 
 public slots:
     void resetLoadingState();
     void onWatchdogTimeout();
-    void scanLibrary();
+    void scanLibrary(bool quiet = false);
+    void scanLibraryQuiet();
     void onPdfPageRendered(int pageNumber);
     void onPdfStreamPageRendered(int pageNumber);
     void onPdfIndicatorRequested(bool enabled);
@@ -683,6 +697,7 @@ signals:
     void formatFilterChanged();
     void categoryFilterChanged();
     void customShelvesChanged();
+    void scanFoldersChanged();
     void searchQueryChanged();
     void languageChanged();
 
@@ -769,6 +784,7 @@ private slots:
     void onSearchCompleted(const QVariantList &results);
     void onScanCompleted(const QList<QVariantMap> &allBooks);
     void onCoverExtracted(const QString &filePath, const QString &coverPath);
+    void onBackgroundCoversFinished();
     void onScanWatchdogTimeout();
     void onProgressSaveTimeout();
     void onPersistentSyncTimeout();
@@ -910,12 +926,15 @@ private:
     bool m_isReaderActive;
     bool m_isPdfReflow;
     bool m_hasPdfText;
+    bool m_pdfHasAnyOcr;
     QString m_currentPdfText;
+    void refreshPdfPageText(int pageNumber);
     QString m_pendingScrollAnchor;
     bool m_ttsAutoAdvance;
     SearchWorker *m_searchWorker;
     ScanWorker *m_scanWorker;
     CoverExtractWorker *m_coverWorker;
+    QStringList m_scanFolders;
 
     void loadSettings();
     void loadSettingsFromQSettings(QSettings &settings);

@@ -610,16 +610,21 @@ QString TxtParser::getChapterContent(int index)
         for (int i = 0; i < lines.size(); ++i) {
             QString line = lines[i].trimmed();
             if (line.isEmpty()) continue;
-            QString esc = escapeHtml(line);
+
+            QString openTag = "<p>";
+            QString closeTag = "</p>";
+            QString body = line;
+            if (line.startsWith("### ")) { openTag = "<h3>"; closeTag = "</h3>"; body = line.mid(4); }
+            else if (line.startsWith("## ")) { openTag = "<h2>"; closeTag = "</h2>"; body = line.mid(3); }
+            else if (line.startsWith("# ")) { openTag = "<h1>"; closeTag = "</h1>"; body = line.mid(2); }
+            else if (line.startsWith("- ") || line.startsWith("* ")) { openTag = "<p style=\"text-indent:0;\">&bull; "; closeTag = "</p>"; body = line.mid(2); }
+            else if (line.startsWith("> ")) { openTag = "<blockquote>"; closeTag = "</blockquote>"; body = line.mid(2); }
+
+            QString esc = escapeHtml(body);
             esc.replace(boldRx, "<b>\\1</b>");
             esc.replace(italicRx, "<i>\\1</i>");
             esc.replace(codeRx, "<code>\\1</code>");
-            if (line.startsWith("### ")) html += "<h3>" + esc.mid(4) + "</h3>";
-            else if (line.startsWith("## ")) html += "<h2>" + esc.mid(3) + "</h2>";
-            else if (line.startsWith("# ")) html += "<h1>" + esc.mid(2) + "</h1>";
-            else if (line.startsWith("- ") || line.startsWith("* ")) html += "<p style=\"text-indent:0;\">&bull; " + esc.mid(2) + "</p>";
-            else if (line.startsWith("> ")) html += "<blockquote>" + esc.mid(2) + "</blockquote>";
-            else html += "<p>" + esc + "</p>";
+            html += openTag + esc + closeTag;
         }
         html += "</body></html>";
         return html;

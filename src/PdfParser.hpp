@@ -48,12 +48,17 @@ public:
     bb::cascades::Image currentImage() const;
     QString currentText() const;
     bool hasText() const;
+    QString pageText(int pageNumber);
+    bool hasEmbeddedOcr(int probeLimit = 5);
+    int findNextTextPage(int startPage, int maxScanPages = 30);
 
     // Continuous stream rendering
-    void requestStreamPage(int pageNumber, bool highPriority = true);
+    void requestStreamPage(int pageNumber, int focusPage = -1);
+    void setStreamPriorityPage(int focusPage);
+    bool hasStreamPage(int pageNumber, int generation = -1) const;
     bb::ImageData streamPageImageData(int pageNumber) const;
     void invalidateStreamCache();
-    void storeStreamPage(int generation, int pageNumber, const bb::ImageData &img);
+    void storeStreamPage(int generation, int pageNumber, const bb::ImageData &img, const QString &pageText = QString());
 
     // Display & Layout Controls
     void setScreenWidth(int width);

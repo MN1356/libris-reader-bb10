@@ -130,6 +130,49 @@ Sheet {
                         multiline: true
                     }
 
+                    Container {
+                        visible: wifiDropServer.running && wifiDropServer.accessPin.length > 0
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        topMargin: bookManager.dp(10)
+                        topPadding: bookManager.dp(12)
+                        bottomPadding: bookManager.dp(12)
+                        leftPadding: bookManager.dp(14)
+                        rightPadding: bookManager.dp(14)
+                        background: Color.create(bookManager.uiCard)
+                        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                        Container {
+                            verticalAlignment: VerticalAlignment.Center
+                            layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                            layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                            Label {
+                                text: qsTr("MÃ PIN TRUY CẬP") + Retranslate.onLanguageChanged
+                                textStyle.base: SystemDefaults.TextStyles.SmallText
+                                textStyle.fontWeight: FontWeight.Bold
+                                textStyle.color: Color.create(bookManager.uiMuted)
+                            }
+                            Label {
+                                topMargin: bookManager.dp(2)
+                                text: qsTr("Nhập mã này trên trình duyệt để mở khóa") + Retranslate.onLanguageChanged
+                                textStyle.base: SystemDefaults.TextStyles.SmallText
+                                textStyle.color: Color.create(bookManager.uiMuted)
+                                multiline: true
+                            }
+                        }
+
+                        Label {
+                            verticalAlignment: VerticalAlignment.Center
+                            leftMargin: bookManager.dp(12)
+                            text: wifiDropServer.accessPin.split("").join(" ")
+                            textStyle.base: SystemDefaults.TextStyles.BigText
+                            textStyle.fontSize: FontSize.PointValue
+                            textStyle.fontSizeValue: 18
+                            textStyle.fontWeight: FontWeight.Bold
+                            textStyle.color: Color.create(bookManager.uiAccent)
+                        }
+                    }
+
                     Label {
                         visible: wifiDropServer.running && wifiDropServer.serverUrl.length === 0
                         topMargin: bookManager.dp(6)
