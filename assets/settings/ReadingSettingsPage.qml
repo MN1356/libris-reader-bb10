@@ -186,10 +186,58 @@ Page {
                     title: qsTr("Lật trang bằng phím âm lượng") + Retranslate.onLanguageChanged
                     subtitle: qsTr("Nhấn Giảm âm lượng để sang trang tiếp, Tăng âm lượng để lùi trang (tự nhả khi bật TTS)") + Retranslate.onLanguageChanged
                     checked: bookManager.volumeKeyTurnEnabled
-                    showDivider: false
                     onToggled: {
                         if (checked !== bookManager.volumeKeyTurnEnabled) {
                             bookManager.setVolumeKeyTurnEnabled(checked);
+                        }
+                    }
+                }
+
+                ToggleableListItem {
+                    title: qsTr("Đảo chiều phím âm lượng") + Retranslate.onLanguageChanged
+                    subtitle: qsTr("Nhấn Tăng âm lượng để sang trang tiếp, Giảm âm lượng để lùi trang") + Retranslate.onLanguageChanged
+                    checked: bookManager.invertVolumeKeys
+                    showDivider: false
+                    onToggled: {
+                        if (checked !== bookManager.invertVolumeKeys) {
+                            bookManager.setInvertVolumeKeys(checked);
+                        }
+                    }
+                }
+
+                Container {
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    topPadding: bookManager.dp(10)
+                    bottomPadding: bookManager.dp(16)
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+
+                    DropDown {
+                        title: qsTr("Nhắc nghỉ mắt (Pomodoro)") + Retranslate.onLanguageChanged
+                        Option {
+                            text: qsTr("Tắt") + Retranslate.onLanguageChanged
+                            value: 0
+                            selected: bookManager.eyeRestMinutes === 0
+                        }
+                        Option {
+                            text: "20 " + (bookManager.language === "en" ? "min" : "phút")
+                            value: 20
+                            selected: bookManager.eyeRestMinutes === 20
+                        }
+                        Option {
+                            text: "30 " + (bookManager.language === "en" ? "min" : "phút")
+                            value: 30
+                            selected: bookManager.eyeRestMinutes === 30
+                        }
+                        Option {
+                            text: "45 " + (bookManager.language === "en" ? "min" : "phút")
+                            value: 45
+                            selected: bookManager.eyeRestMinutes === 45
+                        }
+                        onSelectedValueChanged: {
+                            if (selectedValue !== undefined && selectedValue !== bookManager.eyeRestMinutes) {
+                                bookManager.setEyeRestMinutes(selectedValue);
+                            }
                         }
                     }
                 }

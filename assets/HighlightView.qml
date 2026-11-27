@@ -295,7 +295,7 @@ Container {
 
                         contextActions: [
                             ActionSet {
-                                title: ListItemData.bookTitle ? ListItemData.bookTitle : qsTr("Ghi chú & Dấu trang")
+                                title: (ListItemData.bookTitle ? ListItemData.bookTitle : qsTr("Ghi chú & Dấu trang")) + Retranslate.onLanguageChanged
                                 subtitle: ListItemData.chapterTitle ? ListItemData.chapterTitle : ""
 
                                 ActionItem {
@@ -307,6 +307,11 @@ Container {
                                     title: (ListItemData.note && ListItemData.note.length > 0 ? qsTr("Sửa ghi chú") : qsTr("Thêm ghi chú")) + Retranslate.onLanguageChanged
                                     imageSource: "asset:///icons/ic_highlight.png"
                                     onTriggered: { hlItemCell.ListItem.view.triggerEditNote(ListItemData); }
+                                }
+                                ActionItem {
+                                    title: qsTr("Lưu ảnh trích dẫn") + Retranslate.onLanguageChanged
+                                    imageSource: "asset:///icons/ic_download.png"
+                                    onTriggered: { hlItemCell.ListItem.view.triggerExportQuoteCard(ListItemData); }
                                 }
                                 DeleteActionItem {
                                     title: qsTr("Xóa") + Retranslate.onLanguageChanged
@@ -453,6 +458,15 @@ Container {
                     bookManager.removeHighlight(item.id);
                 }
                 reloadModel();
+            }
+
+            function triggerExportQuoteCard(item) {
+                var txt = item.itemType === "bookmark" ? item.snippet : item.text;
+                var title = item.bookTitle ? item.bookTitle : "";
+                var col = item.color ? item.color : "yellow";
+                var outPath = bookManager.exportQuoteCardPng(txt ? txt : "", title, "", col);
+                hlViewToast.body = (outPath !== "" ? (qsTr("Đã lưu ảnh trích dẫn: ") + outPath) : qsTr("Không thể tạo ảnh trích dẫn")) + Retranslate.onLanguageChanged;
+                hlViewToast.show();
             }
 
             onTriggered: {

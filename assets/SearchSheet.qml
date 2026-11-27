@@ -317,7 +317,12 @@ Sheet {
     function executeSearch() {
         var query = searchInputField.text.trim();
         searchSheet.activeSearchTerm = query;
-        if (query.length === 0) return;
+        if (query.length === 0) {
+            if (typeof resultsDataModel !== "undefined" && resultsDataModel) {
+                resultsDataModel.clear();
+            }
+            return;
+        }
 
         var scope = scopeControl.selectedValue;
         bookManager.searchBook(query, scope);
@@ -334,6 +339,7 @@ Sheet {
     }
 
     onOpened: {
+        searchInputField.requestFocus();
         if (searchInputField.text.trim().length > 0) {
             executeSearch();
         }

@@ -55,6 +55,17 @@ class BookManager : public QObject {
 
     // Application UI Theme: "dark" or "light"
     Q_PROPERTY(QString appTheme READ appTheme WRITE setAppTheme NOTIFY appThemeChanged)
+    Q_PROPERTY(QString textAlign READ textAlign WRITE setTextAlign NOTIFY textAlignChanged)
+    Q_PROPERTY(bool overridePublisherCss READ overridePublisherCss WRITE setOverridePublisherCss NOTIFY overridePublisherCssChanged)
+    Q_PROPERTY(QString paragraphIndent READ paragraphIndent WRITE setParagraphIndent NOTIFY typographyChanged)
+    Q_PROPERTY(QString paragraphSpacing READ paragraphSpacing WRITE setParagraphSpacing NOTIFY typographyChanged)
+    Q_PROPERTY(int readerFontWeight READ readerFontWeight WRITE setReaderFontWeight NOTIFY typographyChanged)
+    Q_PROPERTY(QString darkTextTone READ darkTextTone WRITE setDarkTextTone NOTIFY typographyChanged)
+    Q_PROPERTY(bool showFooterProgressBar READ showFooterProgressBar WRITE setShowFooterProgressBar NOTIFY footerSettingsChanged)
+    Q_PROPERTY(bool showFooterTimeLeft READ showFooterTimeLeft WRITE setShowFooterTimeLeft NOTIFY footerSettingsChanged)
+    Q_PROPERTY(int eyeRestMinutes READ eyeRestMinutes WRITE setEyeRestMinutes NOTIFY readingPrefsChanged)
+    Q_PROPERTY(bool invertVolumeKeys READ invertVolumeKeys WRITE setInvertVolumeKeys NOTIFY readingPrefsChanged)
+    Q_PROPERTY(bool bionicReading READ bionicReading WRITE setBionicReading NOTIFY typographyChanged)
 
     // Scanning & Loading status
     Q_PROPERTY(bool isScanning READ isScanning NOTIFY isScanningChanged)
@@ -551,6 +562,7 @@ public Q_SLOTS:
     Q_INVOKABLE void refreshHighlights();
     Q_INVOKABLE QString exportBookHighlightsToMarkdown(const QString &filePath = QString());
     Q_INVOKABLE QString exportAllHighlightsToMarkdown();
+    Q_INVOKABLE QString exportQuoteCardPng(const QString &quoteText, const QString &bookTitle, const QString &author = QString(), const QString &colorName = "yellow");
 
     QVariantList currentBookHighlights() const;
     QVariantList allHighlights() const;
@@ -594,6 +606,33 @@ public Q_SLOTS:
     Q_INVOKABLE QString persistentJsonFilePath() const;
     Q_INVOKABLE QString persistentHighlightsPath() const;
     Q_INVOKABLE QString persistentStorageStatus() const;
+    QString textAlign() const { return m_textAlign; }
+    bool overridePublisherCss() const { return m_overridePublisherCss; }
+    Q_INVOKABLE void setTextAlign(const QString &align);
+    Q_INVOKABLE void setOverridePublisherCss(bool overrideCss);
+    QString paragraphIndent() const { return m_paragraphIndent; }
+    QString paragraphSpacing() const { return m_paragraphSpacing; }
+    int readerFontWeight() const { return m_readerFontWeight; }
+    QString darkTextTone() const { return m_darkTextTone; }
+    bool showFooterProgressBar() const { return m_showFooterProgressBar; }
+    bool showFooterTimeLeft() const { return m_showFooterTimeLeft; }
+    int eyeRestMinutes() const { return m_eyeRestMinutes; }
+    bool invertVolumeKeys() const { return m_invertVolumeKeys; }
+    Q_INVOKABLE void setParagraphIndent(const QString &indent);
+    Q_INVOKABLE void setParagraphSpacing(const QString &spacing);
+    Q_INVOKABLE void setReaderFontWeight(int weight);
+    Q_INVOKABLE void setDarkTextTone(const QString &tone);
+    Q_INVOKABLE void setShowFooterProgressBar(bool show);
+    Q_INVOKABLE void setShowFooterTimeLeft(bool show);
+    Q_INVOKABLE void setEyeRestMinutes(int minutes);
+    Q_INVOKABLE void setInvertVolumeKeys(bool invert);
+    bool bionicReading() const { return m_bionicReading; }
+    Q_INVOKABLE void setBionicReading(bool enabled);
+    Q_INVOKABLE int getBookRating(const QString &filePath) const;
+    Q_INVOKABLE void setBookRating(const QString &filePath, int rating);
+    Q_INVOKABLE QString getBookReview(const QString &filePath) const;
+    Q_INVOKABLE void setBookReview(const QString &filePath, const QString &review);
+    Q_INVOKABLE bool updateBookMetadata(const QString &filePath, const QString &title, const QString &author, const QString &series, int seriesIndex);
     Q_INVOKABLE void syncToPersistentStorage();
     Q_INVOKABLE void restoreFromPersistentStorage();
     Q_INVOKABLE QString createBackupArchive();
@@ -661,6 +700,11 @@ signals:
     void currentTimeChanged();
     void lineSpacingChanged();
     void marginsChanged();
+    void textAlignChanged();
+    void overridePublisherCssChanged();
+    void typographyChanged();
+    void readingPrefsChanged();
+    void eyeRestReminder();
 
     void mainViewModeChanged();
     void isScanningChanged();
@@ -703,8 +747,11 @@ private slots:
     void onCoverExtracted(const QString &filePath, const QString &coverPath);
     void onScanWatchdogTimeout();
     void onProgressSaveTimeout();
+    void onPersistentSyncTimeout();
 
 private:
+    void schedulePersistentSync();
+    QTimer m_persistSyncTimer;
     mutable EpubParser m_epubParser;
     mutable TxtParser m_txtParser;
     mutable Fb2Parser m_fb2Parser;
@@ -812,6 +859,8 @@ private:
     bool m_showFooterBattery;
     bool m_showFooterClock;
     QString m_lineSpacing;
+    QString m_textAlign;    // "justify", "left"
+    bool m_overridePublisherCss;
     int m_marginTop;
     int m_marginBottom;
     int m_marginLeft;
@@ -882,6 +931,16 @@ private:
     bool m_volumeKeyTurnEnabled;
     bb::multimedia::MediaKeyWatcher *m_volUpWatcher;
     bb::multimedia::MediaKeyWatcher *m_volDownWatcher;
+    QString m_paragraphIndent;
+    QString m_paragraphSpacing;
+    int m_readerFontWeight;
+    QString m_darkTextTone;
+    bool m_showFooterProgressBar;
+    bool m_showFooterTimeLeft;
+    int m_eyeRestMinutes;
+    bool m_invertVolumeKeys;
+    int m_sessionReadingSeconds;
+    bool m_bionicReading;
 
     void updateVolumeKeyWatchers();
     void loadCustomShelvesFromSettings(QSettings &settings);

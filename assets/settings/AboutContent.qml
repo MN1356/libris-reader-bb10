@@ -95,6 +95,7 @@ Container {
                     Label {
                         topMargin: bookManager.dp(4)
                         horizontalAlignment: HorizontalAlignment.Center
+                        multiline: true
                         text: qsTr("Phiên bản %1 (Build %2) - BlackBerry 10").arg(bookManager.appVersion).arg(bookManager.buildNumber) + Retranslate.onLanguageChanged
                         textStyle.base: SystemDefaults.TextStyles.SmallText
                         textStyle.color: Color.create(bookManager.uiInk)

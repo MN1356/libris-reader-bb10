@@ -12,7 +12,8 @@ Sheet {
     }
 
     onClosed: {
-        while (opdsNavPane.top !== opdsPage) {
+        var guard = 0;
+        while (opdsNavPane.top && opdsNavPane.top !== opdsPage && guard++ < 8) {
             opdsNavPane.pop();
         }
     }
@@ -575,7 +576,7 @@ Sheet {
                     ListView {
                         id: opdsFeedListView
                         scrollRole: ScrollRole.Main
-                        visible: !opdsManager.isLoading
+                        visible: !opdsManager.isLoading && opdsManager.feedModel.size() > 0
                         horizontalAlignment: HorizontalAlignment.Fill
                         verticalAlignment: VerticalAlignment.Fill
                         dataModel: opdsManager.feedModel

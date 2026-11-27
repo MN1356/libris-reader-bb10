@@ -12,6 +12,7 @@ Fb2Parser::Fb2Parser()
     : m_title("Tài liệu FB2")
     , m_author("Không rõ tác giả")
     , m_seriesIndex(0)
+    , m_renderDepth(0)
 {
 }
 
@@ -155,6 +156,15 @@ static QString fb2ImageMime(const QString &b64)
 
 QString Fb2Parser::renderNode(const pugi::xml_node &child)
 {
+    if (m_renderDepth >= 64) {
+        return QString();
+    }
+    struct DepthGuard {
+        int &d;
+        DepthGuard(int &x) : d(x) { ++d; }
+        ~DepthGuard() { --d; }
+    } depthGuard(m_renderDepth);
+
     QString tag = QString::fromLatin1(child.name()).toLower();
 
     if (tag.isEmpty()) {

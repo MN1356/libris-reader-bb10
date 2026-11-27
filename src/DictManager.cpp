@@ -200,16 +200,38 @@ void DictManager::lookupOnline(const QString &word, const QString &targetLang)
     sslConfig.setSslOption(QSsl::SslOptionDisableServerNameIndication, false);
     req.setSslConfiguration(sslConfig);
 
+    static quint64 s_lookupSeq = 0;
+    quint64 reqSeq = ++s_lookupSeq;
     QNetworkReply *reply = m_nam->get(req);
+    reply->setProperty("reqSeq", qulonglong(reqSeq));
     reply->ignoreSslErrors();
     connect(reply, SIGNAL(sslErrors(QList<QSslError>)), reply, SLOT(ignoreSslErrors()));
     connect(reply, SIGNAL(finished()), this, SLOT(onOnlineLookupFinished()));
+
+    QTimer *timeoutTimer = new QTimer(reply);
+    timeoutTimer->setSingleShot(true);
+    connect(timeoutTimer, SIGNAL(timeout()), reply, SLOT(abort()));
+    timeoutTimer->start(15000);
 }
 
 void DictManager::onOnlineLookupFinished()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
     if (!reply) return;
+
+    QVariant seqVar = reply->property("reqSeq");
+    if (seqVar.isValid()) {
+        // Ignore stale replies if a newer lookupOnline() was already issued
+        QList<QNetworkReply*> activeReplies = m_nam->findChildren<QNetworkReply*>();
+        quint64 mySeq = seqVar.toULongLong();
+        for (int i = 0; i < activeReplies.size(); ++i) {
+            QNetworkReply *other = activeReplies.at(i);
+            if (other && other != reply && other->property("reqSeq").toULongLong() > mySeq) {
+                reply->deleteLater();
+                return;
+            }
+        }
+    }
 
     m_isLookingUp = false;
     emit lookupStateChanged();
@@ -357,10 +379,18 @@ void DictManager::translateText(const QString &text, const QString &sourceLang, 
     sslConfig.setSslOption(QSsl::SslOptionDisableServerNameIndication, false);
     req.setSslConfiguration(sslConfig);
 
+    static quint64 s_translateSeq = 0;
+    quint64 trSeq = ++s_translateSeq;
     QNetworkReply *reply = m_nam->get(req);
+    reply->setProperty("trSeq", qulonglong(trSeq));
     reply->ignoreSslErrors();
     connect(reply, SIGNAL(sslErrors(QList<QSslError>)), reply, SLOT(ignoreSslErrors()));
     connect(reply, SIGNAL(finished()), this, SLOT(onTranslationFinished()));
+
+    QTimer *timeoutTimer = new QTimer(reply);
+    timeoutTimer->setSingleShot(true);
+    connect(timeoutTimer, SIGNAL(timeout()), reply, SLOT(abort()));
+    timeoutTimer->start(15000);
 }
 
 QString DictManager::parseGoogleTranslateResponse(const QByteArray &data, QString &outDetectedLang) const
@@ -398,6 +428,19 @@ void DictManager::onTranslationFinished()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
     if (!reply) return;
+
+    QVariant seqVar = reply->property("trSeq");
+    if (seqVar.isValid()) {
+        QList<QNetworkReply*> activeReplies = m_nam->findChildren<QNetworkReply*>();
+        quint64 mySeq = seqVar.toULongLong();
+        for (int i = 0; i < activeReplies.size(); ++i) {
+            QNetworkReply *other = activeReplies.at(i);
+            if (other && other != reply && other->property("trSeq").toULongLong() > mySeq) {
+                reply->deleteLater();
+                return;
+            }
+        }
+    }
 
     m_isTranslating = false;
     emit translateStateChanged();

@@ -1,3 +1,12 @@
+Version 2.0.0 (Build 211) - 2026-11-27:
+- Context-aware Active Frame: shows book cover & progress % while reading; shows today's time / daily goal over a dimmed cover on the main UI.
+- Added Bionic Reading (V), Reading Ruler (R), Keyboard Shortcuts overlay (?), Jump History (U/Backspace), and chapter time-left estimate.
+- Added Markdown (.md) & HTML reading, TXT VNI decoding, and TTS pronunciation normalization.
+- Upgraded Wi-Fi Drop with Web Clipper (/api/clip), Notes (.md) download, and stats API.
+- Added Quote Card PNG export, 1-5★ ratings & reviews, Metadata Editor, and PDF horizontal scroll lock (Q).
+- Expanded Settings: text alignment, publisher CSS override, paragraph indent/spacing, font weight, dark text tone, inverted volume keys, and Pomodoro eye-rest reminder.
+- Fixed security, stability & UX bugs (MOBI overflows, DRM check, ZIP limits, atomic backup, applyStyleLive JS, restore Highlights/Bookmarks) and added Accessibility labels.
+
 Version 2.0.0 (Build 210) - 2026-11-23:
 - Simplified text-selection bar to monochrome icon-only (#E8ECF2) matching native BlackBerry 10 chrome, removing text labels and centering icons on a single 36px row.
 

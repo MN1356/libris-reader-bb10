@@ -140,6 +140,7 @@ bool PdfParser::open(const QString &filePath, int targetPage)
 
 void PdfParser::close()
 {
+    if (!d) return;
     if (d->core && d->core->isSessionLoaded()) {
         d->core->resetSession();
     }
@@ -392,6 +393,7 @@ QString PdfParser::extractCover(const QString &cacheDir)
 {
     if (!d || d->filePath.isEmpty()) return QString();
 
+    QDir().mkpath(cacheDir);
     QString hash = QString(QCryptographicHash::hash(d->filePath.toUtf8(), QCryptographicHash::Md5).toHex());
     QString outPath = cacheDir + "/" + hash + ".png";
 

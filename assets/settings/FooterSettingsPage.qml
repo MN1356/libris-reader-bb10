@@ -130,9 +130,27 @@ Page {
                     title: qsTr("Đồng hồ") + Retranslate.onLanguageChanged
                     subtitle: qsTr("Hiển thị thời gian hiện tại") + Retranslate.onLanguageChanged
                     checked: bookManager.showFooterClock
-                    showDivider: false
                     onToggled: {
                         bookManager.setShowFooterClock(checked);
+                    }
+                }
+
+                ToggleableListItem {
+                    title: qsTr("Thanh tiến độ mảnh") + Retranslate.onLanguageChanged
+                    subtitle: qsTr("Hiển thị vạch tiến độ 3px phía trên chân trang") + Retranslate.onLanguageChanged
+                    checked: bookManager.showFooterProgressBar
+                    onToggled: {
+                        bookManager.setShowFooterProgressBar(checked);
+                    }
+                }
+
+                ToggleableListItem {
+                    title: qsTr("Ước tính thời gian còn lại") + Retranslate.onLanguageChanged
+                    subtitle: qsTr("Hiển thị số phút dự kiến hết chương ở chân trang") + Retranslate.onLanguageChanged
+                    checked: bookManager.showFooterTimeLeft
+                    showDivider: false
+                    onToggled: {
+                        bookManager.setShowFooterTimeLeft(checked);
                     }
                 }
 

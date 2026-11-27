@@ -19,9 +19,12 @@ Container {
     property int progressValue: (bookManager.currentFilePath !== "") ? (bookManager.readingProgress >= 0 ? bookManager.readingProgress : 0) :
                                 (bookManager.hasLastBook ? (bookManager.lastBookProgress >= 0 ? bookManager.lastBookProgress : 0) : 0)
 
-    // 1. Active Book State
+    property int goalSeconds: Math.max(60, bookManager.dailyGoalMinutes * 60)
+    property int goalPct: Math.min(100, Math.round((bookManager.todayReadingSeconds * 100) / goalSeconds))
+
+    // 1. Reader Active State: Book Cover + % Progress
     Container {
-        visible: bookTitle !== ""
+        visible: bookManager.isReaderActive && bookTitle !== ""
         horizontalAlignment: HorizontalAlignment.Fill
         verticalAlignment: VerticalAlignment.Fill
         layout: DockLayout {}
@@ -86,15 +89,26 @@ Container {
                 bottomPadding: bookManager.dp(8)
                 leftPadding: bookManager.dp(12)
                 rightPadding: bookManager.dp(12)
+                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
                 Label {
-                    horizontalAlignment: HorizontalAlignment.Fill
+                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                    verticalAlignment: VerticalAlignment.Center
                     text: bookTitle
                     textStyle.base: SystemDefaults.TextStyles.SubtitleText
                     textStyle.fontWeight: FontWeight.Bold
                     textStyle.color: Color.create("#F5EFE6")
                     multiline: true
                     autoSize.maxLineCount: 2
+                }
+
+                Label {
+                    leftMargin: bookManager.dp(8)
+                    verticalAlignment: VerticalAlignment.Center
+                    text: progressValue + "%"
+                    textStyle.base: SystemDefaults.TextStyles.SubtitleText
+                    textStyle.fontWeight: FontWeight.Bold
+                    textStyle.color: Color.create("#D9AB60")
                 }
             }
 
@@ -125,34 +139,106 @@ Container {
         }
     }
 
-    // 2. Empty State
+    // 2. Main UI Active Frame: Today Reading Time / Daily Goal over dimmed current book cover
     Container {
-        visible: bookTitle === ""
-        horizontalAlignment: HorizontalAlignment.Center
-        verticalAlignment: VerticalAlignment.Center
+        visible: !bookManager.isReaderActive
+        horizontalAlignment: HorizontalAlignment.Fill
+        verticalAlignment: VerticalAlignment.Fill
+        layout: DockLayout {}
+
+        // Dimmed book cover background
+        ImageView {
+            visible: bookTitle !== "" && coverPath !== ""
+            horizontalAlignment: HorizontalAlignment.Fill
+            verticalAlignment: VerticalAlignment.Fill
+            imageSource: coverPath !== "" ? ("file://" + coverPath) : ""
+            scalingMethod: ScalingMethod.AspectFill
+            opacity: 0.24
+        }
 
         ImageView {
-            horizontalAlignment: HorizontalAlignment.Center
-            preferredWidth: bookManager.dp(56)
-            preferredHeight: bookManager.dp(56)
-            imageSource: "asset:///icons/ic_app_dark.png"
+            visible: bookTitle !== "" && coverPath === ""
+            horizontalAlignment: HorizontalAlignment.Fill
+            verticalAlignment: VerticalAlignment.Fill
+            imageSource: {
+                var fmt = coverRootContainer.bookFormat ? coverRootContainer.bookFormat.toLowerCase() : "epub";
+                if (fmt === "azw" || fmt === "azw3" || fmt === "kf8" || fmt === "prc") fmt = "mobi";
+                if (fmt !== "pdf" && fmt !== "epub" && fmt !== "mobi" && fmt !== "fb2" && fmt !== "cbz" && fmt !== "djvu" && fmt !== "txt") fmt = "epub";
+                return "asset:///icons/default_cover_" + fmt + ".png";
+            }
+            scalingMethod: ScalingMethod.AspectFill
+            opacity: 0.20
         }
 
-        Label {
-            topMargin: bookManager.dp(8)
-            horizontalAlignment: HorizontalAlignment.Center
-            text: "Libris"
-            textStyle.base: SystemDefaults.TextStyles.TitleText
-            textStyle.fontWeight: FontWeight.Bold
-            textStyle.color: Color.create("#D9AB60")
+        Container {
+            horizontalAlignment: HorizontalAlignment.Fill
+            verticalAlignment: VerticalAlignment.Fill
+            background: Color.create(0.05, 0.04, 0.03, 0.55)
         }
 
-        Label {
-            topMargin: bookManager.dp(4)
-            horizontalAlignment: HorizontalAlignment.Center
-            text: qsTr("Chưa có sách đang đọc") + Retranslate.onLanguageChanged
-            textStyle.base: SystemDefaults.TextStyles.SmallText
-            textStyle.color: Color.create("#9C9488")
+        // Foreground Daily Goal & Today Time
+        Container {
+            horizontalAlignment: HorizontalAlignment.Fill
+            verticalAlignment: VerticalAlignment.Center
+            leftPadding: bookManager.dp(16)
+            rightPadding: bookManager.dp(16)
+            layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+            Label {
+                horizontalAlignment: HorizontalAlignment.Center
+                text: qsTr("Hôm nay") + Retranslate.onLanguageChanged
+                textStyle.base: SystemDefaults.TextStyles.SmallText
+                textStyle.color: Color.create("#B8AD9E")
+            }
+
+            Label {
+                topMargin: bookManager.dp(4)
+                horizontalAlignment: HorizontalAlignment.Center
+                text: bookManager.todayReadingTimeStr
+                textStyle.base: SystemDefaults.TextStyles.TitleText
+                textStyle.fontWeight: FontWeight.Bold
+                textStyle.color: Color.create("#D9AB60")
+            }
+
+            Label {
+                topMargin: bookManager.dp(4)
+                horizontalAlignment: HorizontalAlignment.Center
+                text: qsTr("Mục tiêu:") + " " + bookManager.dailyGoalMinutes + " " + qsTr("phút") + " (" + goalPct + "%)"
+                textStyle.base: SystemDefaults.TextStyles.SmallText
+                textStyle.color: Color.create("#E6DFD3")
+            }
+
+            Container {
+                topMargin: bookManager.dp(10)
+                horizontalAlignment: HorizontalAlignment.Fill
+                preferredHeight: bookManager.dp(6)
+                minHeight: bookManager.dp(6)
+                background: Color.create("#26211B")
+                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                Container {
+                    verticalAlignment: VerticalAlignment.Fill
+                    background: goalPct >= 100 ? Color.create("#5FA876") : Color.create("#D9AB60")
+                    visible: goalPct > 0
+                    layoutProperties: StackLayoutProperties { spaceQuota: Math.max(0.001, goalPct) }
+                }
+                Container {
+                    verticalAlignment: VerticalAlignment.Fill
+                    background: Color.Transparent
+                    visible: goalPct < 100
+                    layoutProperties: StackLayoutProperties { spaceQuota: Math.max(0.001, 100 - goalPct) }
+                }
+            }
+
+            Label {
+                visible: bookTitle !== ""
+                topMargin: bookManager.dp(12)
+                horizontalAlignment: HorizontalAlignment.Center
+                text: bookTitle
+                textStyle.base: SystemDefaults.TextStyles.SmallText
+                textStyle.color: Color.create("#C8BFB0")
+                autoSize.maxLineCount: 1
+            }
         }
     }
 }

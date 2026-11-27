@@ -11,7 +11,7 @@
 SearchWorker::SearchWorker(const SearchParams &params, QObject *parent)
     : QThread(parent)
     , m_params(params)
-    , m_cancelled(false)
+    , m_cancelled(0)
 {
 }
 
@@ -23,7 +23,7 @@ SearchWorker::~SearchWorker()
 
 void SearchWorker::cancel()
 {
-    m_cancelled = true;
+    m_cancelled.fetchAndStoreOrdered(1);
 }
 
 static QString escapeHtmlSnippet(const QString &str)
@@ -49,21 +49,27 @@ QString SearchWorker::extractSnippet(const QString &text, int matchPos, int matc
         end++;
     }
 
-    QString snippet = text.mid(start, end - start).trimmed();
-    snippet.replace(QRegExp("[\\r\\n\\t]+"), " ");
-    snippet = escapeHtmlSnippet(snippet);
+    QString rawSnippet = text.mid(start, end - start).trimmed();
+    rawSnippet.replace(QRegExp("[\\r\\n\\t]+"), " ");
 
-    QString q = query.trimmed();
-    if (!q.isEmpty()) {
-        QString escQ = escapeHtmlSnippet(q);
-        QRegExp rx("(" + QRegExp::escape(escQ) + ")", Qt::CaseInsensitive);
-        snippet.replace(rx, "<b>\\1</b>");
-    } else if (matchLen > 0) {
-        QString matchWord = escapeHtmlSnippet(text.mid(matchPos, matchLen));
-        if (!matchWord.isEmpty()) {
-            QRegExp rx("(" + QRegExp::escape(matchWord) + ")", Qt::CaseInsensitive);
-            snippet.replace(rx, "<b>\\1</b>");
+    QString needle = query.trimmed();
+    if (needle.isEmpty() && matchLen > 0) {
+        needle = text.mid(matchPos, matchLen);
+    }
+    QString snippet;
+    if (!needle.isEmpty()) {
+        QRegExp rx(QRegExp::escape(needle), Qt::CaseInsensitive);
+        int pos = 0, last = 0;
+        while ((pos = rx.indexIn(rawSnippet, last)) != -1) {
+            int len = rx.matchedLength();
+            if (len <= 0) break;
+            snippet += escapeHtmlSnippet(rawSnippet.mid(last, pos - last));
+            snippet += "<b>" + escapeHtmlSnippet(rawSnippet.mid(pos, len)) + "</b>";
+            last = pos + len;
         }
+        snippet += escapeHtmlSnippet(rawSnippet.mid(last));
+    } else {
+        snippet = escapeHtmlSnippet(rawSnippet);
     }
 
     if (start > 0) {
@@ -271,8 +277,8 @@ ScanWorker::ScanWorker(const QStringList &searchRoots, const QString &cacheDir, 
     : QThread(parent)
     , m_searchRoots(searchRoots)
     , m_cacheDir(cacheDir)
-    , m_cancelled(false)
-    , m_emitPartial(false)
+    , m_cancelled(0)
+    , m_emitPartial(0)
 {
 }
 
@@ -289,8 +295,10 @@ void ScanWorker::setPrefsSnapshot(const ScanPrefsSnapshot &prefs)
 
 void ScanWorker::cancel(bool emitPartial)
 {
-    m_emitPartial = emitPartial;
-    m_cancelled = true;
+    if (emitPartial) {
+        m_emitPartial.fetchAndStoreOrdered(1);
+    }
+    m_cancelled.fetchAndStoreOrdered(1);
 }
 
 void ScanWorker::extractSeriesFromTitleOrFile(const QString &title, const QString &fileName, QString &outSeries, int &outIndex)
@@ -361,6 +369,8 @@ void ScanWorker::scanDir(const QString &dirPath, int depth, QSet<QString> &visit
         QString bookTitle = rawName;
         QString bookAuthor = (ext == "epub") ? "EPUB eBook" :
                              (ext == "txt")  ? "Văn bản TXT" :
+                             (ext == "md" || ext == "markdown") ? "Markdown" :
+                             (ext == "html" || ext == "htm") ? "Web / HTML" :
                              (ext == "fb2")  ? "FB2 FictionBook" :
                              (ext == "pdf")  ? "Tài liệu PDF" :
                              (ext == "djvu" || ext == "djv") ? "Tài liệu DjVu" :
@@ -659,7 +669,7 @@ CoverExtractWorker::CoverExtractWorker(const QStringList &bookPaths, const QStri
     : QThread(parent)
     , m_bookPaths(bookPaths)
     , m_cacheDir(cacheDir)
-    , m_cancelled(false)
+    , m_cancelled(0)
 {
 }
 
@@ -671,7 +681,7 @@ CoverExtractWorker::~CoverExtractWorker()
 
 void CoverExtractWorker::cancel()
 {
-    m_cancelled = true;
+    m_cancelled.fetchAndStoreOrdered(1);
 }
 
 void CoverExtractWorker::run()

@@ -2,6 +2,7 @@
 #define BOOKWORKERS_HPP
 
 #include <QThread>
+#include <QAtomicInt>
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
@@ -48,7 +49,7 @@ protected:
 
 private:
     SearchParams m_params;
-    volatile bool m_cancelled;
+    QAtomicInt m_cancelled;
 
     static QString extractSnippet(const QString &text, int matchPos, int matchLen, const QString &query = QString());
 };
@@ -90,8 +91,8 @@ private:
     QStringList m_searchRoots;
     QString m_cacheDir;
     ScanPrefsSnapshot m_prefs;
-    volatile bool m_cancelled;
-    volatile bool m_emitPartial;
+    QAtomicInt m_cancelled;
+    QAtomicInt m_emitPartial;
 };
 
 class CoverExtractWorker : public QThread
@@ -111,7 +112,7 @@ protected:
 private:
     QStringList m_bookPaths;
     QString m_cacheDir;
-    volatile bool m_cancelled;
+    QAtomicInt m_cancelled;
 };
 
 Q_DECLARE_METATYPE(QList<QVariantMap>)

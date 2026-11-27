@@ -386,6 +386,11 @@ void OpdsManager::setupReply(QNetworkReply *reply)
     reply->ignoreSslErrors();
     connect(reply, SIGNAL(sslErrors(QList<QSslError>)), reply, SLOT(ignoreSslErrors()));
     connect(reply, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(onSslErrors(QList<QSslError>)));
+
+    QTimer *timeoutTimer = new QTimer(reply);
+    timeoutTimer->setSingleShot(true);
+    connect(timeoutTimer, SIGNAL(timeout()), reply, SLOT(abort()));
+    timeoutTimer->start(30000);
 }
 
 void OpdsManager::sendFeedRequest(const QString &urlStr)
@@ -1334,9 +1339,15 @@ void OpdsManager::onOpenSearchReplyFinished()
 
     QVariant redirectVar = reply->attribute(QNetworkRequest::RedirectionTargetAttribute);
     if (!redirectVar.isNull()) {
+        int redirCount = reply->property("openSearchRedirCount").toInt();
         QUrl redir = reply->url().resolved(redirectVar.toUrl());
         reply->deleteLater();
-        fetchOpenSearchDescription(QString::fromUtf8(redir.toEncoded()));
+        if (redirCount < 5) {
+            fetchOpenSearchDescription(QString::fromUtf8(redir.toEncoded()));
+            if (m_openSearchReply) {
+                m_openSearchReply->setProperty("openSearchRedirCount", redirCount + 1);
+            }
+        }
         return;
     }
 
@@ -1677,6 +1688,7 @@ void OpdsManager::onDownloadFinished()
                 m_downloadFile = NULL;
             }
             emit downloadFailed(tr("Lỗi chuyển hướng tải sách quá nhiều lần (Redirect loop)!"));
+            startNextQueuedDownload();
             return;
         }
 
@@ -1690,6 +1702,7 @@ void OpdsManager::onDownloadFinished()
                 m_downloadFile = NULL;
             }
             emit downloadFailed(tr("Máy chủ bắt buộc dùng HTTPS với chuẩn TLS/mã hóa mới mà thiết bị BB10 chưa hỗ trợ."));
+            startNextQueuedDownload();
             return;
         }
 
@@ -1824,6 +1837,26 @@ void OpdsManager::onCoverReplyFinished()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (!reply) return;
+
+    QVariant redirectVar = reply->attribute(QNetworkRequest::RedirectionTargetAttribute);
+    if (!redirectVar.isNull()) {
+        int redirCount = reply->property("coverRedirCount").toInt();
+        QUrl redirUrl = reply->url().resolved(redirectVar.toUrl());
+        QString cachePath = reply->property("cachePath").toString();
+        QString bookPath = reply->property("bookPath").toString();
+        reply->deleteLater();
+        if (redirCount < 3 && redirUrl.isValid()) {
+            QNetworkRequest req(redirUrl);
+            prepareRequest(req);
+            QNetworkReply *newReply = m_nam->get(req);
+            setupReply(newReply);
+            newReply->setProperty("cachePath", cachePath);
+            newReply->setProperty("bookPath", bookPath);
+            newReply->setProperty("coverRedirCount", redirCount + 1);
+            connect(newReply, SIGNAL(finished()), this, SLOT(onCoverReplyFinished()));
+        }
+        return;
+    }
 
     if (reply->error() == QNetworkReply::NoError) {
         QString cachePath = reply->property("cachePath").toString();

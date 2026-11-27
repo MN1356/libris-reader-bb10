@@ -132,6 +132,8 @@ Sheet {
 
                             // Yellow Swatch
                             Container {
+                                accessibility.name: qsTr("Vàng") + Retranslate.onLanguageChanged
+                                minHeight: bookManager.dp(48)
                                 layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
                                 background: currentColor === "yellow" ? Color.create(bookManager.uiActive) : Color.create(bookManager.uiSurface)
                                 topPadding: bookManager.dp(8)
@@ -158,6 +160,8 @@ Sheet {
 
                             // Green Swatch
                             Container {
+                                accessibility.name: qsTr("Xanh lá") + Retranslate.onLanguageChanged
+                                minHeight: bookManager.dp(48)
                                 leftMargin: bookManager.dp(8)
                                 layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
                                 background: currentColor === "green" ? Color.create(bookManager.uiActive) : Color.create(bookManager.uiSurface)
@@ -185,6 +189,8 @@ Sheet {
 
                             // Blue Swatch
                             Container {
+                                accessibility.name: qsTr("Xanh dương") + Retranslate.onLanguageChanged
+                                minHeight: bookManager.dp(48)
                                 leftMargin: bookManager.dp(8)
                                 layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
                                 background: currentColor === "blue" ? Color.create(bookManager.uiActive) : Color.create(bookManager.uiSurface)
@@ -213,6 +219,8 @@ Sheet {
 
                             // Pink Swatch
                             Container {
+                                accessibility.name: qsTr("Hồng") + Retranslate.onLanguageChanged
+                                minHeight: bookManager.dp(48)
                                 leftMargin: bookManager.dp(8)
                                 layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
                                 background: currentColor === "pink" ? Color.create(bookManager.uiActive) : Color.create(bookManager.uiSurface)

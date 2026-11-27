@@ -1,4 +1,5 @@
 import bb.cascades 1.3
+import bb.system 1.2
 
 Sheet {
     id: bookDetailSheet
@@ -31,9 +32,18 @@ Sheet {
     property string displayRawPath: bookPath !== "" ? bookPath : bookManager.currentFilePath
     property string displayDesc: bookDescription !== "" ? bookDescription : (isCurrentBook ? bookManager.currentBookDescription : "")
     property variant nextSeriesInfo: ({})
+    property int currentRating: 0
+    property bool showMetaEditor: false
 
     onOpened: {
         nextSeriesInfo = bookManager.nextSeriesBook(displayRawPath);
+        currentRating = bookManager.getBookRating(displayRawPath);
+        reviewInput.text = bookManager.getBookReview(displayRawPath);
+        editTitleField.text = displayTitle;
+        editAuthorField.text = bookAuthor !== "" ? bookAuthor : bookManager.currentBookAuthor;
+        editSeriesField.text = bookSeries !== "" ? bookSeries : bookManager.currentBookSeries;
+        editSeriesIdxField.text = "";
+        showMetaEditor = false;
     }
 
     function cleanDesc(t) {
@@ -462,6 +472,7 @@ Sheet {
 
                             Label {
                                 visible: bookDetailSheet.displayDesc === ""
+                                multiline: true
                                 text: qsTr("Chưa có mô tả cho cuốn sách này.") + Retranslate.onLanguageChanged
                                 textStyle.base: SystemDefaults.TextStyles.BodyText
                                 textStyle.fontStyle: FontStyle.Italic
@@ -487,9 +498,152 @@ Sheet {
                                 multiline: true
                             }
                         }
+
+                        // Rating & Review Card
+                        Container {
+                            topMargin: bookManager.dp(12)
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            background: Color.create(bookManager.uiCard)
+                            topPadding: bookManager.dp(12)
+                            bottomPadding: bookManager.dp(12)
+                            leftPadding: bookManager.dp(16)
+                            rightPadding: bookManager.dp(16)
+                            layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                            Label {
+                                text: qsTr("Đánh giá & Cảm nhận") + Retranslate.onLanguageChanged
+                                textStyle.base: SystemDefaults.TextStyles.SubtitleText
+                                textStyle.fontWeight: FontWeight.Bold
+                                textStyle.color: Color.create(bookManager.uiAccent)
+                            }
+
+                            Container {
+                                topMargin: bookManager.dp(8)
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                                Button {
+                                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                    text: bookDetailSheet.currentRating >= 1 ? "★" : "☆"
+                                    onClicked: { bookDetailSheet.currentRating = 1; bookManager.setBookRating(bookDetailSheet.displayRawPath, 1); }
+                                }
+                                Button {
+                                    leftMargin: bookManager.dp(4)
+                                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                    text: bookDetailSheet.currentRating >= 2 ? "★" : "☆"
+                                    onClicked: { bookDetailSheet.currentRating = 2; bookManager.setBookRating(bookDetailSheet.displayRawPath, 2); }
+                                }
+                                Button {
+                                    leftMargin: bookManager.dp(4)
+                                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                    text: bookDetailSheet.currentRating >= 3 ? "★" : "☆"
+                                    onClicked: { bookDetailSheet.currentRating = 3; bookManager.setBookRating(bookDetailSheet.displayRawPath, 3); }
+                                }
+                                Button {
+                                    leftMargin: bookManager.dp(4)
+                                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                    text: bookDetailSheet.currentRating >= 4 ? "★" : "☆"
+                                    onClicked: { bookDetailSheet.currentRating = 4; bookManager.setBookRating(bookDetailSheet.displayRawPath, 4); }
+                                }
+                                Button {
+                                    leftMargin: bookManager.dp(4)
+                                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                    text: bookDetailSheet.currentRating >= 5 ? "★" : "☆"
+                                    onClicked: { bookDetailSheet.currentRating = 5; bookManager.setBookRating(bookDetailSheet.displayRawPath, 5); }
+                                }
+                            }
+
+                            TextArea {
+                                id: reviewInput
+                                topMargin: bookManager.dp(8)
+                                hintText: qsTr("Viết vài dòng cảm nhận về cuốn sách...") + Retranslate.onLanguageChanged
+                                minHeight: bookManager.dp(80)
+                            }
+
+                            Button {
+                                topMargin: bookManager.dp(8)
+                                horizontalAlignment: HorizontalAlignment.Right
+                                text: qsTr("Lưu cảm nhận") + Retranslate.onLanguageChanged
+                                onClicked: {
+                                    bookManager.setBookReview(bookDetailSheet.displayRawPath, reviewInput.text);
+                                    detailToast.body = qsTr("Đã lưu đánh giá & cảm nhận") + Retranslate.onLanguageChanged;
+                                    detailToast.show();
+                                }
+                            }
+                        }
+
+                        // Metadata Editor Card
+                        Container {
+                            topMargin: bookManager.dp(12)
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            background: Color.create(bookManager.uiCard)
+                            topPadding: bookManager.dp(12)
+                            bottomPadding: bookManager.dp(12)
+                            leftPadding: bookManager.dp(16)
+                            rightPadding: bookManager.dp(16)
+                            layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                            Button {
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                text: (bookDetailSheet.showMetaEditor ? qsTr("Ẩn trình sửa thông tin") : qsTr("Sửa thông tin sách (Tên / Tác giả / Bộ)")) + Retranslate.onLanguageChanged
+                                onClicked: { bookDetailSheet.showMetaEditor = !bookDetailSheet.showMetaEditor; }
+                            }
+
+                            Container {
+                                visible: bookDetailSheet.showMetaEditor
+                                topMargin: bookManager.dp(10)
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                                TextField {
+                                    id: editTitleField
+                                    hintText: qsTr("Tên sách") + Retranslate.onLanguageChanged
+                                }
+                                TextField {
+                                    id: editAuthorField
+                                    topMargin: bookManager.dp(6)
+                                    hintText: qsTr("Tác giả") + Retranslate.onLanguageChanged
+                                }
+                                TextField {
+                                    id: editSeriesField
+                                    topMargin: bookManager.dp(6)
+                                    hintText: qsTr("Bộ truyện (Series)") + Retranslate.onLanguageChanged
+                                }
+                                TextField {
+                                    id: editSeriesIdxField
+                                    topMargin: bookManager.dp(6)
+                                    hintText: qsTr("Số tập (VD: 1)") + Retranslate.onLanguageChanged
+                                    inputMode: TextFieldInputMode.NumbersAndPunctuation
+                                }
+                                Button {
+                                    topMargin: bookManager.dp(10)
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    appearance: ControlAppearance.Primary
+                                    text: qsTr("Lưu thay đổi") + Retranslate.onLanguageChanged
+                                    onClicked: {
+                                        var idxVal = parseInt(editSeriesIdxField.text, 10);
+                                        if (isNaN(idxVal)) idxVal = 0;
+                                        if (bookManager.updateBookMetadata(bookDetailSheet.displayRawPath, editTitleField.text, editAuthorField.text, editSeriesField.text, idxVal)) {
+                                            if (editTitleField.text.trim() !== "") bookDetailSheet.bookTitle = editTitleField.text.trim();
+                                            if (editAuthorField.text.trim() !== "") bookDetailSheet.bookAuthor = editAuthorField.text.trim();
+                                            bookDetailSheet.bookSeries = editSeriesField.text.trim();
+                                            bookDetailSheet.showMetaEditor = false;
+                                            detailToast.body = qsTr("Đã cập nhật thông tin sách") + Retranslate.onLanguageChanged;
+                                            detailToast.show();
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
+
+    attachedObjects: [
+        SystemToast {
+            id: detailToast
+            body: ""
+        }
+    ]
 }

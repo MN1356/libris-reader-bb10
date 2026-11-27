@@ -735,11 +735,25 @@ Sheet {
                             }
 
                             Button {
-                                leftMargin: bookManager.dp(10)
+                                leftMargin: bookManager.dp(8)
+                                text: qsTr("Ngẫu nhiên") + Retranslate.onLanguageChanged
+                                onClicked: {
+                                    if (dictSheet.vocabItems.length > 1) {
+                                        var nextIdx = Math.floor(Math.random() * dictSheet.vocabItems.length);
+                                        if (nextIdx === dictSheet.vocabIndex) {
+                                            nextIdx = (nextIdx + 1) % dictSheet.vocabItems.length;
+                                        }
+                                        dictSheet.vocabIndex = nextIdx;
+                                        dictSheet.vocabFlipped = false;
+                                    }
+                                }
+                            }
+
+                            Button {
+                                leftMargin: bookManager.dp(8)
                                 text: qsTr("Xóa") + Retranslate.onLanguageChanged
                                 onClicked: {
-                                    dictManager.removeVocabWord(dictSheet.vocabIndex);
-                                    dictSheet.reloadVocab();
+                                    confirmDeleteVocabDialog.show();
                                 }
                             }
                         }
@@ -923,6 +937,19 @@ Sheet {
         SystemToast {
             id: dictToast
             body: ""
+        },
+        SystemDialog {
+            id: confirmDeleteVocabDialog
+            title: qsTr("Xóa từ vựng?") + Retranslate.onLanguageChanged
+            body: qsTr("Bạn có chắc muốn xóa từ này khỏi sổ từ vựng?") + Retranslate.onLanguageChanged
+            confirmButton.label: qsTr("Xóa") + Retranslate.onLanguageChanged
+            cancelButton.label: qsTr("Hủy") + Retranslate.onLanguageChanged
+            onFinished: {
+                if (value === SystemUiResult.ConfirmButtonSelection) {
+                    dictManager.removeVocabWord(dictSheet.vocabIndex);
+                    dictSheet.reloadVocab();
+                }
+            }
         }
     ]
 

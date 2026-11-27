@@ -1134,7 +1134,7 @@ Sheet {
                                         text: "PDF / DjVu"
                                         textStyle.base: SystemDefaults.TextStyles.SmallText
                                         textStyle.fontWeight: FontWeight.Bold
-                                        textStyle.color: bookManager.appTheme === "dark" ? Color.create("#C99A4E") : Color.create("#A6752B")
+                                        textStyle.color: bookManager.appTheme === "dark" ? Color.create("#C99A4E") : Color.create("#8A5D16")
                                     }
                                     Label {
                                         id: pdfTimeLabel
@@ -1278,7 +1278,7 @@ Sheet {
                                         text: "CBZ"
                                         textStyle.base: SystemDefaults.TextStyles.SmallText
                                         textStyle.fontWeight: FontWeight.Bold
-                                        textStyle.color: bookManager.appTheme === "dark" ? Color.create("#8C7355") : Color.create("#6D5539")
+                                        textStyle.color: bookManager.appTheme === "dark" ? Color.create("#B89B78") : Color.create("#6D5539")
                                     }
                                     Label {
                                         id: cbzTimeLabel
@@ -2097,7 +2097,7 @@ Sheet {
                                                 text: "EPUB"
                                                 textStyle.base: SystemDefaults.TextStyles.SmallText
                                                 textStyle.fontWeight: FontWeight.Bold
-                                                textStyle.color: Color.create("#0D0B09")
+                                                textStyle.color: bookManager.appTheme === "dark" ? Color.create("#0D0B09") : Color.White
                                             }
                                         }
                                     }

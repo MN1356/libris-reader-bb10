@@ -182,6 +182,161 @@ static bool looksLikeTcvn3(const QByteArray &data)
     return tcvnHits > 4 && tcvnHits > win1258Combines * 2;
 }
 
+static ushort mapVniSingleByte(unsigned char b)
+{
+    switch (b) {
+    case 0xF1: return 0x0111; // ñ -> đ
+    case 0xD1: return 0x0110; // Ñ -> Đ
+    case 0xF4: return 0x01A1; // ô -> ơ
+    case 0xD4: return 0x01A0; // Ô -> Ơ
+    case 0xF6: return 0x01B0; // ö -> ư
+    case 0xD6: return 0x01AF; // Ö -> Ư
+    case 0xEC: return 0x00EC; // ì
+    case 0xCC: return 0x00CC; // Ì
+    case 0xED: return 0x00ED; // í
+    case 0xCD: return 0x00CD; // Í
+    case 0xE6: return 0x1EC9; // æ -> ỉ
+    case 0xC6: return 0x1EC8; // Æ -> Ỉ
+    case 0xF3: return 0x0129; // ó -> ĩ
+    case 0xD3: return 0x0128; // Ó -> Ĩ
+    case 0xF2: return 0x1ECB; // ò -> ị
+    case 0xD2: return 0x1ECA; // Ò -> Ị
+    case 0xEE: return 0x1EF5; // î -> ỵ
+    case 0xCE: return 0x1EF4; // Î -> Ỵ
+    default: return b;
+    }
+}
+
+static bool mapVniPair(unsigned char b1, unsigned char b2, ushort &outChar)
+{
+    bool upper = (b1 >= 'A' && b1 <= 'Z');
+    unsigned char base = upper ? (b1 + 32) : b1;
+    // Tone/diacritic byte in VNI-Windows
+    if (base == 'a') {
+        switch (b2) {
+        case 0xF8: outChar = upper ? 0x00C0 : 0x00E0; return true; // à
+        case 0xF9: outChar = upper ? 0x00C1 : 0x00E1; return true; // á
+        case 0xFB: outChar = upper ? 0x1EA2 : 0x1EA3; return true; // ả
+        case 0xF5: outChar = upper ? 0x00C3 : 0x00E3; return true; // ã
+        case 0xEF: outChar = upper ? 0x1EA0 : 0x1EA1; return true; // ạ
+        case 0xE2: outChar = upper ? 0x00C2 : 0x00E2; return true; // â
+        case 0xE0: outChar = upper ? 0x1EA6 : 0x1EA7; return true; // ầ
+        case 0xE1: outChar = upper ? 0x1EA4 : 0x1EA5; return true; // ấ
+        case 0xE5: outChar = upper ? 0x1EA8 : 0x1EA9; return true; // ẩ
+        case 0xE3: outChar = upper ? 0x1EAA : 0x1EAB; return true; // ẫ
+        case 0xE4: outChar = upper ? 0x1EAC : 0x1EAD; return true; // ậ
+        case 0xEA: outChar = upper ? 0x0102 : 0x0103; return true; // ă
+        case 0xE8: outChar = upper ? 0x1EB0 : 0x1EB1; return true; // ằ
+        case 0xE9: outChar = upper ? 0x1EAE : 0x1EAF; return true; // ắ
+        case 0xFA: outChar = upper ? 0x1EB2 : 0x1EB3; return true; // ẳ
+        case 0xFC: outChar = upper ? 0x1EB4 : 0x1EB5; return true; // ẵ
+        case 0xEB: outChar = upper ? 0x1EB6 : 0x1EB7; return true; // ặ
+        default: break;
+        }
+    } else if (base == 'e') {
+        switch (b2) {
+        case 0xF8: outChar = upper ? 0x00C8 : 0x00E8; return true; // è
+        case 0xF9: outChar = upper ? 0x00C9 : 0x00E9; return true; // é
+        case 0xFB: outChar = upper ? 0x1EBA : 0x1EBB; return true; // ẻ
+        case 0xF5: outChar = upper ? 0x1EBC : 0x1EBD; return true; // ẽ
+        case 0xEF: outChar = upper ? 0x1EB8 : 0x1EB9; return true; // ẹ
+        case 0xE2: outChar = upper ? 0x00CA : 0x00EA; return true; // ê
+        case 0xE0: outChar = upper ? 0x1EC0 : 0x1EC1; return true; // ề
+        case 0xE1: outChar = upper ? 0x1EBE : 0x1ECF; return true; // ế (fix below)
+        case 0xE5: outChar = upper ? 0x1EC2 : 0x1EC3; return true; // ể
+        case 0xE3: outChar = upper ? 0x1EC4 : 0x1EC5; return true; // ễ
+        case 0xE4: outChar = upper ? 0x1EC6 : 0x1EC7; return true; // ệ
+        default: break;
+        }
+    } else if (base == 'o') {
+        switch (b2) {
+        case 0xF8: outChar = upper ? 0x00D2 : 0x00F2; return true; // ò
+        case 0xF9: outChar = upper ? 0x00D3 : 0x00F3; return true; // ó
+        case 0xFB: outChar = upper ? 0x1ECE : 0x1ECF; return true; // ỏ
+        case 0xF5: outChar = upper ? 0x00D5 : 0x00F5; return true; // õ
+        case 0xEF: outChar = upper ? 0x1ECC : 0x1ECD; return true; // ọ
+        case 0xE2: outChar = upper ? 0x00D4 : 0x00F4; return true; // ô
+        case 0xE0: outChar = upper ? 0x1ED2 : 0x1ED3; return true; // ồ
+        case 0xE1: outChar = upper ? 0x1ED0 : 0x1ED1; return true; // ố
+        case 0xE5: outChar = upper ? 0x1ED4 : 0x1ED5; return true; // ổ
+        case 0xE3: outChar = upper ? 0x1ED6 : 0x1ED7; return true; // ỗ
+        case 0xE4: outChar = upper ? 0x1ED8 : 0x1ED9; return true; // ộ
+        default: break;
+        }
+    } else if (b1 == 0xF4 || b1 == 0xD4) { // ơ / Ơ + tone
+        bool up = (b1 == 0xD4);
+        switch (b2) {
+        case 0xF8: outChar = up ? 0x1EDC : 0x1EDD; return true; // ờ
+        case 0xF9: outChar = up ? 0x1EDA : 0x1EDB; return true; // ớ
+        case 0xFB: outChar = up ? 0x1EDE : 0x1EDF; return true; // ở
+        case 0xF5: outChar = up ? 0x1EE0 : 0x1EE1; return true; // ỡ
+        case 0xEF: outChar = up ? 0x1EE2 : 0x1EE3; return true; // ợ
+        default: break;
+        }
+    } else if (base == 'u') {
+        switch (b2) {
+        case 0xF8: outChar = upper ? 0x00D9 : 0x00F9; return true; // ù
+        case 0xF9: outChar = upper ? 0x00DA : 0x00FA; return true; // ú
+        case 0xFB: outChar = upper ? 0x1EE6 : 0x1EE7; return true; // ủ
+        case 0xF5: outChar = upper ? 0x0168 : 0x0169; return true; // ũ
+        case 0xEF: outChar = upper ? 0x1EE4 : 0x1EE5; return true; // ụ
+        default: break;
+        }
+    } else if (b1 == 0xF6 || b1 == 0xD6) { // ư / Ư + tone
+        bool up = (b1 == 0xD6);
+        switch (b2) {
+        case 0xF8: outChar = up ? 0x1EEA : 0x1EEB; return true; // ừ
+        case 0xF9: outChar = up ? 0x1EE8 : 0x1EE9; return true; // ứ
+        case 0xFB: outChar = up ? 0x1EEC : 0x1EED; return true; // ử
+        case 0xF5: outChar = up ? 0x1EEE : 0x1EEF; return true; // ữ
+        case 0xEF: outChar = up ? 0x1EF0 : 0x1EF1; return true; // ự
+        default: break;
+        }
+    } else if (base == 'y') {
+        switch (b2) {
+        case 0xF8: outChar = upper ? 0x1EF2 : 0x1EF3; return true; // ỳ
+        case 0xF9: outChar = upper ? 0x00DD : 0x00FD; return true; // ý
+        case 0xFB: outChar = upper ? 0x1EF6 : 0x1EF7; return true; // ỷ
+        case 0xF5: outChar = upper ? 0x1EF8 : 0x1EF9; return true; // ỹ
+        default: break;
+        }
+    }
+    return false;
+}
+
+static bool looksLikeVni(const QByteArray &data)
+{
+    int sample = qMin(data.size(), 8192);
+    const unsigned char *p = reinterpret_cast<const unsigned char*>(data.constData());
+    int vniPairs = 0;
+    for (int i = 0; i + 1 < sample; ++i) {
+        ushort ch = 0;
+        if (mapVniPair(p[i], p[i + 1], ch)) {
+            vniPairs++;
+            ++i;
+        }
+    }
+    return vniPairs >= 4;
+}
+
+static QString decodeVni(const QByteArray &data)
+{
+    QString out;
+    out.reserve(data.size());
+    const unsigned char *p = reinterpret_cast<const unsigned char*>(data.constData());
+    for (int i = 0; i < data.size(); ++i) {
+        ushort ch = 0;
+        if (i + 1 < data.size() && mapVniPair(p[i], p[i + 1], ch)) {
+            if (ch == 0x1ECF && (p[i] == 'e' || p[i] == 'E')) ch = (p[i] == 'E') ? 0x1EBE : 0x1EBF; // ế/Ế
+            out.append(QChar(ch));
+            ++i;
+        } else {
+            out.append(QChar(mapVniSingleByte(p[i])));
+        }
+    }
+    return out;
+}
+
 QString TxtParser::detectAndDecode(const QByteArray &data)
 {
     if (data.size() >= 3 && (uchar)data[0] == 0xEF && (uchar)data[1] == 0xBB && (uchar)data[2] == 0xBF) {
@@ -198,14 +353,16 @@ QString TxtParser::detectAndDecode(const QByteArray &data)
 
     // Try UTF-8 first
     QTextCodec *utf8Codec = QTextCodec::codecForName("UTF-8");
-    QTextCodec::ConverterState state;
-    QString text = utf8Codec->toUnicode(data.constData(), data.size(), &state);
+    if (utf8Codec) {
+        QTextCodec::ConverterState state;
+        QString text = utf8Codec->toUnicode(data.constData(), data.size(), &state);
 
-    if (state.invalidChars == 0) {
-        return text;
+        if (state.invalidChars == 0) {
+            return text;
+        }
     }
 
-    // TCVN3 (ABC) legacy Vietnamese encoding
+    // TCVN3 (ABC) & VNI legacy Vietnamese encodings
     if (looksLikeTcvn3(data)) {
         QString out;
         out.reserve(data.size());
@@ -214,6 +371,9 @@ QString TxtParser::detectAndDecode(const QByteArray &data)
             out.append(QChar(mapTcvn3Byte(p[i])));
         }
         return out;
+    }
+    if (looksLikeVni(data)) {
+        return decodeVni(data);
     }
 
     // Fallback: try Windows-1258 (Vietnamese) normalized to NFC, or Windows-1252 / Latin1
@@ -422,6 +582,14 @@ QString TxtParser::getChapterContent(int index)
 
     QString rawText = m_chapterTexts[index];
     QString chTitle = m_chapters[index].title;
+    QString ext = QFileInfo(m_filePath).suffix().toLower();
+
+    if (ext == "html" || ext == "htm") {
+        if (rawText.contains("<html", Qt::CaseInsensitive) || rawText.contains("<body", Qt::CaseInsensitive)) {
+            return rawText;
+        }
+        return "<!DOCTYPE html><html><head><meta charset=\"utf-8\"/></head><body>" + rawText + "</body></html>";
+    }
 
     QString html;
     html += "<!DOCTYPE html><html><head><meta charset=\"utf-8\"/>";
@@ -429,11 +597,33 @@ QString TxtParser::getChapterContent(int index)
     html += "body { font-family: -apple-system, sans-serif; line-height: 1.6; padding: 12px; margin: 0; word-wrap: break-word; }";
     html += "h2.txt-chapter-title { text-align: center; margin: 1.2em 0 1em 0; font-size: 1.3em; border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 0.5em; }";
     html += "p { text-indent: 1.8em; margin: 0.6em 0; }";
+    html += "code { font-family: monospace; background: rgba(128,128,128,0.16); padding: 1px 4px; border-radius: 3px; }";
     html += "</style></head><body>";
 
     html += QString("<h2 class=\"txt-chapter-title\">%1</h2>").arg(escapeHtml(chTitle));
 
     QStringList lines = rawText.split('\n');
+    if (ext == "md" || ext == "markdown") {
+        QRegExp boldRx("\\*\\*([^*]+)\\*\\*");
+        QRegExp italicRx("\\*([^*]+)\\*");
+        QRegExp codeRx("`([^`]+)`");
+        for (int i = 0; i < lines.size(); ++i) {
+            QString line = lines[i].trimmed();
+            if (line.isEmpty()) continue;
+            QString esc = escapeHtml(line);
+            esc.replace(boldRx, "<b>\\1</b>");
+            esc.replace(italicRx, "<i>\\1</i>");
+            esc.replace(codeRx, "<code>\\1</code>");
+            if (line.startsWith("### ")) html += "<h3>" + esc.mid(4) + "</h3>";
+            else if (line.startsWith("## ")) html += "<h2>" + esc.mid(3) + "</h2>";
+            else if (line.startsWith("# ")) html += "<h1>" + esc.mid(2) + "</h1>";
+            else if (line.startsWith("- ") || line.startsWith("* ")) html += "<p style=\"text-indent:0;\">&bull; " + esc.mid(2) + "</p>";
+            else if (line.startsWith("> ")) html += "<blockquote>" + esc.mid(2) + "</blockquote>";
+            else html += "<p>" + esc + "</p>";
+        }
+        html += "</body></html>";
+        return html;
+    }
     QString currentParagraph;
 
     for (int i = 0; i < lines.size(); ++i) {

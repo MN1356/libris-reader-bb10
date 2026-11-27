@@ -62,6 +62,7 @@ private:
             STATE_HEADERS,
             STATE_PART_HEADER,
             STATE_STREAMING_BODY,
+            STATE_CLIP_BODY,
             STATE_DONE
         };
 

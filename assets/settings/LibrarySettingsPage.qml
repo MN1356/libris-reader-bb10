@@ -151,7 +151,8 @@ Page {
                                 text: qsTr("Khôi Phục") + Retranslate.onLanguageChanged
                                 imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_refresh.png" : "asset:///icons/ic_refresh_dark.png"
                                 onClicked: {
-                                    bookManager.restoreFromPersistentStorage();
+                                    restoreConfirmDialog.pendingArchivePath = "";
+                                    restoreConfirmDialog.show();
                                 }
                             }
                         }
@@ -247,6 +248,27 @@ Page {
             id: backupToast
             body: ""
         },
+        SystemDialog {
+            id: restoreConfirmDialog
+            property string pendingArchivePath: ""
+            title: qsTr("Khôi phục dữ liệu?") + Retranslate.onLanguageChanged
+            body: qsTr("Thao tác này sẽ ghi đè tiến độ đọc, ghi chú và cài đặt hiện tại bằng bản sao lưu. Tiếp tục?") + Retranslate.onLanguageChanged
+            confirmButton.label: qsTr("Khôi Phục") + Retranslate.onLanguageChanged
+            cancelButton.label: qsTr("Hủy") + Retranslate.onLanguageChanged
+            onFinished: {
+                if (value === SystemUiResult.ConfirmButtonSelection) {
+                    if (pendingArchivePath === "") {
+                        bookManager.restoreFromPersistentStorage();
+                        backupToast.body = bookManager.persistentStorageStatus;
+                        backupToast.show();
+                    } else {
+                        var ok = bookManager.restoreBackupArchive(pendingArchivePath);
+                        backupToast.body = (ok ? qsTr("Đã khôi phục dữ liệu từ gói sao lưu!") : qsTr("Gói sao lưu không hợp lệ hoặc bị lỗi")) + Retranslate.onLanguageChanged;
+                        backupToast.show();
+                    }
+                }
+            }
+        },
         FilePicker {
             id: backupFilePicker
             type: FileType.Other
@@ -254,9 +276,8 @@ Page {
             filter: [ "*.librisbackup", "*.zip" ]
             onFileSelected: {
                 if (selectedFiles && selectedFiles.length > 0) {
-                    var ok = bookManager.restoreBackupArchive(selectedFiles[0]);
-                    backupToast.body = (ok ? qsTr("Đã khôi phục dữ liệu từ gói sao lưu!") : qsTr("Gói sao lưu không hợp lệ hoặc bị lỗi")) + Retranslate.onLanguageChanged;
-                    backupToast.show();
+                    restoreConfirmDialog.pendingArchivePath = selectedFiles[0];
+                    restoreConfirmDialog.show();
                 }
             }
         }

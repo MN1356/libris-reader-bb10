@@ -116,8 +116,8 @@ static bool hasKnownBookExtension(const QString &s)
     QString clean = s.trimmed();
     while (clean.endsWith('/')) clean.chop(1);
     static const char *exts[] = {
-        ".epub", ".pdf", ".txt", ".fb2", ".djvu", ".djv",
-        ".cbz", ".mobi", ".azw3", ".azw", ".kf8", ".prc"
+        ".epub", ".pdf", ".txt", ".md", ".markdown", ".html", ".htm",
+        ".fb2", ".djvu", ".djv", ".cbz", ".mobi", ".azw3", ".azw", ".kf8", ".prc"
     };
     const int count = (int)(sizeof(exts) / sizeof(exts[0]));
     for (int i = 0; i < count; ++i) {
@@ -405,6 +405,8 @@ BookManager::BookManager(QObject *parent)
     , m_showFooterBattery(true)
     , m_showFooterClock(true)
     , m_lineSpacing("normal")
+    , m_textAlign("justify")
+    , m_overridePublisherCss(false)
     , m_marginTop(16)
     , m_marginBottom(16)
     , m_marginLeft(16)
@@ -517,6 +519,21 @@ BookManager::BookManager(QObject *parent)
     m_scanWatchdogTimer.setSingleShot(true);
     connect(&m_scanWatchdogTimer, SIGNAL(timeout()), this, SLOT(onScanWatchdogTimeout()));
 
+    // Debounce timer for persistent backup sync
+    m_persistSyncTimer.setSingleShot(true);
+    connect(&m_persistSyncTimer, SIGNAL(timeout()), this, SLOT(onPersistentSyncTimeout()));
+
+    m_paragraphIndent = "normal";
+    m_paragraphSpacing = "normal";
+    m_readerFontWeight = 400;
+    m_darkTextTone = "bright";
+    m_showFooterProgressBar = true;
+    m_showFooterTimeLeft = true;
+    m_eyeRestMinutes = 0;
+    m_invertVolumeKeys = false;
+    m_sessionReadingSeconds = 0;
+    m_bionicReading = false;
+
     // Load persisted library cache immediately for instant startup without blocking scan
     loadLibraryCache();
     bool hadEmptyLibrary = m_allBooks.isEmpty();
@@ -625,15 +642,15 @@ static void retireWorkerThread(WorkerT *&worker, QObject *receiver, bool waitBri
     if (!worker) return;
     worker->cancel();
     QObject::disconnect(worker, 0, receiver, 0);
+    worker->setParent(NULL);
+    QObject::connect(worker, SIGNAL(finished()), worker, SLOT(deleteLater()));
     if (worker->isRunning()) {
         if (waitBrieflyOnShutdown && worker->wait(250)) {
+            QObject::disconnect(worker, SIGNAL(finished()), worker, SLOT(deleteLater()));
             delete worker;
-            worker = NULL;
-            return;
         }
-        worker->setParent(NULL);
-        QObject::connect(worker, SIGNAL(finished()), worker, SLOT(deleteLater()));
     } else {
+        QObject::disconnect(worker, SIGNAL(finished()), worker, SLOT(deleteLater()));
         delete worker;
     }
     worker = NULL;
@@ -664,6 +681,7 @@ BookManager::~BookManager()
     }
     m_scanWatchdogTimer.stop();
     m_watchdogTimer.stop();
+    m_persistSyncTimer.stop();
     saveCurrentProgress();
     syncToPersistentStorage();
 
@@ -1167,6 +1185,7 @@ QString BookManager::currentCoverPath() const
     return QString();
 }
 
+
 QString BookManager::currentBookDescription() const
 {
     return m_currentBookDescription;
@@ -1397,7 +1416,7 @@ QString BookManager::currentContent() const
 
     // Dynamic colors according to selected theme
     QString bgColor = "#000000";
-    QString textColor = "#DDDDDD";
+    QString textColor = (m_darkTextTone == "dim") ? "#8E887D" : ((m_darkTextTone == "soft") ? "#B8B2A6" : "#DDDDDD");
     QString linkColor = "#4CA3FF";
 
     if (m_theme == "sepia") {
@@ -1572,13 +1591,14 @@ QString BookManager::currentContent() const
     html += "</style>";
 
     // Inlined original book styles & embedded fonts
-    if (!bookCss.isEmpty() || !chapterStyles.isEmpty()) {
+    if (!m_overridePublisherCss && (!bookCss.isEmpty() || !chapterStyles.isEmpty())) {
         html += "<style id=\"book-author-styles\">\n" + bookCss + "\n" + chapterStyles + "\n</style>";
     }
 
     // Adaptive Theme & Typography baseline
     QString fontFaceCss = currentFontFaceCss();
     QString fontCss = currentFontCss();
+    QString alignCss = (m_textAlign == "left") ? "left" : "justify";
 
     html += QString("<style id=\"dynamic-theme-style\">");
     if (!fontFaceCss.isEmpty()) {
@@ -1587,12 +1607,16 @@ QString BookManager::currentContent() const
     html += QString("body { ")
          + fontCss
          + QString("font-size: %1px; ").arg(m_fontSize)
+         + QString("font-weight: %1; ").arg(m_readerFontWeight)
          + QString("line-height: %1; ").arg(lh)
          + QString("background-color: %1 !important; ").arg(bgColor)
          + QString("color: %2 !important; ").arg(textColor)
          + "}";
     html += QString("a { color: %1 !important; text-decoration: none; }").arg(linkColor);
-    html += "p:not([class]) { text-indent: 1.5em; margin: 0.5em 0; }";
+    QString indentVal = (m_paragraphIndent == "none") ? "0" : ((m_paragraphIndent == "deep") ? "2.2em" : "1.5em");
+    QString pSpaceVal = (m_paragraphSpacing == "compact") ? "0.25em 0" : ((m_paragraphSpacing == "wide") ? "1.0em 0" : "0.5em 0");
+    html += QString("p:not([class]) { text-indent: %1; margin: %2; }").arg(indentVal, pSpaceVal);
+    html += QString("p, li { text-align: %1 !important; }").arg(alignCss);
 
     if (m_theme == "dark") {
         html += ".banner, div[class*=\"box\"], div[class*=\"frame\"], div[class*=\"card\"], blockquote { "
@@ -3117,7 +3141,7 @@ void BookManager::onProgressSaveTimeout()
     settings.setValue("lastBook/progress", prog);
     settings.sync();
     if (!m_suppressPersistentSync) {
-        syncToPersistentStorage();
+        schedulePersistentSync();
     }
 }
 
@@ -4091,6 +4115,7 @@ void BookManager::setIsPdfReflow(bool reflow)
     if (!isPdf()) return;
     if (m_isPdfReflow != reflow) {
         m_isPdfReflow = reflow;
+        m_cachedContentHtml.clear();
         emit isPdfReflowChanged();
         if (m_isPdfReflow) {
             updatePdfReflowContent();
@@ -4213,7 +4238,7 @@ bool BookManager::openBook(const QString &filePath)
         loadCurrentChapter();
         ensureBookInLibrary(filePath);
         return true;
-    } else if (ext == "txt") {
+    } else if (ext == "txt" || ext == "md" || ext == "markdown" || ext == "html" || ext == "htm") {
         m_currentFormat = "txt";
         if (!m_txtParser.open(filePath)) {
             qWarning() << "[BookManager] Failed to parse TXT:" << filePath;
@@ -4734,6 +4759,8 @@ void BookManager::registerBookFile(const QString &filePath)
     QString bookTitle = rawName;
     QString bookAuthor = (ext == "epub") ? "EPUB eBook" :
                          (ext == "txt")  ? "Văn bản TXT" :
+                         (ext == "md" || ext == "markdown") ? "Markdown" :
+                         (ext == "html" || ext == "htm") ? "Web / HTML" :
                          (ext == "fb2")  ? "FB2 FictionBook" :
                          (ext == "pdf")  ? "Tài liệu PDF" :
                          (ext == "djvu" || ext == "djv") ? "Tài liệu DjVu" :
@@ -5235,8 +5262,11 @@ void BookManager::cancelScan()
 {
     qDebug() << "[BookManager] Scan cancelled by user tap or watchdog";
     m_scanWatchdogTimer.stop();
-    if (m_scanWorker && m_scanWorker->isRunning()) {
-        m_scanWorker->cancel();
+    if (m_scanWorker) {
+        QObject::disconnect(m_scanWorker, 0, this, 0);
+        if (m_scanWorker->isRunning()) {
+            m_scanWorker->cancel();
+        }
     }
     if (m_isScanning) {
         m_isScanning = false;
@@ -5277,6 +5307,17 @@ void BookManager::saveSettings()
     settings.setValue("reader/columnLayout", m_columnLayout);
     settings.setValue("reader/mangaRtlMode", m_mangaRtlMode);
     settings.setValue("reader/lineSpacing", m_lineSpacing);
+    settings.setValue("reader/textAlign", m_textAlign);
+    settings.setValue("reader/overridePublisherCss", m_overridePublisherCss);
+    settings.setValue("reader/paragraphIndent", m_paragraphIndent);
+    settings.setValue("reader/paragraphSpacing", m_paragraphSpacing);
+    settings.setValue("reader/fontWeight", m_readerFontWeight);
+    settings.setValue("reader/darkTextTone", m_darkTextTone);
+    settings.setValue("reader/showFooterProgressBar", m_showFooterProgressBar);
+    settings.setValue("reader/showFooterTimeLeft", m_showFooterTimeLeft);
+    settings.setValue("reader/eyeRestMinutes", m_eyeRestMinutes);
+    settings.setValue("reader/invertVolumeKeys", m_invertVolumeKeys);
+    settings.setValue("reader/bionicReading", m_bionicReading);
     settings.setValue("reader/showFooterChapter", m_showFooterChapter);
     settings.setValue("reader/showFooterProgress", m_showFooterProgress);
     settings.setValue("reader/showFooterBattery", m_showFooterBattery);
@@ -5387,7 +5428,7 @@ void BookManager::saveSettings()
     }
     settings.sync();
     if (!m_suppressPersistentSync) {
-        syncToPersistentStorage();
+        schedulePersistentSync();
     }
 }
 
@@ -5471,6 +5512,22 @@ void BookManager::loadSettingsFromQSettings(QSettings &settings)
     }
     m_mangaRtlMode = settings.value("reader/mangaRtlMode", false).toBool();
     m_lineSpacing = settings.value("reader/lineSpacing", "normal").toString();
+    QString loadedAlign = settings.value("reader/textAlign", "justify").toString();
+    m_textAlign = (loadedAlign == "left") ? "left" : "justify";
+    m_overridePublisherCss = settings.value("reader/overridePublisherCss", false).toBool();
+    QString loadedIndent = settings.value("reader/paragraphIndent", "normal").toString();
+    m_paragraphIndent = (loadedIndent == "none" || loadedIndent == "deep") ? loadedIndent : "normal";
+    QString loadedPSpace = settings.value("reader/paragraphSpacing", "normal").toString();
+    m_paragraphSpacing = (loadedPSpace == "compact" || loadedPSpace == "wide") ? loadedPSpace : "normal";
+    int loadedFw = settings.value("reader/fontWeight", 400).toInt();
+    m_readerFontWeight = (loadedFw == 500 || loadedFw == 600) ? loadedFw : 400;
+    QString loadedTone = settings.value("reader/darkTextTone", "bright").toString();
+    m_darkTextTone = (loadedTone == "soft" || loadedTone == "dim") ? loadedTone : "bright";
+    m_showFooterProgressBar = settings.value("reader/showFooterProgressBar", true).toBool();
+    m_showFooterTimeLeft = settings.value("reader/showFooterTimeLeft", true).toBool();
+    m_eyeRestMinutes = qMax(0, settings.value("reader/eyeRestMinutes", 0).toInt());
+    m_invertVolumeKeys = settings.value("reader/invertVolumeKeys", false).toBool();
+    m_bionicReading = settings.value("reader/bionicReading", false).toBool();
     m_showFooterChapter = settings.value("reader/showFooterChapter", true).toBool();
     m_showFooterProgress = settings.value("reader/showFooterProgress", true).toBool();
     m_showFooterBattery = settings.value("reader/showFooterBattery", true).toBool();
@@ -5671,6 +5728,7 @@ void BookManager::setMarginTop(int margin)
     if (margin > 80) margin = 80;
     if (m_marginTop != margin) {
         m_marginTop = margin;
+        m_cachedContentHtml.clear();
         emit marginsChanged();
         saveSettings();
     }
@@ -5682,6 +5740,7 @@ void BookManager::setMarginBottom(int margin)
     if (margin > 80) margin = 80;
     if (m_marginBottom != margin) {
         m_marginBottom = margin;
+        m_cachedContentHtml.clear();
         emit marginsChanged();
         saveSettings();
     }
@@ -5693,6 +5752,7 @@ void BookManager::setMarginLeft(int margin)
     if (margin > 80) margin = 80;
     if (m_marginLeft != margin) {
         m_marginLeft = margin;
+        m_cachedContentHtml.clear();
         emit marginsChanged();
         saveSettings();
     }
@@ -5704,6 +5764,7 @@ void BookManager::setMarginRight(int margin)
     if (margin > 80) margin = 80;
     if (m_marginRight != margin) {
         m_marginRight = margin;
+        m_cachedContentHtml.clear();
         emit marginsChanged();
         saveSettings();
     }
@@ -5715,8 +5776,210 @@ void BookManager::resetMargins()
     m_marginBottom = 16;
     m_marginLeft = 16;
     m_marginRight = 16;
+    m_cachedContentHtml.clear();
     emit marginsChanged();
     saveSettings();
+}
+
+void BookManager::setTextAlign(const QString &align)
+{
+    QString norm = (align == "left") ? "left" : "justify";
+    if (m_textAlign != norm) {
+        m_textAlign = norm;
+        m_cachedContentHtml.clear();
+        emit textAlignChanged();
+        saveSettings();
+    }
+}
+
+void BookManager::setOverridePublisherCss(bool overrideCss)
+{
+    if (m_overridePublisherCss != overrideCss) {
+        m_overridePublisherCss = overrideCss;
+        m_cachedContentHtml.clear();
+        emit overridePublisherCssChanged();
+        saveSettings();
+    }
+}
+
+void BookManager::setParagraphIndent(const QString &indent)
+{
+    QString norm = (indent == "none" || indent == "deep") ? indent : "normal";
+    if (m_paragraphIndent != norm) {
+        m_paragraphIndent = norm;
+        m_cachedContentHtml.clear();
+        emit typographyChanged();
+        saveSettings();
+    }
+}
+
+void BookManager::setParagraphSpacing(const QString &spacing)
+{
+    QString norm = (spacing == "compact" || spacing == "wide") ? spacing : "normal";
+    if (m_paragraphSpacing != norm) {
+        m_paragraphSpacing = norm;
+        m_cachedContentHtml.clear();
+        emit typographyChanged();
+        saveSettings();
+    }
+}
+
+void BookManager::setReaderFontWeight(int weight)
+{
+    int norm = (weight == 500 || weight == 600) ? weight : 400;
+    if (m_readerFontWeight != norm) {
+        m_readerFontWeight = norm;
+        m_cachedContentHtml.clear();
+        emit typographyChanged();
+        saveSettings();
+    }
+}
+
+void BookManager::setDarkTextTone(const QString &tone)
+{
+    QString norm = (tone == "soft" || tone == "dim") ? tone : "bright";
+    if (m_darkTextTone != norm) {
+        m_darkTextTone = norm;
+        m_cachedContentHtml.clear();
+        emit typographyChanged();
+        saveSettings();
+    }
+}
+
+void BookManager::setShowFooterProgressBar(bool show)
+{
+    if (m_showFooterProgressBar != show) {
+        m_showFooterProgressBar = show;
+        emit footerSettingsChanged();
+        saveSettings();
+    }
+}
+
+void BookManager::setShowFooterTimeLeft(bool show)
+{
+    if (m_showFooterTimeLeft != show) {
+        m_showFooterTimeLeft = show;
+        emit footerSettingsChanged();
+        saveSettings();
+    }
+}
+
+void BookManager::setEyeRestMinutes(int minutes)
+{
+    int norm = qMax(0, minutes);
+    if (m_eyeRestMinutes != norm) {
+        m_eyeRestMinutes = norm;
+        m_sessionReadingSeconds = 0;
+        emit readingPrefsChanged();
+        saveSettings();
+    }
+}
+
+void BookManager::setInvertVolumeKeys(bool invert)
+{
+    if (m_invertVolumeKeys != invert) {
+        m_invertVolumeKeys = invert;
+        emit readingPrefsChanged();
+        saveSettings();
+    }
+}
+
+void BookManager::setBionicReading(bool enabled)
+{
+    if (m_bionicReading != enabled) {
+        m_bionicReading = enabled;
+        emit typographyChanged();
+        saveSettings();
+    }
+}
+
+int BookManager::getBookRating(const QString &filePath) const
+{
+    QString absPath = QFileInfo(filePath).absoluteFilePath();
+    if (absPath.isEmpty()) absPath = filePath;
+    QSettings settings("Libris", "Libris");
+    return qBound(0, settings.value(QString("meta/rating/%1").arg(absPath), 0).toInt(), 5);
+}
+
+void BookManager::setBookRating(const QString &filePath, int rating)
+{
+    QString absPath = QFileInfo(filePath).absoluteFilePath();
+    if (absPath.isEmpty()) absPath = filePath;
+    int r = qBound(0, rating, 5);
+    QSettings settings("Libris", "Libris");
+    settings.setValue(QString("meta/rating/%1").arg(absPath), r);
+    settings.sync();
+    schedulePersistentSync();
+}
+
+QString BookManager::getBookReview(const QString &filePath) const
+{
+    QString absPath = QFileInfo(filePath).absoluteFilePath();
+    if (absPath.isEmpty()) absPath = filePath;
+    QSettings settings("Libris", "Libris");
+    return settings.value(QString("meta/review/%1").arg(absPath)).toString();
+}
+
+void BookManager::setBookReview(const QString &filePath, const QString &review)
+{
+    QString absPath = QFileInfo(filePath).absoluteFilePath();
+    if (absPath.isEmpty()) absPath = filePath;
+    QSettings settings("Libris", "Libris");
+    settings.setValue(QString("meta/review/%1").arg(absPath), review.trimmed());
+    settings.sync();
+    schedulePersistentSync();
+}
+
+bool BookManager::updateBookMetadata(const QString &filePath, const QString &title, const QString &author, const QString &series, int seriesIndex)
+{
+    QString absPath = QFileInfo(filePath).absoluteFilePath();
+    if (absPath.isEmpty()) absPath = filePath;
+    if (absPath.isEmpty()) return false;
+
+    QString t = title.trimmed();
+    QString a = author.trimmed();
+    QString s = series.trimmed();
+    int sIdx = qMax(0, seriesIndex);
+
+    QSettings settings("Libris", "Libris");
+    if (!t.isEmpty()) settings.setValue(QString("meta/title/%1").arg(absPath), t);
+    if (!a.isEmpty()) settings.setValue(QString("meta/author/%1").arg(absPath), a);
+    if (!s.isEmpty()) {
+        settings.setValue(QString("series/%1").arg(absPath), s);
+        settings.setValue(QString("seriesIdx/%1").arg(absPath), sIdx);
+    } else {
+        settings.remove(QString("series/%1").arg(absPath));
+        settings.remove(QString("seriesIdx/%1").arg(absPath));
+    }
+
+    for (int i = 0; i < m_allBooks.size(); ++i) {
+        if (m_allBooks[i].value("filePath").toString() == absPath || m_allBooks[i].value("filePath").toString() == filePath) {
+            if (!t.isEmpty()) m_allBooks[i]["title"] = t;
+            if (!a.isEmpty()) m_allBooks[i]["author"] = a;
+            m_allBooks[i]["series"] = s;
+            m_allBooks[i]["seriesIndex"] = sIdx;
+            break;
+        }
+    }
+
+    if (m_currentFilePath == absPath || m_currentFilePath == filePath) {
+        if (!t.isEmpty()) m_currentBookTitle = t;
+        if (!a.isEmpty()) m_currentBookAuthor = a;
+        m_currentBookSeries = s;
+        m_currentBookSeriesIndex = sIdx;
+        emit currentBookChanged();
+    }
+    if (m_lastBookPath == absPath || m_lastBookPath == filePath) {
+        if (!t.isEmpty()) m_lastBookTitle = t;
+        if (!a.isEmpty()) m_lastBookAuthor = a;
+        emit lastBookChanged();
+    }
+
+    saveLibraryCache();
+    applyFilterAndSort();
+    updateReadingHistoryModel();
+    saveSettings();
+    return true;
 }
 
 bool BookManager::hasLastBook() const
@@ -7341,7 +7604,8 @@ QVariantMap BookManager::getBookMetadata(const QString &filePath)
         res["description"] = settings.value(descKey).toString();
         res["genre"] = settings.value(genreKey).toString();
         res["series"] = settings.value(QString("series/%1").arg(absPath)).toString();
-        res["seriesIndex"] = settings.value(QString("seriesIndex/%1").arg(absPath), 0).toInt();
+        res["seriesIndex"] = settings.value(QString("seriesIdx/%1").arg(absPath),
+                                            settings.value(QString("seriesIndex/%1").arg(absPath), 0)).toInt();
         return res;
     }
 
@@ -7403,7 +7667,7 @@ QVariantMap BookManager::getBookMetadata(const QString &filePath)
     if (!genre.isEmpty()) settings.setValue(genreKey, genre);
     if (!series.isEmpty()) {
         settings.setValue(QString("series/%1").arg(absPath), series);
-        settings.setValue(QString("seriesIndex/%1").arg(absPath), seriesIdx);
+        settings.setValue(QString("seriesIdx/%1").arg(absPath), seriesIdx);
     }
 
     res["description"] = desc;
@@ -7712,15 +7976,15 @@ QVariantList BookManager::getBookStatsList()
         }
     }
 
-    for (int i = 0; i < rest.size() - 1; ++i) {
-        for (int j = i + 1; j < rest.size(); ++j) {
-            int sI = rest[i].value("totalSeconds").toInt();
-            int sJ = rest[j].value("totalSeconds").toInt();
-            if (sJ > sI || (sJ == sI && rest[j].value("progress").toInt() > rest[i].value("progress").toInt())) {
-                rest.swap(i, j);
-            }
+    struct BookStatsCmp {
+        static bool lessThan(const QVariantMap &a, const QVariantMap &b) {
+            int sA = a.value("totalSeconds").toInt();
+            int sB = b.value("totalSeconds").toInt();
+            if (sA != sB) return sA > sB;
+            return a.value("progress").toInt() > b.value("progress").toInt();
         }
-    }
+    };
+    qSort(rest.begin(), rest.end(), BookStatsCmp::lessThan);
     for (int i = 0; i < rest.size(); ++i) {
         list.append(rest[i]);
     }
@@ -7913,6 +8177,10 @@ void BookManager::onReadingHeartbeat()
     if (m_totalReadingSeconds % 60 == 0) {
         saveSettings();
         updateReadingHistoryModel();
+    }
+    m_sessionReadingSeconds += 10;
+    if (m_eyeRestMinutes > 0 && m_sessionReadingSeconds > 0 && (m_sessionReadingSeconds % (m_eyeRestMinutes * 60) == 0)) {
+        emit eyeRestReminder();
     }
     emit statsChanged();
     emit dailyStatsChanged();
@@ -8736,6 +9004,18 @@ QString BookManager::persistentStorageStatus() const
     return m_persistentStorageStatus;
 }
 
+void BookManager::schedulePersistentSync()
+{
+    m_persistSyncTimer.start(3000);
+}
+
+void BookManager::onPersistentSyncTimeout()
+{
+    if (!m_suppressPersistentSync) {
+        syncToPersistentStorage();
+    }
+}
+
 void BookManager::syncToPersistentStorage()
 {
     static bool s_isSyncing = false;
@@ -8759,9 +9039,10 @@ void BookManager::syncToPersistentStorage()
     persistentSettings.setValue("meta/appVersion", "2.0.0");
     persistentSettings.sync();
 
-    // Export libris_userdata.json
+    // Export libris_userdata.json (atomic write via .tmp + rename)
     QString jsonPath = persistentJsonFilePath();
-    QFile jsonFile(jsonPath);
+    QString jsonTmpPath = jsonPath + ".tmp";
+    QFile jsonFile(jsonTmpPath);
     if (jsonFile.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
         QTextStream out(&jsonFile);
         out.setCodec("UTF-8");
@@ -8876,12 +9157,16 @@ void BookManager::syncToPersistentStorage()
         }
         out << "\n  ]\n";
         out << "}\n";
+        out.flush();
         jsonFile.close();
+        QFile::remove(jsonPath);
+        QFile::rename(jsonTmpPath, jsonPath);
     }
 
-    // Export libris_highlights.json
+    // Export libris_highlights.json (atomic write via .tmp + rename)
     QString hlPath = persistentHighlightsPath();
-    QFile hlFile(hlPath);
+    QString hlTmpPath = hlPath + ".tmp";
+    QFile hlFile(hlTmpPath);
     if (hlFile.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
         QTextStream out(&hlFile);
         out.setCodec("UTF-8");
@@ -8903,12 +9188,16 @@ void BookManager::syncToPersistentStorage()
             out << "  }";
         }
         out << "\n]\n";
+        out.flush();
         hlFile.close();
+        QFile::remove(hlPath);
+        QFile::rename(hlTmpPath, hlPath);
     }
 
-    // Export libris_bookmarks.json
+    // Export libris_bookmarks.json (atomic write via .tmp + rename)
     QString bmPath = persistentBookmarksPath();
-    QFile bmFile(bmPath);
+    QString bmTmpPath = bmPath + ".tmp";
+    QFile bmFile(bmTmpPath);
     if (bmFile.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
         QTextStream out(&bmFile);
         out.setCodec("UTF-8");
@@ -8930,7 +9219,10 @@ void BookManager::syncToPersistentStorage()
             out << "  }";
         }
         out << "\n]\n";
+        out.flush();
         bmFile.close();
+        QFile::remove(bmPath);
+        QFile::rename(bmTmpPath, bmPath);
     }
 
     m_persistentStorageStatus = tr("Đã đồng bộ dữ liệu vào ") + dirPath;
@@ -9058,12 +9350,17 @@ void BookManager::restoreFromPersistentStorageInternal(bool forceOverwrite, bool
 
     if (reloadState) {
         loadSettingsFromQSettings(settings);
+        loadLibraryCache();
         reconcileLibraryWithSettings(settings);
-        saveLibraryCache();
+        loadHighlights();
+        loadBookmarks();
         applyFilterAndSort();
         updateReadingHistoryModel();
         refreshStats();
 
+        emit highlightsChanged();
+        emit bookmarksChanged();
+        emit customShelvesChanged();
         emit languageChanged();
         emit fontSizeChanged();
         emit fontFamilyChanged();
@@ -9240,6 +9537,7 @@ QString BookManager::exportBookHighlightsToMarkdown(const QString &filePath)
     return QString();
 }
 
+
 QString BookManager::exportAllHighlightsToMarkdown()
 {
     if (m_allHighlights.isEmpty() && m_allBookmarks.isEmpty()) {
@@ -9346,6 +9644,78 @@ QString BookManager::exportAllHighlightsToMarkdown()
         outStream.setCodec("UTF-8");
         outStream << md;
         outFile.close();
+        return outPath;
+    }
+    return QString();
+}
+
+QString BookManager::exportQuoteCardPng(const QString &quoteText, const QString &bookTitle, const QString &author, const QString &colorName)
+{
+    QString cleanQuote = quoteText.trimmed();
+    if (cleanQuote.isEmpty()) return QString();
+    if (cleanQuote.length() > 480) {
+        cleanQuote = cleanQuote.left(477).trimmed() + QString::fromUtf8("…");
+    }
+
+    QColor accent("#D9AB60");
+    if (colorName == "green") accent = QColor("#5FA876");
+    else if (colorName == "blue") accent = QColor("#5B9BD5");
+    else if (colorName == "pink") accent = QColor("#D6729B");
+
+    QImage img(1080, 1080, QImage::Format_ARGB32);
+    img.fill(QColor("#14110E"));
+
+    QPainter p(&img);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setRenderHint(QPainter::TextAntialiasing, true);
+
+    // Outer card
+    QRect cardRect(72, 72, 936, 936);
+    p.fillRect(cardRect, QColor("#1D1915"));
+    p.setPen(QPen(QColor("#2E2720"), 2));
+    p.drawRect(cardRect);
+
+    // Accent left stripe
+    p.fillRect(QRect(72, 72, 10, 936), accent);
+
+    // Opening quote mark
+    QFont markFont("Georgia", 72, QFont::Bold);
+    p.setFont(markFont);
+    p.setPen(accent);
+    p.drawText(QRect(126, 106, 120, 110), Qt::AlignLeft | Qt::AlignTop, QString::fromUtf8("“"));
+
+    // Quote text
+    int fontSize = (cleanQuote.length() > 260) ? 26 : ((cleanQuote.length() > 140) ? 31 : 36);
+    QFont quoteFont("Georgia", fontSize);
+    p.setFont(quoteFont);
+    p.setPen(QColor("#F5EFE6"));
+    p.drawText(QRect(130, 210, 820, 560), Qt::AlignLeft | Qt::AlignVCenter | Qt::TextWordWrap, cleanQuote);
+
+    // Divider
+    p.setPen(QPen(QColor("#3A3128"), 2));
+    p.drawLine(130, 815, 950, 815);
+
+    // Book title & author
+    QString titleStr = bookTitle.trimmed().isEmpty() ? QString("Libris") : bookTitle.trimmed();
+    QFont titleFont("Sans", 22, QFont::Bold);
+    p.setFont(titleFont);
+    p.setPen(accent);
+    p.drawText(QRect(130, 840, 820, 44), Qt::AlignLeft | Qt::AlignVCenter, titleStr);
+
+    QString metaStr = author.trimmed().isEmpty() ? QString("Libris • BlackBerry 10") : (author.trimmed() + QString::fromUtf8("  •  Libris"));
+    QFont metaFont("Sans", 16);
+    p.setFont(metaFont);
+    p.setPen(QColor("#9C9488"));
+    p.drawText(QRect(130, 892, 820, 36), Qt::AlignLeft | Qt::AlignVCenter, metaStr);
+    p.end();
+
+    QString outDir = "/accounts/1000/shared/photos";
+    if (!QDir().exists(outDir)) {
+        outDir = persistentDataDir();
+    }
+    QDir().mkpath(outDir);
+    QString outPath = outDir + QString("/Libris_Quote_%1.png").arg(QDateTime::currentMSecsSinceEpoch());
+    if (img.save(outPath, "PNG")) {
         return outPath;
     }
     return QString();
@@ -9775,6 +10145,7 @@ QString BookManager::exportQuoteCardImage(const QString &quoteText, const QStrin
     return QString();
 }
 
+
 // =============================================================================
 // LIFECYCLE-SAFE VOLUME KEY PAGE TURN
 // =============================================================================
@@ -9826,7 +10197,8 @@ void BookManager::onVolumeUpPressed(bb::multimedia::MediaKey::Type key)
 {
     Q_UNUSED(key);
     if (m_isReaderActive && !m_isAppSleeping && m_volumeKeyTurnEnabled) {
-        emit volumePagePrevRequested();
+        if (m_invertVolumeKeys) emit volumePageNextRequested();
+        else emit volumePagePrevRequested();
     }
 }
 
@@ -9834,7 +10206,8 @@ void BookManager::onVolumeDownPressed(bb::multimedia::MediaKey::Type key)
 {
     Q_UNUSED(key);
     if (m_isReaderActive && !m_isAppSleeping && m_volumeKeyTurnEnabled) {
-        emit volumePageNextRequested();
+        if (m_invertVolumeKeys) emit volumePagePrevRequested();
+        else emit volumePageNextRequested();
     }
 }
 

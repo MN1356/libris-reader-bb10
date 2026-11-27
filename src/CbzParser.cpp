@@ -216,9 +216,23 @@ QByteArray CbzParser::readZipEntry(const QString &entryName)
         return QByteArray();
     }
 
+    mz_zip_archive_file_stat stat;
+    if (!mz_zip_reader_file_stat(&m_zip, (mz_uint)entryIndex, &stat)) {
+        return QByteArray();
+    }
+    static const mz_uint64 MAX_ENTRY_SIZE = 64ULL * 1024ULL * 1024ULL;
+    if (stat.m_uncomp_size > MAX_ENTRY_SIZE) {
+        qWarning() << "CbzParser: zip entry too large:" << entryName << stat.m_uncomp_size;
+        return QByteArray();
+    }
+
     size_t uncompSize = 0;
     void *pData = mz_zip_reader_extract_to_heap(&m_zip, (mz_uint)entryIndex, &uncompSize, 0);
     if (!pData) {
+        return QByteArray();
+    }
+    if (uncompSize > MAX_ENTRY_SIZE) {
+        mz_free(pData);
         return QByteArray();
     }
 

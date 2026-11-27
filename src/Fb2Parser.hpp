@@ -44,6 +44,7 @@ private:
     QStringList m_chapterHtmls;
     QString m_notesHtml;
     QMap<QString, QString> m_binaries; // id -> base64 data
+    int m_renderDepth;
 
     void parseTitleInfo(const pugi::xml_node &titleInfoNode);
     void parseBinaries(const pugi::xml_node &root);

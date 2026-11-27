@@ -167,6 +167,12 @@ bool MobiParser::open(const QString &filePath)
     m_compression = readBE16(pRec0 + 0);
     quint32 textLength = readBE32(pRec0 + 4);
     quint16 textRecordCount = readBE16(pRec0 + 8);
+    quint16 encryptionType = readBE16(pRec0 + 12);
+    if (encryptionType != 0) {
+        qWarning() << "[MobiParser] DRM-encrypted MOBI/AZW3 is not supported, encryptionType=" << encryptionType;
+        close();
+        return false;
+    }
 
     bool isMobi = (rec0.size() >= 32 && rec0.mid(16, 4) == "MOBI");
     if (isMobi) {
@@ -195,16 +201,17 @@ bool MobiParser::open(const QString &filePath)
             m_extraFlags = readBE16(pRec0 + 242);
         }
 
-        if (fullNameOffset > 0 && fullNameLength > 0 && (fullNameOffset + fullNameLength) <= (quint32)rec0.size()) {
+        if (fullNameOffset > 0 && fullNameLength > 0 &&
+            (quint64)fullNameOffset + (quint64)fullNameLength <= (quint64)rec0.size()) {
             QByteArray nameBytes = rec0.mid(fullNameOffset, fullNameLength);
             m_title = (m_textEncoding == 65001) ? QString::fromUtf8(nameBytes) : QString::fromLatin1(nameBytes);
             m_title = m_title.trimmed();
         }
 
         if (exthFlags & 0x40) {
-            quint32 exthOffset = 16 + mobiHeaderLen;
-            if (exthOffset + 12 <= (quint32)rec0.size() && rec0.mid(exthOffset, 4) == "EXTH") {
-                parseExth(rec0, exthOffset);
+            quint64 exthOffset = 16ULL + (quint64)mobiHeaderLen;
+            if (exthOffset + 12ULL <= (quint64)rec0.size() && rec0.mid((int)exthOffset, 4) == "EXTH") {
+                parseExth(rec0, (quint32)exthOffset);
             }
         }
 
@@ -298,17 +305,17 @@ void MobiParser::parseExth(const QByteArray &rec0, quint32 exthOffset)
     quint32 exthLen = readBE32(pRec0 + exthOffset + 4);
     quint32 exthCount = readBE32(pRec0 + exthOffset + 8);
 
-    quint32 pos = exthOffset + 12;
-    quint32 end = qMin(exthOffset + exthLen, (quint32)rec0.size());
+    quint64 pos = (quint64)exthOffset + 12ULL;
+    quint64 end = qMin((quint64)exthOffset + (quint64)exthLen, (quint64)rec0.size());
 
-    for (quint32 i = 0; i < exthCount && pos + 8 <= end; ++i) {
+    for (quint32 i = 0; i < exthCount && pos + 8ULL <= end; ++i) {
         quint32 recType = readBE32(pRec0 + pos);
         quint32 recLen = readBE32(pRec0 + pos + 4);
 
-        if (recLen < 8 || pos + recLen > end) break;
+        if (recLen < 8 || pos + (quint64)recLen > end) break;
 
-        QByteArray data = rec0.mid(pos + 8, recLen - 8);
-        pos += recLen;
+        QByteArray data = rec0.mid((int)(pos + 8ULL), (int)(recLen - 8));
+        pos += (quint64)recLen;
 
         if (recType == 100 && m_author.isEmpty()) { // Author
             m_author = (m_textEncoding == 65001) ? QString::fromUtf8(data) : QString::fromLatin1(data);
@@ -345,7 +352,7 @@ void MobiParser::parseFdstRecord(int fdstRecIdx, const QByteArray &fullData, QBy
 
     const unsigned char *pFdst = (const unsigned char*)fdstRec.constData();
     quint32 numSections = readBE32(pFdst + 8);
-    if (numSections == 0 || (12 + numSections * 8) > (quint32)fdstRec.size()) {
+    if (numSections == 0 || (12ULL + (quint64)numSections * 8ULL) > (quint64)fdstRec.size()) {
         xhtmlData = fullData;
         return;
     }

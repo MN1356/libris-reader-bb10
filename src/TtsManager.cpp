@@ -771,6 +771,34 @@ QString TtsManager::resolveEspeakVoiceSpec(const QString &effLang) const
     return "en-us+" + v;
 }
 
+static QString normalizeTextForTts(const QString &text, const QString &lang)
+{
+    QString out = text;
+    if (lang.startsWith("vi", Qt::CaseInsensitive)) {
+        out.replace("TP.HCM", QString::fromUtf8("Thành phố Hồ Chí Minh"), Qt::CaseInsensitive);
+        out.replace("TP.", QString::fromUtf8("Thành phố "), Qt::CaseSensitive);
+        out.replace("PGS.", QString::fromUtf8("Phó giáo sư "), Qt::CaseSensitive);
+        out.replace("GS.", QString::fromUtf8("Giáo sư "), Qt::CaseSensitive);
+        out.replace("TS.", QString::fromUtf8("Tiến sĩ "), Qt::CaseSensitive);
+        out.replace("ThS.", QString::fromUtf8("Thạc sĩ "), Qt::CaseSensitive);
+        out.replace("BS.", QString::fromUtf8("Bác sĩ "), Qt::CaseSensitive);
+    }
+    QSettings settings("Libris", "Libris");
+    QString customRules = settings.value("tts/pronunciationRules").toString();
+    if (!customRules.isEmpty()) {
+        QStringList lines = customRules.split('\n', QString::SkipEmptyParts);
+        for (int i = 0; i < lines.size(); ++i) {
+            int eq = lines[i].indexOf('=');
+            if (eq > 0) {
+                QString from = lines[i].left(eq).trimmed();
+                QString to = lines[i].mid(eq + 1).trimmed();
+                if (!from.isEmpty()) out.replace(from, to);
+            }
+        }
+    }
+    return out;
+}
+
 bool TtsManager::playSentenceWithEspeak(int index, const QString &effLang)
 {
     if (index < 0 || index >= m_sentences.size()) return false;
@@ -779,7 +807,8 @@ bool TtsManager::playSentenceWithEspeak(int index, const QString &effLang)
     QString wav = m_cacheDir + QString("/espeak_slot_%1.wav").arg(m_espeakSlot++ % 2);
     QString err;
     QTime synthT; synthT.start();
-    if (!EspeakEngine::instance().synthesizeToWav(m_sentences[index], resolveEspeakVoiceSpec(effLang), rate, pitch, wav, &err)) {
+    QString spokenText = normalizeTextForTts(m_sentences[index], effLang);
+    if (!EspeakEngine::instance().synthesizeToWav(spokenText, resolveEspeakVoiceSpec(effLang), rate, pitch, wav, &err)) {
         qDebug() << "[TtsManager] eSpeak failed:" << err;
         return false;
     }

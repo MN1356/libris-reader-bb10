@@ -1,3 +1,12 @@
+Phiên bản 2.0.0 (Build 211) - 2026-11-27:
+- Active Frame thông minh: hiện bìa sách & % tiến độ khi đang đọc; hiện thời gian hôm nay / mục tiêu ngày trên nền bìa chìm khi ở màn hình chính.
+- Bổ sung Bionic Reading (phím V), Thước kẻ đọc (phím R), Bảng phím tắt (?), Lịch sử nhảy vị trí (U/Backspace) và ước tính thời gian hết chương.
+- Hỗ trợ đọc Markdown (.md), HTML, giải mã TXT chuẩn VNI và chuẩn hóa phát âm TTS.
+- Nâng cấp Wi-Fi Drop: thêm Web Clipper gửi bài viết (/api/clip), tải Notes (.md) và API thống kê.
+- Thêm xuất ảnh Quote Card PNG, đánh giá 1-5★ + cảm nhận, sửa metadata sách và khóa cuộn ngang PDF (phím Q).
+- Mở rộng Settings chuyên sâu: căn lề, bỏ CSS gốc, thụt đầu dòng, khoảng cách đoạn, độ đậm chữ, độ sáng chữ nền tối, đảo phím âm lượng và nhắc nghỉ mắt Pomodoro.
+- Vá các lỗi bảo mật/ổn định (tràn số MOBI, kiểm tra DRM, giới hạn ZIP, backup atomic, lỗi applyStyleLive JS, khôi phục Highlights/Bookmarks) và cải thiện UX/Accessibility.
+
 Phiên bản 2.0.0 (Build 210) - 2026-11-23:
 - Gọn hóa thanh công cụ chọn văn bản về dạng chỉ biểu tượng đơn sắc (#E8ECF2) đồng bộ chuẩn BlackBerry 10, loại bỏ chữ thừa và căn giữa dọc tuyệt đối trên 1 hàng 36px.
 

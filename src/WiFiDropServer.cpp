@@ -344,6 +344,28 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
                 } else {
                     sendResponse(socket, 500, "Internal Server Error", "text/plain", "Backup creation failed");
                 }
+            } else if (ctx->path == "/api/highlights.md") {
+                BookManager *bm = qobject_cast<BookManager*>(parent());
+                QString mdPath = bm ? bm->exportAllHighlightsToMarkdown() : QString();
+                QFile hf(mdPath);
+                if (!mdPath.isEmpty() && hf.open(QIODevice::ReadOnly)) {
+                    streamFileToSocket(socket, hf, "libris_highlights.md");
+                    hf.close();
+                } else {
+                    sendResponse(socket, 404, "Not Found", "text/plain", "No highlights available");
+                }
+            } else if (ctx->path == "/api/stats") {
+                BookManager *bm = qobject_cast<BookManager*>(parent());
+                QString json = QString("{\"totalReadingTime\":\"%1\",\"todayReadingTime\":\"%2\",\"todaySeconds\":%3,\"dailyGoalMinutes\":%4,\"currentStreak\":%5,\"totalBooks\":%6,\"completedBooks\":%7,\"readingBooks\":%8}")
+                    .arg(escapeWifiJson(bm ? bm->totalReadingTimeStr() : "0m"))
+                    .arg(escapeWifiJson(bm ? bm->todayReadingTimeStr() : "0m"))
+                    .arg(bm ? bm->todayReadingSeconds() : 0)
+                    .arg(bm ? bm->dailyGoalMinutes() : 30)
+                    .arg(bm ? bm->currentStreak() : 0)
+                    .arg(bm ? bm->totalLibraryBooks() : 0)
+                    .arg(bm ? bm->completedBooksCount() : 0)
+                    .arg(bm ? bm->readingBooksCount() : 0);
+                sendResponse(socket, 200, "OK", "application/json; charset=utf-8", json.toUtf8());
             } else if (ctx->path.startsWith("/download?")) {
                 QUrl reqUrl = QUrl::fromEncoded(("http://localhost" + ctx->path).toUtf8());
                 QString reqPath = reqUrl.queryItemValue("path");
@@ -351,7 +373,7 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
                 bool allowed = !canon.isEmpty() && (
                     canon.startsWith("/accounts/1000/shared/books/") ||
                     canon.startsWith("/accounts/1000/shared/documents/") ||
-                    canon.startsWith("/accounts/1000/removable/sdcard")
+                    canon.startsWith("/accounts/1000/removable/sdcard/")
                 );
                 QFile df(canon);
                 if (allowed && df.exists() && df.open(QIODevice::ReadOnly)) {
@@ -371,6 +393,15 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
             socket->disconnectFromHost();
             ctx->state = ClientContext::STATE_DONE;
             return;
+        } else if (ctx->method == "POST" && ctx->path == "/api/clip") {
+            if (ctx->contentLength <= 0 || ctx->contentLength > 2 * 1024 * 1024) {
+                sendResponse(socket, 400, "Bad Request", "application/json; charset=utf-8",
+                             "{\"success\":false,\"error\":\"Invalid clip size\"}");
+                socket->disconnectFromHost();
+                ctx->state = ClientContext::STATE_DONE;
+                return;
+            }
+            ctx->state = ClientContext::STATE_CLIP_BODY;
         } else if (ctx->method == "POST" && ctx->path == "/upload") {
             if (ctx->boundary.isEmpty()) {
                 sendResponse(socket, 400, "Bad Request", "text/plain", "Missing multipart boundary");
@@ -391,6 +422,11 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
     if (ctx->state == ClientContext::STATE_PART_HEADER) {
         int partHeaderEnd = ctx->buffer.indexOf("\r\n\r\n");
         if (partHeaderEnd == -1) {
+            if (ctx->buffer.size() > 16384) {
+                sendResponse(socket, 400, "Bad Request", "text/plain", "Multipart header too large");
+                socket->disconnectFromHost();
+                ctx->state = ClientContext::STATE_DONE;
+            }
             return;
         }
 
@@ -430,7 +466,8 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
         bool isBookExt = (upExt == "epub" || upExt == "pdf" || upExt == "mobi" ||
                           upExt == "azw" || upExt == "azw3" || upExt == "kf8" ||
                           upExt == "prc" || upExt == "fb2" || upExt == "cbz" ||
-                          upExt == "djvu" || upExt == "djv" || upExt == "txt");
+                          upExt == "djvu" || upExt == "djv" || upExt == "txt" ||
+                          upExt == "md" || upExt == "markdown" || upExt == "html" || upExt == "htm");
         if (!isBookExt) {
             sendResponse(socket, 400, "Bad Request", "application/json; charset=utf-8",
                          "{\"success\":false,\"error\":\"Unsupported eBook file format\"}");
@@ -477,8 +514,17 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
         int delimPos = ctx->buffer.indexOf(ctx->endDelimiter);
         if (delimPos != -1) {
             if (delimPos > 0 && ctx->file) {
-                ctx->file->write(ctx->buffer.constData(), delimPos);
-                ctx->bytesWritten += delimPos;
+                qint64 written = ctx->file->write(ctx->buffer.constData(), delimPos);
+                if (written != delimPos) {
+                    ctx->file->close();
+                    ctx->file->remove();
+                    sendResponse(socket, 500, "Internal Server Error", "application/json; charset=utf-8",
+                                 "{\"success\":false,\"error\":\"Disk write failed\"}");
+                    socket->disconnectFromHost();
+                    ctx->state = ClientContext::STATE_DONE;
+                    return;
+                }
+                ctx->bytesWritten += written;
             }
             if (ctx->file) {
                 ctx->file->flush();
@@ -510,7 +556,8 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
             bool isBookExt = (upExt == "epub" || upExt == "pdf" || upExt == "mobi" ||
                               upExt == "azw" || upExt == "azw3" || upExt == "kf8" ||
                               upExt == "prc" || upExt == "fb2" || upExt == "cbz" ||
-                              upExt == "djvu" || upExt == "djv" || upExt == "txt");
+                              upExt == "djvu" || upExt == "djv" || upExt == "txt" ||
+                          upExt == "md" || upExt == "markdown" || upExt == "html" || upExt == "htm");
             if (isBookExt) {
                 emit bookUploaded(uploadedPath, uploadedName, totalSize);
             }
@@ -528,12 +575,64 @@ void WiFiDropServer::processClient(QTcpSocket *socket, ClientContext *ctx)
             if (ctx->buffer.size() > keepLen) {
                 int writeLen = ctx->buffer.size() - keepLen;
                 if (ctx->file) {
-                    ctx->file->write(ctx->buffer.constData(), writeLen);
-                    ctx->bytesWritten += writeLen;
+                    qint64 written = ctx->file->write(ctx->buffer.constData(), writeLen);
+                    if (written != writeLen) {
+                        ctx->file->close();
+                        ctx->file->remove();
+                        sendResponse(socket, 500, "Internal Server Error", "application/json; charset=utf-8",
+                                     "{\"success\":false,\"error\":\"Disk write failed\"}");
+                        socket->disconnectFromHost();
+                        ctx->state = ClientContext::STATE_DONE;
+                        return;
+                    }
+                    ctx->bytesWritten += written;
                 }
                 ctx->buffer.remove(0, writeLen);
             }
         }
+    }
+
+    if (ctx->state == ClientContext::STATE_CLIP_BODY) {
+        if (ctx->buffer.size() < ctx->contentLength) {
+            return;
+        }
+        QByteArray rawBody = ctx->buffer.left((int)ctx->contentLength);
+        ctx->state = ClientContext::STATE_DONE;
+        QUrl formUrl = QUrl::fromEncoded("http://localhost/?" + rawBody);
+        QString clipTitle = formUrl.queryItemValue("title").trimmed();
+        QString clipText = formUrl.queryItemValue("body").trimmed();
+        if (clipTitle.isEmpty()) clipTitle = QString("Web Clip %1").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm"));
+        if (clipText.isEmpty()) {
+            sendResponse(socket, 400, "Bad Request", "application/json; charset=utf-8", "{\"success\":false,\"error\":\"Empty content\"}");
+            socket->disconnectFromHost();
+            return;
+        }
+        QString escTitle = clipTitle;
+        escTitle.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+        QString escBody = clipText;
+        escBody.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+        escBody.replace("\r\n", "\n");
+        escBody.replace("\n\n", "</p><p>");
+        escBody.replace("\n", "<br/>");
+        QString htmlDoc = QString("<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><title>%1</title></head><body><h1>%1</h1><p>%2</p></body></html>")
+                              .arg(escTitle, escBody);
+        QString saveDir = targetUploadDir();
+        QString fileName = QString("Clip_%1.html").arg(QDateTime::currentMSecsSinceEpoch());
+        QString savePath = saveDir + "/" + fileName;
+        QFile cf(savePath);
+        if (cf.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            QByteArray utf8 = htmlDoc.toUtf8();
+            cf.write(utf8);
+            cf.close();
+            emit bookUploaded(savePath, fileName, utf8.size());
+            QString respJson = QString("{\"success\":true,\"fileName\":\"%1\"}").arg(escapeWifiJson(fileName));
+            sendResponse(socket, 200, "OK", "application/json; charset=utf-8", respJson.toUtf8());
+        } else {
+            sendResponse(socket, 500, "Internal Server Error", "application/json; charset=utf-8", "{\"success\":false,\"error\":\"Cannot save clip\"}");
+        }
+        socket->flush();
+        socket->disconnectFromHost();
+        return;
     }
 }
 
@@ -923,6 +1022,7 @@ QString WiFiDropServer::getHtmlPage() const
 "    <div class=\"uploads-header\">\n"
 "      <span>__L_LIB_HEADER__</span>\n"
 "      <div style=\"display:flex; gap:8px;\">\n"
+"        <a href=\"/api/highlights.md\" style=\"background:rgba(212,163,89,0.16);color:var(--primary);border:1px solid rgba(212,163,89,0.4);padding:6px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;\">Notes (.md)</a>\n"
 "        <a href=\"/api/backup\" style=\"background:var(--primary);color:#0D0B09;padding:6px 12px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;\">__L_BTN_BACKUP__</a>\n"
 "        <button type=\"button\" onclick=\"loadBooks()\" style=\"background:rgba(212,163,89,0.16);color:var(--primary);border:1px solid rgba(212,163,89,0.4);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;\">__L_BTN_LOAD__</button>\n"
 "      </div>\n"
@@ -930,6 +1030,16 @@ QString WiFiDropServer::getHtmlPage() const
 "    <ul class=\"file-list\" id=\"deviceBookList\"><li class=\"file-item\" style=\"color:var(--text-muted);font-size:13px;\">__L_LIB_HINT__</li></ul>\n"
 "  </div>\n"
 "\n"
+"  <div class=\"uploads-card\" style=\"margin-top:20px;\">\n"
+"    <div class=\"uploads-header\"><span>Web Clipper (Send Article)</span></div>\n"
+"    <div style=\"padding:14px 16px;\">\n"
+"      <input id=\"clipTitle\" placeholder=\"Article title...\" style=\"width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(0,0,0,0.2);color:var(--text);margin-bottom:8px;box-sizing:border-box;\"/>\n"
+"      <textarea id=\"clipBody\" rows=\"4\" placeholder=\"Paste article text here...\" style=\"width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(0,0,0,0.2);color:var(--text);margin-bottom:8px;box-sizing:border-box;\"></textarea>\n"
+"      <button type=\"button\" onclick=\"sendClip()\" style=\"background:var(--primary);color:#0D0B09;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;\">Save to Libris</button>\n"
+"      <span id=\"clipStatus\" style=\"margin-left:10px;font-size:12px;color:var(--text-muted);\"></span>\n"
+"    </div>\n"
+"  </div>\n"
+"  <script>function sendClip(){var t=document.getElementById('clipTitle').value,b=document.getElementById('clipBody').value,st=document.getElementById('clipStatus');if(!b.trim()){st.textContent='Empty text';return;}st.textContent='Saving...';fetch('/api/clip',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'title='+encodeURIComponent(t)+'&body='+encodeURIComponent(b)}).then(r=>r.json()).then(d=>{st.textContent=d.success?('Saved '+d.fileName):(d.error||'Error');if(d.success){document.getElementById('clipTitle').value='';document.getElementById('clipBody').value='';}}).catch(()=>{st.textContent='Network error';});}</script>\n"
 "  <div class=\"footer\">\n"
 "    __L_FOOTER_1__ <code>/accounts/1000/shared/books</code><br>\n"
 "    __L_FOOTER_2__\n"

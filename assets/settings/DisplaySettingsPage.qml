@@ -254,6 +254,136 @@ Page {
                             }
                         }
 
+                        DropDown {
+                            topMargin: bookManager.dp(10)
+                            title: qsTr("Căn lề văn bản") + Retranslate.onLanguageChanged
+                            Option {
+                                text: qsTr("Căn đều hai bên") + Retranslate.onLanguageChanged
+                                value: "justify"
+                                selected: bookManager.textAlign !== "left"
+                            }
+                            Option {
+                                text: qsTr("Căn trái") + Retranslate.onLanguageChanged
+                                value: "left"
+                                selected: bookManager.textAlign === "left"
+                            }
+                            onSelectedValueChanged: {
+                                if (selectedValue && selectedValue !== bookManager.textAlign) {
+                                    bookManager.setTextAlign(selectedValue);
+                                }
+                            }
+                        }
+
+                        ToggleableListItem {
+                            topMargin: bookManager.dp(10)
+                            title: qsTr("Bỏ CSS gốc của sách") + Retranslate.onLanguageChanged
+                            subtitle: qsTr("Dùng định dạng chuẩn của Libris thay cho CSS nhúng") + Retranslate.onLanguageChanged
+                            checked: bookManager.overridePublisherCss
+                            onToggled: {
+                                bookManager.setOverridePublisherCss(checked);
+                            }
+                        }
+
+                        DropDown {
+                            topMargin: bookManager.dp(10)
+                            title: qsTr("Thụt đầu dòng") + Retranslate.onLanguageChanged
+                            Option {
+                                text: qsTr("Không thụt (0)") + Retranslate.onLanguageChanged
+                                value: "none"
+                                selected: bookManager.paragraphIndent === "none"
+                            }
+                            Option {
+                                text: qsTr("Chuẩn (1.5em)") + Retranslate.onLanguageChanged
+                                value: "normal"
+                                selected: bookManager.paragraphIndent === "normal"
+                            }
+                            Option {
+                                text: qsTr("Sâu (2.2em)") + Retranslate.onLanguageChanged
+                                value: "deep"
+                                selected: bookManager.paragraphIndent === "deep"
+                            }
+                            onSelectedValueChanged: {
+                                if (selectedValue && selectedValue !== bookManager.paragraphIndent) {
+                                    bookManager.setParagraphIndent(selectedValue);
+                                }
+                            }
+                        }
+
+                        DropDown {
+                            topMargin: bookManager.dp(10)
+                            title: qsTr("Khoảng cách đoạn") + Retranslate.onLanguageChanged
+                            Option {
+                                text: qsTr("Gọn") + Retranslate.onLanguageChanged
+                                value: "compact"
+                                selected: bookManager.paragraphSpacing === "compact"
+                            }
+                            Option {
+                                text: qsTr("Chuẩn") + Retranslate.onLanguageChanged
+                                value: "normal"
+                                selected: bookManager.paragraphSpacing === "normal"
+                            }
+                            Option {
+                                text: qsTr("Thoáng") + Retranslate.onLanguageChanged
+                                value: "wide"
+                                selected: bookManager.paragraphSpacing === "wide"
+                            }
+                            onSelectedValueChanged: {
+                                if (selectedValue && selectedValue !== bookManager.paragraphSpacing) {
+                                    bookManager.setParagraphSpacing(selectedValue);
+                                }
+                            }
+                        }
+
+                        DropDown {
+                            topMargin: bookManager.dp(10)
+                            title: qsTr("Độ đậm chữ") + Retranslate.onLanguageChanged
+                            Option {
+                                text: qsTr("Thường (400)") + Retranslate.onLanguageChanged
+                                value: 400
+                                selected: bookManager.readerFontWeight === 400
+                            }
+                            Option {
+                                text: qsTr("Vừa (500)") + Retranslate.onLanguageChanged
+                                value: 500
+                                selected: bookManager.readerFontWeight === 500
+                            }
+                            Option {
+                                text: qsTr("Đậm (600)") + Retranslate.onLanguageChanged
+                                value: 600
+                                selected: bookManager.readerFontWeight === 600
+                            }
+                            onSelectedValueChanged: {
+                                if (selectedValue && selectedValue !== bookManager.readerFontWeight) {
+                                    bookManager.setReaderFontWeight(selectedValue);
+                                }
+                            }
+                        }
+
+                        DropDown {
+                            topMargin: bookManager.dp(10)
+                            title: qsTr("Độ sáng chữ nền Tối") + Retranslate.onLanguageChanged
+                            Option {
+                                text: qsTr("Sáng rõ") + Retranslate.onLanguageChanged
+                                value: "bright"
+                                selected: bookManager.darkTextTone === "bright"
+                            }
+                            Option {
+                                text: qsTr("Dịu mắt") + Retranslate.onLanguageChanged
+                                value: "soft"
+                                selected: bookManager.darkTextTone === "soft"
+                            }
+                            Option {
+                                text: qsTr("Rất dịu (đọc đêm)") + Retranslate.onLanguageChanged
+                                value: "dim"
+                                selected: bookManager.darkTextTone === "dim"
+                            }
+                            onSelectedValueChanged: {
+                                if (selectedValue && selectedValue !== bookManager.darkTextTone) {
+                                    bookManager.setDarkTextTone(selectedValue);
+                                }
+                            }
+                        }
+
                         // Custom .ttf / .otf Fonts Card
                         Container {
                             topMargin: bookManager.dp(12)
@@ -266,6 +396,7 @@ Page {
                             layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
                             Label {
+                                multiline: true
                                 text: qsTr("Phông chữ tùy chỉnh (.ttf / .otf)") + Retranslate.onLanguageChanged
                                 textStyle.base: SystemDefaults.TextStyles.SmallText
                                 textStyle.fontWeight: FontWeight.W500
@@ -304,7 +435,7 @@ Page {
                             Label {
                                 text: qsTr("Văn bản mẫu xem trước hiển thị.") + Retranslate.onLanguageChanged
                                 textStyle.fontSize: FontSize.PointValue
-                                textStyle.fontSizeValue: bookManager.fontSize
+                                textStyle.fontSizeValue: Math.max(5.5, Math.min(16.0, bookManager.fontSize * 0.45))
                                 textStyle.color: bookManager.theme === "dark" ? Color.create("#E0E0E0") :
                                                  (bookManager.theme === "sepia" ? Color.create("#382818") : Color.create("#111111"))
                                 multiline: true
@@ -318,6 +449,15 @@ Page {
                 // =========================================================
                 Header {
                     title: qsTr("BẢO VỆ MẮT & TỰ ĐỘNG") + Retranslate.onLanguageChanged
+                }
+
+                ToggleableListItem {
+                    title: qsTr("Bionic Reading (Đọc nhanh)") + Retranslate.onLanguageChanged
+                    subtitle: qsTr("Làm đậm nửa đầu mỗi từ giúp mắt bắt nhịp đọc nhanh hơn") + Retranslate.onLanguageChanged
+                    checked: bookManager.bionicReading
+                    onToggled: {
+                        bookManager.setBionicReading(checked);
+                    }
                 }
 
                 ToggleableListItem {

@@ -415,8 +415,9 @@ Page {
                                     DeleteActionItem {
                                         title: qsTr("Xóa khỏi gần đây") + Retranslate.onLanguageChanged
                                         onTriggered: {
+                                            var removedTitle = bookManager.lastBookTitle;
                                             bookManager.removeFromRecent(bookManager.lastBookPath);
-                                            dashRoot.ListItem.view.fwdToast(qsTr("Đã xóa khỏi gần đây: ") + bookManager.lastBookTitle);
+                                            dashRoot.ListItem.view.fwdToast(qsTr("Đã xóa khỏi gần đây: ") + removedTitle);
                                         }
                                     }
                                 }
