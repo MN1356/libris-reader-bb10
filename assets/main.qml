@@ -40,10 +40,11 @@ TabbedPane {
     }
 
     property alias settingsSheet: settingsSheet
-    property alias aboutSheet: aboutSheet
-    property alias readingStatsSheet: readingStatsSheet
-    property alias opdsSheet: opdsSheet
-    property alias wifiDropSheet: wifiDropSheet
+    property variant activeAboutSheet: null
+    property variant activeOnboardingSheet: null
+    property variant activeReadingStatsSheet: null
+    property variant activeOpdsSheet: null
+    property variant activeWifiDropSheet: null
     property alias filePicker: filePicker
     property alias navPane: navPane
     property alias recentTab: recentTab
@@ -53,17 +54,59 @@ TabbedPane {
     property alias importTab: importTab
 
     property string pendingExternalPath: ""
+    property bool pendingOnboardingOpen: false
 
     function openSettings() {
         settingsSheet.open();
     }
 
     function showAbout() {
-        aboutSheet.open();
+        if (!activeAboutSheet) {
+            activeAboutSheet = aboutSheetDef.createObject(rootTabbedPane);
+            activeAboutSheet.closed.connect(function() {
+                if (rootTabbedPane.pendingOnboardingOpen) {
+                    rootTabbedPane.pendingOnboardingOpen = false;
+                    rootTabbedPane.openOnboardingGuide();
+                }
+                if (activeAboutSheet) {
+                    activeAboutSheet.destroy();
+                    activeAboutSheet = null;
+                }
+            });
+        }
+        activeAboutSheet.open();
+    }
+
+    function openOnboardingGuide() {
+        if ((activeAboutSheet && activeAboutSheet.opened) || settingsSheet.opened) {
+            pendingOnboardingOpen = true;
+            if (activeAboutSheet && activeAboutSheet.opened) activeAboutSheet.close();
+            if (settingsSheet.opened) settingsSheet.close();
+        } else {
+            if (!activeOnboardingSheet) {
+                activeOnboardingSheet = onboardingSheetDef.createObject(rootTabbedPane);
+                activeOnboardingSheet.closed.connect(function() {
+                    if (activeOnboardingSheet) {
+                        activeOnboardingSheet.destroy();
+                        activeOnboardingSheet = null;
+                    }
+                });
+            }
+            activeOnboardingSheet.openFromStart();
+        }
     }
 
     function openReadingStats() {
-        readingStatsSheet.open();
+        if (!activeReadingStatsSheet) {
+            activeReadingStatsSheet = readingStatsSheetDef.createObject(rootTabbedPane);
+            activeReadingStatsSheet.closed.connect(function() {
+                if (activeReadingStatsSheet) {
+                    activeReadingStatsSheet.destroy();
+                    activeReadingStatsSheet = null;
+                }
+            });
+        }
+        activeReadingStatsSheet.open();
     }
 
     function openFilePicker() {
@@ -71,11 +114,29 @@ TabbedPane {
     }
 
     function openWifiDrop() {
-        wifiDropSheet.open();
+        if (!activeWifiDropSheet) {
+            activeWifiDropSheet = wifiDropSheetDef.createObject(rootTabbedPane);
+            activeWifiDropSheet.closed.connect(function() {
+                if (activeWifiDropSheet) {
+                    activeWifiDropSheet.destroy();
+                    activeWifiDropSheet = null;
+                }
+            });
+        }
+        activeWifiDropSheet.open();
     }
 
     function openOpds() {
-        opdsSheet.open();
+        if (!activeOpdsSheet) {
+            activeOpdsSheet = opdsSheetDef.createObject(rootTabbedPane);
+            activeOpdsSheet.closed.connect(function() {
+                if (activeOpdsSheet) {
+                    activeOpdsSheet.destroy();
+                    activeOpdsSheet = null;
+                }
+            });
+        }
+        activeOpdsSheet.open();
     }
 
     function promptExit() {
@@ -164,6 +225,10 @@ TabbedPane {
         app.openOpdsRequested.connect(rootTabbedPane.openOpds);
         app.promptExitRequested.connect(rootTabbedPane.promptExit);
         bookManager.promptExitRequested.connect(rootTabbedPane.promptExit);
+        bookManager.openOnboardingGuideRequested.connect(rootTabbedPane.openOnboardingGuide);
+        if (!bookManager.onboardingCompleted) {
+            openOnboardingGuide();
+        }
     }
 
     function openBookExternal(filePath) {
@@ -196,7 +261,7 @@ TabbedPane {
     Tab {
         id: recentTab
         title: qsTr("Trang chủ") + Retranslate.onLanguageChanged
-        imageSource: "asset:///icons/ic_recent.png"
+        imageSource: "asset:///icons/ic_home.png"
 
         NavigationPane {
             id: navPane
@@ -232,6 +297,7 @@ TabbedPane {
                 bookManager.stopWatchdog();
                 bookManager.setIsLoadingBook(false);
                 page.destroy();
+                bookManager.releaseReaderMemory();
                 bookManager.refreshStats();
                 if (pendingExternalPath !== "") {
                     var nextPath = pendingExternalPath;
@@ -261,7 +327,7 @@ TabbedPane {
     Tab {
         id: highlightTab
         title: qsTr("Ghi chú") + Retranslate.onLanguageChanged
-        imageSource: "asset:///icons/ic_bookmarks.png"
+        imageSource: "asset:///icons/ic_highlight.png"
 
         HighlightPage {
             id: highlightPage
@@ -344,18 +410,32 @@ TabbedPane {
         },
         SettingsSheet {
             id: settingsSheet
+            onClosed: {
+                if (rootTabbedPane.pendingOnboardingOpen) {
+                    rootTabbedPane.pendingOnboardingOpen = false;
+                    rootTabbedPane.openOnboardingGuide();
+                }
+            }
         },
-        AboutSheet {
-            id: aboutSheet
+        ComponentDefinition {
+            id: aboutSheetDef
+            source: "asset:///AboutSheet.qml"
         },
-        ReadingStatsSheet {
-            id: readingStatsSheet
+        ComponentDefinition {
+            id: onboardingSheetDef
+            source: "asset:///OnboardingGuideSheet.qml"
         },
-        OpdsSheet {
-            id: opdsSheet
+        ComponentDefinition {
+            id: readingStatsSheetDef
+            source: "asset:///ReadingStatsSheet.qml"
         },
-        WiFiDropSheet {
-            id: wifiDropSheet
+        ComponentDefinition {
+            id: opdsSheetDef
+            source: "asset:///OpdsSheet.qml"
+        },
+        ComponentDefinition {
+            id: wifiDropSheetDef
+            source: "asset:///WiFiDropSheet.qml"
         },
         ComponentDefinition {
             id: readerDefinition

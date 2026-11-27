@@ -2,7 +2,7 @@
 
 AppTranslator::AppTranslator(QObject *parent)
     : QTranslator(parent)
-    , m_language("vi")
+    , m_language("en")
 {
     initTranslations();
 }
@@ -170,7 +170,7 @@ void AppTranslator::initTranslations()
     add("LỌC ĐỊNH DẠNG FILE", "FILTER BY FORMAT", "LỌC ĐỊNH DẠNG FILE");
     add("Tất cả", "All", "Tất cả");
     add("CHẾ ĐỘ HIỂN THỊ", "DISPLAY MODE", "CHẾ ĐỘ HIỂN THỊ");
-    add("Lưới bìa (Mosaic)", "Mosaic (Grid)", "Lưới bìa (Mosaic)");
+    add("Lưới bìa (Mosaic)", "Mosaic (Grid)", "Lưới bìa");
     add("Chi tiết (Detailed)", "Detailed List", "Chi tiết (Detailed)");
     add("Danh sách chi tiết (Detailed)", "Detailed List", "Danh sách chi tiết (Detailed)");
     add("Bộ lọc và thứ tự sắp xếp được lưu tự động cho các lần mở sau.",
@@ -232,8 +232,8 @@ void AppTranslator::initTranslations()
     add("Màu tối (Đảo màu)", "Invert Colors", "Màu tối (Đảo màu)");
     add("Chế độ: Lật trang", "Mode: Paged", "Chế độ: Lật trang");
     add("Chế độ: Cuộn dọc", "Mode: Scroll", "Chế độ: Cuộn dọc");
-    add("Chế độ văn bản (Reflow OCR)", "Text Reflow (OCR)", "Chế độ văn bản (Reflow OCR)");
-    add("Chế độ xem PDF gốc", "Original PDF View", "Chế độ xem PDF gốc");
+    add("Chế độ văn bản (Reflow OCR)", "Text Reflow (OCR)", "PDF Reflow (Văn bản)");
+    add("Chế độ xem PDF gốc", "Original PDF View", "PDF gốc");
     add("Xoay 90°", "Rotate 90°", "Xoay 90°");
     add("Phóng to +", "Zoom in +", "Phóng to +");
     add("Thu nhỏ -", "Zoom out -", "Thu nhỏ -");
@@ -267,9 +267,9 @@ void AppTranslator::initTranslations()
     add("Google TTS - Nhanh (Mobile)", "Google TTS - Fast (Mobile)", "Google TTS - Nhanh (Mobile)");
     add("Google APIs TTS", "Google APIs TTS", "Google APIs TTS");
     add("Nghe thử giọng đọc", "Test Voice", "Nghe thử giọng đọc");
-    add("Xóa bộ nhớ đệm âm thanh", "Clear audio cache", "Xóa bộ nhớ đệm âm thanh");
-    add("Đã dọn dẹp xong bộ nhớ đệm âm thanh.", "Audio cache cleared.", "Đã dọn dẹp xong bộ nhớ đệm âm thanh.");
-    add("Đã dọn dẹp xong toàn bộ bộ nhớ đệm âm thanh.", "All audio cache cleared.", "Đã dọn dẹp xong toàn bộ bộ nhớ đệm âm thanh.");
+    add("Xóa bộ nhớ đệm âm thanh", "Clear audio cache", "Xóa cache âm thanh");
+    add("Đã dọn dẹp xong bộ nhớ đệm âm thanh.", "Audio cache cleared.", "Đã xóa cache âm thanh.");
+    add("Đã dọn dẹp xong toàn bộ bộ nhớ đệm âm thanh.", "All audio cache cleared.", "Đã xóa toàn bộ cache âm thanh.");
 
     // Settings & Margins Presentation
     add("CÀI ĐẶT ĐỌC SÁCH", "READING SETTINGS", "CÀI ĐẶT ĐỌC SÁCH");
@@ -353,7 +353,7 @@ void AppTranslator::initTranslations()
     add("Chuẩn 1.0x", "Normal 1.0x", "Chuẩn 1.0x");
     add("Nhanh 1.25x", "Fast 1.25x", "Nhanh 1.25x");
     add("Rất nhanh 1.5x", "Very fast 1.5x", "Rất nhanh 1.5x");
-    add("Xóa bộ nhớ đệm âm thanh", "Clear audio cache", "Xóa bộ nhớ đệm âm thanh");
+    add("Xóa bộ nhớ đệm âm thanh", "Clear audio cache", "Xóa cache âm thanh");
     add("Quét lại toàn bộ thẻ nhớ và thiết bị", "Rescan storage & SD card", "Quét lại toàn bộ thẻ nhớ và thiết bị");
     add("Tự động tìm kiếm sách trên thẻ nhớ và bộ nhớ trong.",
         "Automatically scans for books on SD card and storage.",
@@ -442,7 +442,7 @@ void AppTranslator::initTranslations()
     add("Tra từ điển", "Dictionary", "Tra từ điển");
     add("Dịch văn bản", "Translate", "Dịch văn bản");
     add("Từ điển & Dịch", "Dictionary & Translate", "Từ điển & Dịch");
-    add("Từ điển & Dịch thuật", "Dictionary & Translation", "Từ điển & Dịch thuật");
+    add("Từ điển & Dịch thuật", "Dictionary & Translation", "Từ điển & Dịch");
     add("Từ điển Offline", "Offline Dict", "Từ điển Offline");
     add("Từ điển Online", "Online Dict", "Từ điển Online");
     add("Công cụ Dịch", "Translate Tools", "Công cụ Dịch");
@@ -455,8 +455,8 @@ void AppTranslator::initTranslations()
     add("Sao chép", "Copy", "Sao chép");
     add("Đọc (TTS)", "Speak (TTS)", "Đọc (TTS)");
     add("Đã sao chép vào bộ nhớ tạm", "Copied to clipboard", "Đã sao chép vào bộ nhớ tạm");
-    add("Đang tra từ trực tuyến...", "Looking up online...", "Đang tra từ trực tuyến...");
-    add("Đang tra từ điển trực tuyến...", "Looking up online dictionary...", "Đang tra từ điển trực tuyến...");
+    add("Đang tra từ trực tuyến...", "Looking up online...", "Đang tra từ online...");
+    add("Đang tra từ điển trực tuyến...", "Looking up online dictionary...", "Đang tra từ điển online...");
     add("Đang dịch văn bản...", "Translating text...", "Đang dịch văn bản...");
     add("Văn bản gốc", "Original Text", "Văn bản gốc");
     add("Văn bản gốc:", "Source text:", "Văn bản gốc:");
@@ -468,9 +468,9 @@ void AppTranslator::initTranslations()
     add("Sang:", "To:", "Sang:");
     add("Tự động", "Auto Detect", "Tự động");
     add("Gợi ý từ tương tự: ", "Suggestions: ", "Gợi ý từ tương tự: ");
-    add("Không tìm thấy kết quả từ điển trực tuyến.", "No online dictionary definitions found.", "Không tìm thấy kết quả từ điển trực tuyến.");
-    add("Kết nối công cụ dịch thuật hàng đầu:", "Top translation engines:", "Kết nối công cụ dịch thuật hàng đầu:");
-    add("Chế độ Reflow (Văn bản)", "Text Reflow Mode", "Chế độ Reflow (Văn bản)");
+    add("Không tìm thấy kết quả từ điển trực tuyến.", "No online dictionary definitions found.", "Không tìm thấy kết quả từ điển online.");
+    add("Kết nối công cụ dịch thuật hàng đầu:", "Top translation engines:", "Các công cụ dịch hỗ trợ:");
+    add("Chế độ Reflow (Văn bản)", "Text Reflow Mode", "PDF Reflow (Văn bản)");
     add("Chế độ Trang ảnh", "Original Page Mode", "Chế độ Trang ảnh");
     add("Không tìm thấy lớp chữ OCR", "No OCR text layer found", "Không tìm thấy lớp chữ OCR");
     add("Trang PDF này được quét dạng hình ảnh và chưa có lớp văn bản (OCR text layer).",
@@ -570,7 +570,7 @@ void AppTranslator::initTranslations()
     add("Tên chương, tiến độ %, pin và đồng hồ thời gian thực", "Chapter title, progress %, battery and real-time clock", "Tên chương, tiến độ %, pin và đồng hồ thời gian thực");
     add("Giọng đọc sách", "Text-To-Speech (TTS)", "Giọng đọc sách");
     add("Giọng đọc sách (TTS)", "Voice Reader (TTS)", "Giọng đọc sách (TTS)");
-    add("Ngôn ngữ giọng đọc, tốc độ phát và bộ nhớ đệm âm thanh", "Voice language, playback speed and audio cache", "Ngôn ngữ giọng đọc, tốc độ phát và bộ nhớ đệm âm thanh");
+    add("Ngôn ngữ giọng đọc, tốc độ phát và bộ nhớ đệm âm thanh", "Voice language, playback speed and audio cache", "Ngôn ngữ giọng đọc, tốc độ và cache âm thanh");
     add("Tủ sách & Quản lý", "Bookshelf & Management", "Tủ sách & Quản lý");
     add("Tủ sách & Quản lý dữ liệu", "Bookshelf & Management", "Tủ sách & Quản lý");
     add("Chế độ xem Lưới/Danh sách, gom nhóm, quét thư mục sách", "Mosaic/List view, grouping, book folder scanning", "Chế độ xem Lưới/Danh sách, gom nhóm, quét thư mục sách");
@@ -880,7 +880,7 @@ void AppTranslator::initTranslations()
     add("TRUNG BÌNH / NGÀY", "DAILY AVERAGE", "TRUNG BÌNH / NGÀY");
     add("CHUỖI DÀI NHẤT", "LONGEST STREAK", "CHUỖI DÀI NHẤT");
     add("CHI TIẾT NGÀY ĐÃ CHỌN", "SELECTED DAY DETAILS", "CHI TIẾT NGÀY ĐÃ CHỌN");
-    add("TỔNG TÍCH LŨY TOÀN THỜI GIAN", "ALL-TIME READING SUMMARY", "TỔNG TÍCH LŨY TOÀN THỜI GIAN");
+    add("TỔNG TÍCH LŨY TOÀN THỜI GIAN", "ALL-TIME READING SUMMARY", "TỔNG THỜI GIAN ĐỌC");
     add("Tổng thời gian đọc tích lũy", "Total cumulative reading time", "Tổng thời gian đọc tích lũy");
     add("Tổng số ngày đã đọc sách", "Total days with reading", "Tổng số ngày đã đọc sách");
     add("Chuỗi ngày đọc hiện tại", "Current reading streak", "Chuỗi ngày đọc hiện tại");
@@ -924,7 +924,7 @@ void AppTranslator::initTranslations()
     add("TỔNG TUẦN NÀY", "THIS WEEK TOTAL", "TỔNG TUẦN NÀY");
     add("TRUNG BÌNH/NGÀY", "DAILY AVERAGE", "TRUNG BÌNH/NGÀY");
     add("CAO NHẤT", "RECORD", "CAO NHẤT");
-    add("TỔNG QUAN TÍCH LŨY", "ALL-TIME OVERVIEW", "TỔNG QUAN TÍCH LŨY");
+    add("TỔNG QUAN TÍCH LŨY", "ALL-TIME OVERVIEW", "TỔNG QUAN");
     add("TỔNG THỜI GIAN ĐÃ ĐỌC", "TOTAL READING TIME", "TỔNG THỜI GIAN ĐÃ ĐỌC");
     add("TỔNG SỐ NGÀY ĐÃ ĐỌC", "TOTAL READING DAYS", "TỔNG SỐ NGÀY ĐÃ ĐỌC");
     add("CHUỖI HIỆN TẠI", "CURRENT STREAK", "CHUỖI HIỆN TẠI");
@@ -984,8 +984,8 @@ void AppTranslator::initTranslations()
     // --- Reader Mode & Overflows ---
     add("Sepia", "Sepia", "Nâu ấm (Sepia)");
     add("Nâu ấm (Sepia)", "Sepia", "Nâu ấm (Sepia)");
-    add("Chế độ văn bản (Reflow OCR)", "Text Mode (Reflow OCR)", "Chế độ văn bản (Reflow OCR)");
-    add("Chế độ xem PDF gốc", "Original PDF View", "Chế độ xem PDF gốc");
+    add("Chế độ văn bản (Reflow OCR)", "Text Mode (Reflow OCR)", "PDF Reflow (Văn bản)");
+    add("Chế độ xem PDF gốc", "Original PDF View", "PDF gốc");
     add("Đọc sách (TTS)", "Read Aloud (TTS)", "Đọc sách (TTS)");
     add("Dừng đọc TTS", "Stop TTS", "Dừng đọc TTS");
     add("Đánh Dấu Sách", "Bookmark Book", "Đánh Dấu Sách");
@@ -998,7 +998,7 @@ void AppTranslator::initTranslations()
     add("Chủ đề, phông chữ & lề trang", "Themes, fonts & page margins", "Chủ đề, phông chữ & lề trang");
     add("Phương thức chuyển trang", "Page turn method", "Phương thức chuyển trang");
     add("Tiến độ đọc, pin & đồng hồ", "Reading progress, battery & clock", "Tiến độ đọc, pin & đồng hồ");
-    add("Giọng đọc, ngôn ngữ & ngoại tuyến", "Voices, languages & offline playback", "Giọng đọc, ngôn ngữ & ngoại tuyến");
+    add("Giọng đọc, ngôn ngữ & ngoại tuyến", "Voices, languages & offline playback", "Giọng đọc, ngôn ngữ & phát Offline");
     add("Bố cục tủ sách & quét lại dữ liệu", "Bookshelf layout & rescan data", "Bố cục tủ sách & quét lại dữ liệu");
     add("Phiên bản v2.0 & trợ giúp", "Version 2.0 & help guide", "Phiên bản v2.0 & trợ giúp");
 
@@ -1058,8 +1058,8 @@ void AppTranslator::initTranslations()
     add("Nghe thử giọng đọc đã chọn", "Preview Selected Voice", "Nghe thử giọng đọc đã chọn");
     add("TÙY CHỌN PHÁT & NGOẠI TUYẾN", "PLAYBACK & OFFLINE OPTIONS", "TÙY CHỌN PHÁT & NGOẠI TUYẾN");
     add("Chế độ đọc", "Playback mode", "Chế độ đọc");
-    add("Trực tuyến", "Online", "Trực tuyến");
-    add("Ngoại tuyến", "Offline", "Ngoại tuyến");
+    add("Trực tuyến", "Online", "Online");
+    add("Ngoại tuyến", "Offline", "Offline");
     add("Tự động chuyển chương", "Auto next chapter", "Tự động chuyển chương");
     add("Tải toàn bộ chương về máy để nghe Offline", "Download entire chapter for Offline listening", "Tải toàn bộ chương về máy để nghe Offline");
     add("Đang tải: ", "Downloading: ", "Đang tải: ");
@@ -1104,10 +1104,10 @@ void AppTranslator::initTranslations()
     add("Đọc", "Read", "Đọc");
     add("Không có hoạt động đọc sách", "No reading activity", "Không có hoạt động đọc sách");
     add("LỊCH ĐỌC THEO THÁNG", "MONTHLY READING CALENDAR", "LỊCH ĐỌC THEO THÁNG");
-    add("TỔNG TÍCH LŨY TOÀN THỜI GIAN", "ALL-TIME TOTAL READING", "TỔNG TÍCH LŨY TOÀN THỜI GIAN");
+    add("TỔNG TÍCH LŨY TOÀN THỜI GIAN", "ALL-TIME TOTAL READING", "TỔNG THỜI GIAN ĐỌC");
 
     // --- Filter & Sort Sheet ---
-    add("Lưới bìa sách (Mosaic)", "Mosaic Grid", "Lưới bìa sách (Mosaic)");
+    add("Lưới bìa sách (Mosaic)", "Mosaic Grid", "Lưới bìa");
     add("✦ Danh sách đọc", "✦ Reading List", "✦ Danh sách đọc");
     add("Chế độ xem:", "View mode:", "Chế độ xem:");
     add("Không phân nhóm", "No grouping", "Không phân nhóm");
@@ -1165,10 +1165,10 @@ void AppTranslator::initTranslations()
     add("Rất bổng (1.4x)", "Very high (1.4x)", "Rất bổng (1.4x)");
 
     // --- DictManager Strings ---
-    add("Lỗi dịch thuật: ", "Translation error: ", "Lỗi dịch thuật: ");
-    add("Không thể kết nối đến từ điển trực tuyến: ", "Cannot connect to online dictionary: ", "Không thể kết nối đến từ điển trực tuyến: ");
+    add("Lỗi dịch thuật: ", "Translation error: ", "Lỗi dịch: ");
+    add("Không thể kết nối đến từ điển trực tuyến: ", "Cannot connect to online dictionary: ", "Không thể kết nối từ điển online: ");
     add("Không tìm thấy định nghĩa cho từ này.", "No definition found for this word.", "Không tìm thấy định nghĩa cho từ này.");
-    add("Không thể phân tích kết quả dịch thuật.", "Cannot parse translation results.", "Không thể phân tích kết quả dịch thuật.");
+    add("Không thể phân tích kết quả dịch thuật.", "Cannot parse translation results.", "Không thể đọc kết quả dịch.");
 
     // --- Concise UI & Menu Strings ---
     add("Hiển thị", "Display", "Hiển thị");
@@ -1232,7 +1232,7 @@ void AppTranslator::initTranslations()
     add("Chế độ", "Mode", "Chế độ");
     add("Tự chuyển chương", "Auto next chapter", "Tự chuyển chương");
     add("Tải chương để nghe Offline", "Download chapter for offline", "Tải chương để nghe Offline");
-    add("Xóa bộ nhớ đệm", "Clear cache", "Xóa bộ nhớ đệm");
+    add("Xóa bộ nhớ đệm", "Clear cache", "Xóa cache");
 
     // Display & Fonts concise
     add("GIAO DIỆN", "INTERFACE", "GIAO DIỆN");
@@ -1269,7 +1269,7 @@ void AppTranslator::initTranslations()
     add("Tuần", "Week", "Tuần");
     add("LỊCH THÁNG", "MONTHLY CALENDAR", "LỊCH THÁNG");
     add("HOẠT ĐỘNG TUẦN", "WEEKLY ACTIVITY", "HOẠT ĐỘNG TUẦN");
-    add("TỔNG TÍCH LŨY", "ALL-TIME STATS", "TỔNG TÍCH LŨY");
+    add("TỔNG TÍCH LŨY", "ALL-TIME STATS", "TỔNG THỐNG KÊ");
 
     // --- Settings Menu & Subtitles ---
     add("Chủ đề, phông chữ & màu nền", "Themes, fonts & color schemes", "Chủ đề, phông chữ & màu nền");
@@ -1584,7 +1584,7 @@ void AppTranslator::initTranslations()
     add("Không có ghi chú nào để xuất.", "No notes or bookmarks to export.", "Không có ghi chú nào để xuất.");
 
     // WiFi Drop, Reader, Highlights, About, & Misc Missing Strings
-    add("Truyền sách Wi-Fi", "Wi-Fi Book Drop", "Truyền sách Wi-Fi");
+    add("Truyền sách Wi-Fi", "Wi-Fi Book Drop", "Wi-Fi Drop");
     add("Máy chủ WiFi Book Drop", "WiFi Book Drop Server", "Máy chủ WiFi Book Drop");
     add("● MÁY CHỦ ĐANG HOẠT ĐỘNG", "● SERVER ACTIVE", "● MÁY CHỦ ĐANG HOẠT ĐỘNG");
     add("○ MÁY CHỦ ĐÃ TẠM DỪNG", "○ SERVER STOPPED", "○ MÁY CHỦ ĐÃ TẠM DỪNG");
@@ -1632,7 +1632,7 @@ void AppTranslator::initTranslations()
     // About & Help
     add("Phiên bản 2.0.0 (Build 200) - BlackBerry 10", "Version 2.0.0 (Build 200) - BlackBerry 10", "Phiên bản 2.0.0 (Build 200) - BlackBerry 10");
     add("Trình đọc sách Native thuần C++ và Cascades cho BlackBerry 10.", "Pure C++ and Cascades Native eBook Reader for BlackBerry 10.", "Trình đọc sách Native thuần C++ và Cascades cho BlackBerry 10.");
-    add("Libris là ứng dụng đọc sách chuẩn Native Cascades dành cho BlackBerry 10. Hỗ trợ nhiều định dạng, cử chỉ vuốt mượt mà, tra từ điển ngoại tuyến và đọc giọng nói TTS.", "Libris is a Native Cascades eBook reader for BlackBerry 10 supporting multiple formats, smooth swipe gestures, offline dictionary, and TTS voice reading.", "Libris là ứng dụng đọc sách chuẩn Native Cascades dành cho BlackBerry 10. Hỗ trợ nhiều định dạng, cử chỉ vuốt mượt mà, tra từ điển ngoại tuyến và đọc giọng nói TTS.");
+    add("Libris là ứng dụng đọc sách chuẩn Native Cascades dành cho BlackBerry 10. Hỗ trợ nhiều định dạng, cử chỉ vuốt mượt mà, tra từ điển ngoại tuyến và đọc giọng nói TTS.", "Libris is a Native Cascades eBook reader for BlackBerry 10 supporting multiple formats, smooth swipe gestures, offline dictionary, and TTS voice reading.", "Libris là ứng dụng đọc sách Native Cascades dành cho BlackBerry 10, hỗ trợ nhiều định dạng, vuốt mượt mà, từ điển Offline và đọc giọng nói TTS.");
     add("Hỗ trợ EPUB, PDF, MOBI, AZW3, PRC, FB2, TXT, CBZ, DJVU.", "Supports EPUB, PDF, MOBI, AZW3, PRC, FB2, TXT, CBZ, DJVU.", "Hỗ trợ EPUB, PDF, MOBI, AZW3, PRC, FB2, TXT, CBZ, DJVU.");
     add("CÔNG NGHỆ VÀ BỘ XỬ LÝ LÕI", "CORE TECHNOLOGIES & ENGINES", "CÔNG NGHỆ VÀ BỘ XỬ LÝ LÕI");
     add("BẢN QUYỀN VÀ GIẤY PHÉP", "COPYRIGHT & LICENSE", "BẢN QUYỀN VÀ GIẤY PHÉP");
@@ -1661,8 +1661,8 @@ void AppTranslator::initTranslations()
         "Version 2.0.0 (Build 200):\n- Monochrome Black & White palette with Emerald accents following BlackBerry 10 design.\n- Removed cluttered labels and redundant badges.\n- Real chapter title extraction from EPUB, TXT, and FB2 content.\n- Optimized offline dictionary and TTS voice reading.\n- Smooth keyboard & optical trackpad navigation for Passport, Classic, and Q10.\n\nVersion 2.0.0 (Previous Builds):\n- Native 5-tab Navigation Drawer: Reading, Recent, TOC, Library, Files.\n- Automatic Vietnamese charset detection (TCVN3, Windows-1258, VNI, UTF-8).\n- Persistent sync of reading history and settings to safe storage.",
         "Phiên bản 2.0.0 (Build 200):\n- Bảng màu đơn sắc Đen, Trắng và điểm nhấn Emerald theo chuẩn BlackBerry 10.\n- Loại bỏ toàn bộ thẻ xanh đậm và ký tự rườm rà.\n- Nhận diện tên chương thực tế từ nội dung sách EPUB, TXT, FB2.\n- Tối ưu tra từ điển ngoại tuyến và đọc giọng nói TTS.\n- Điều hướng mượt mà với bàn phím và bàn rê quang học Passport, Classic, Q10.\n\nPhiên bản 2.0.0 (Bản dựng trước):\n- Cấu trúc Navigation Drawer 5 tab Native: Đang đọc, Gần đây, Mục lục, Tủ sách, Duyệt tệp.\n- Tự động nhận diện bảng mã tiếng Việt TCVN3, Windows-1258, VNI, UTF-8.\n- Đồng bộ dữ liệu lịch sử đọc và cấu hình vào bộ nhớ lưu trữ an toàn.");
     add("Không thể mở tệp PDF/DjVu.", "Unable to open PDF/DjVu file.", "Không thể mở tệp PDF/DjVu.");
-    add("Không thể mở hoặc giải mã tệp PDF/DjVu (mã lỗi %1).", "Unable to open or decode PDF/DjVu file (error %1).", "Không thể mở hoặc giải mã tệp PDF/DjVu (mã lỗi %1).");
-    add("Lỗi dịch thuật:", "Translation error:", "Lỗi dịch thuật:");
+    add("Không thể mở hoặc giải mã tệp PDF/DjVu (mã lỗi %1).", "Unable to open or decode PDF/DjVu file (error %1).", "Không thể mở tệp PDF/DjVu (mã lỗi %1).");
+    add("Lỗi dịch thuật:", "Translation error:", "Lỗi dịch:");
     add("Phiên bản %1 (Build %2) - BlackBerry 10", "Version %1 (Build %2) - BlackBerry 10", "Phiên bản %1 (Build %2) - BlackBerry 10");
     add("Phiên bản hiện tại: %1 (Build %2)", "Current version: %1 (Build %2)", "Phiên bản hiện tại: %1 (Build %2)");
     add("TỔNG 7 NGÀY", "7-DAY TOTAL", "TỔNG 7 NGÀY");
@@ -1695,7 +1695,7 @@ void AppTranslator::initTranslations()
     add("FONT CHỮ", "FONT FAMILY", "FONT CHỮ");
     add("CỠ CHỮ", "FONT SIZE", "CỠ CHỮ");
     add("SỐ CỘT", "COLUMNS", "SỐ CỘT");
-    add("DÃN DÒNG", "LINE SPACING", "DÃN DÒNG");
+    add("DÃN DÒNG", "LINE SPACING", "GIÃN DÒNG");
     add("Đọc sách", "Read book", "Đọc sách");
     add("Cập nhật", "Updated", "Cập nhật");
     add("Sách khác gần đây", "Other Recent Books", "Sách khác gần đây");
@@ -1717,7 +1717,7 @@ void AppTranslator::initTranslations()
     add("Đã tắt cắt lề trắng PDF", "PDF Auto-Crop disabled", "Đã tắt cắt lề trắng PDF");
     add("Đã xuất ghi chú: ", "Notes exported: ", "Đã xuất ghi chú: ");
     add("Không có ghi chú để xuất", "No notes to export", "Không có ghi chú để xuất");
-    add("Truyền Wi-Fi", "Wi-Fi Drop", "Truyền Wi-Fi");
+    add("Truyền Wi-Fi", "Wi-Fi Drop", "Wi-Fi Drop");
     add("Kho OPDS", "OPDS", "Kho OPDS");
     add("Libris TTS", "Libris TTS", "Libris TTS");
     add("Phiên bản Libris & hướng dẫn", "Libris version & guide", "Phiên bản Libris & hướng dẫn");
@@ -1762,7 +1762,7 @@ void AppTranslator::initTranslations()
     add("Tự cuộn (Teleprompter)", "Auto-Scroll", "Tự cuộn");
     add("Kho máy", "On Device", "Kho máy");
     add("Kệ", "Shelf", "Kệ");
-    add("CHUỖI MAX", "MAX STREAK", "CHUỖI MAX");
+    add("CHUỖI MAX", "MAX STREAK", "CHUỖI DÀI NHẤT");
     add("MỤC TIÊU HÔM NAY", "TODAY'S GOAL", "MỤC TIÊU HÔM NAY");
     add("Mục tiêu: ", "Goal: ", "Mục tiêu: ");
     add("NGÀY ĐỌC", "READ DAYS", "NGÀY ĐỌC");
@@ -1792,12 +1792,12 @@ void AppTranslator::initTranslations()
     add("Dừng", "Stop", "Dừng");
 
     // --- Focus Mode, Next Series, Quote Share, Flashcards, OPDS Queue & .librisbackup ---
-    add("Chế độ Tập trung (Thước đọc)", "Focus Mode (Reading Ruler)", "Chế độ Tập trung (Thước đọc)");
-    add("Làm mờ vùng chữ xung quanh, chạm để dời dải đọc", "Dim surrounding text, tap to move reading band", "Làm mờ vùng chữ xung quanh, chạm để dời dải đọc");
-    add("Chế độ Tập trung", "Focus Mode", "Chế độ Tập trung");
-    add("Chế độ Tập trung (Đang bật)", "Focus Mode (On)", "Chế độ Tập trung (Đang bật)");
-    add("Đã bật Chế độ Tập trung", "Focus Mode enabled", "Đã bật Chế độ Tập trung");
-    add("Đã tắt Chế độ Tập trung", "Focus Mode disabled", "Đã tắt Chế độ Tập trung");
+    add("Chế độ Tập trung (Thước đọc)", "Focus Mode (Reading Ruler)", "Focus Mode (Reading Ruler)");
+    add("Làm mờ vùng chữ xung quanh, chạm để dời dải đọc", "Dim surrounding text, tap to move reading band", "Làm mờ chữ xung quanh, chạm để di chuyển vùng đọc");
+    add("Chế độ Tập trung", "Focus Mode", "Focus Mode");
+    add("Chế độ Tập trung (Đang bật)", "Focus Mode (On)", "Focus Mode (Đang bật)");
+    add("Đã bật Chế độ Tập trung", "Focus Mode enabled", "Đã bật Focus Mode");
+    add("Đã tắt Chế độ Tập trung", "Focus Mode disabled", "Đã tắt Focus Mode");
     add("Đọc tiếp tập kế", "Read Next Volume", "Đọc tiếp tập kế");
     add("Chia sẻ Quote Card", "Share Quote Card", "Chia sẻ Quote Card");
     add("Lưu từ", "Save Word", "Lưu từ");
@@ -1847,7 +1847,7 @@ void AppTranslator::initTranslations()
 
     // --- Reading Statistics Redesign ---
     add("7 NGÀY GẦN NHẤT", "LAST 7 DAYS", "7 NGÀY GẦN NHẤT");
-    add("TÍCH LŨY", "ALL-TIME", "TÍCH LŨY");
+    add("TÍCH LŨY", "ALL-TIME", "TỔNG CỘNG");
     add("THEO ĐỊNH DẠNG", "BY FORMAT", "THEO ĐỊNH DẠNG");
     add("TỔNG TUẦN", "WEEK TOTAL", "TỔNG TUẦN");
     add("TIẾN ĐỘ CHƯƠNG", "CHAPTER PROGRESS", "TIẾN ĐỘ CHƯƠNG");
@@ -1855,7 +1855,7 @@ void AppTranslator::initTranslations()
     add("Chưa có dữ liệu đọc sách", "No reading data yet", "Chưa có dữ liệu đọc sách");
 
     // --- eSpeak-NG ---
-    add("eSpeak-NG (Ngoại tuyến)", "eSpeak-NG (Offline)", "eSpeak-NG (Ngoại tuyến)");
+    add("eSpeak-NG (Ngoại tuyến)", "eSpeak-NG (Offline)", "eSpeak-NG (Offline)");
     add("Giọng vùng miền (Tiếng Việt)", "Vietnamese regional accent", "Giọng vùng miền (Tiếng Việt)");
     add("Miền Bắc", "Northern", "Miền Bắc");
     add("Miền Nam", "Southern", "Miền Nam");
@@ -1867,15 +1867,261 @@ void AppTranslator::initTranslations()
     add("Nam trầm ấm", "Male - Warm", "Nam trầm ấm");
     add("Klatt rõ chữ", "Klatt - Clear", "Klatt rõ chữ");
     add("Giọng Nguyễn", "Nguyen voice", "Giọng Nguyễn");
-    add("Chế độ ngoại tuyến: ưu tiên phát âm thanh đã tải, câu chưa có sẽ tự đọc bằng eSpeak-NG tích hợp sẵn.", "Offline mode: downloaded audio plays first; uncached sentences are read by the built-in eSpeak-NG.", "Chế độ ngoại tuyến: ưu tiên phát âm thanh đã tải, câu chưa có sẽ tự đọc bằng eSpeak-NG tích hợp sẵn.");
+    add("Chế độ ngoại tuyến: ưu tiên phát âm thanh đã tải, câu chưa có sẽ tự đọc bằng eSpeak-NG tích hợp sẵn.", "Offline mode: downloaded audio plays first; uncached sentences are read by the built-in eSpeak-NG.", "Chế độ Offline: ưu tiên phát âm thanh đã tải, câu chưa có sẽ đọc bằng eSpeak-NG tích hợp sẵn.");
     // --- TTS quick HUD ---
     add("Tạm dừng", "Pause", "Tạm dừng");
     add("Phát tiếp", "Play", "Phát tiếp");
     add("Nguồn", "Source", "Nguồn");
     add("Giọng", "Voice", "Giọng");
     add("Chuẩn (mượt nhất)", "Standard (smoothest)", "Chuẩn (mượt nhất)");
-    add("Chế độ ngoại tuyến: đọc âm thanh đã tải hoặc eSpeak-NG", "Offline mode: cached audio or eSpeak-NG", "Chế độ ngoại tuyến: đọc âm thanh đã tải hoặc eSpeak-NG");
-    add("Chế độ trực tuyến", "Online mode", "Chế độ trực tuyến");
+    add("Chế độ ngoại tuyến: đọc âm thanh đã tải hoặc eSpeak-NG", "Offline mode: cached audio or eSpeak-NG", "Chế độ Offline: dùng âm thanh đã tải hoặc eSpeak-NG");
+    add("Chế độ trực tuyến", "Online mode", "Chế độ Online");
+
+    // --- Onboarding Guide ---
+    add("Skip", "Skip", "Bỏ qua");
+    add("Chào mừng bạn", "Welcome", "Chào mừng bạn");
+    add("Trình đọc sách bản địa cho BlackBerry 10", "Native E-Book Reader for BlackBerry 10", "Ứng dụng đọc sách cho BlackBerry 10");
+    add("Chọn ngôn ngữ", "Choose Language", "Chọn ngôn ngữ");
+    add("Chọn ngôn ngữ hiển thị", "Select your preferred language", "Chọn ngôn ngữ hiển thị");
+    add("Chọn giao diện", "Choose Theme", "Chọn giao diện");
+    add("Thêm sách vào tủ", "Add Books", "Thêm sách vào tủ");
+    add("Bộ nhớ & Thẻ SD", "Storage & SD Card", "Bộ nhớ & Thẻ SD");
+    add("/shared/books & MicroSD", "/shared/books & MicroSD", "/shared/books & Thẻ MicroSD");
+    add("Kéo thả sách & bài web qua Wi-Fi", "Drop books & web articles over Wi-Fi", "Gửi sách & bài web qua Wi-Fi");
+    add("Tải sách trực tuyến miễn phí", "Browse & download free e-books online", "Tải sách online miễn phí");
+    add("Cử chỉ & Phím tắt", "Gestures & Shortcuts", "Cử chỉ & Phím tắt");
+    add("Chạm giữa", "Tap center", "Chạm giữa");
+    add("Vuốt cạnh trái: Mở menu 5 tab", "Swipe left edge: Open 5-tab menu", "Vuốt cạnh trái: Mở menu chính");
+    add("Chạm giữa: Ẩn / hiện thanh công cụ", "Tap center: Toggle toolbars", "Chạm giữa: Ẩn / hiện thanh công cụ");
+    add("Chạm / vuốt cạnh: Lật trang", "Tap / swipe edge: Turn page", "Chạm hoặc vuốt cạnh: Lật trang");
+    add("Chạm vào các vùng trên để thử cử chỉ", "Tap any zone above to try gestures", "Chạm vào các vùng trên để thử");
+    add("Space / J, K: Lật trang mượt mà", "Space / J, K: Turn pages smoothly", "Space / J, K: Lật trang");
+    add("Z / W: Tăng hoặc giảm cỡ chữ tức thì", "Z / W: Increase or decrease font size", "Z / W: Tăng / giảm cỡ chữ nhanh");
+    add("D: Chuyển nhanh nền Tối / Sepia / Sáng", "D: Cycle Dark / Sepia / Light theme", "D: Chuyển nhanh nền Tối / Sepia / Sáng");
+    add("R: Bật hoặc tắt Thước kẻ đọc", "R: Toggle Reading Ruler", "R: Bật / tắt Reading Ruler");
+    add("V: Bật hoặc tắt Bionic Reading", "V: Toggle Bionic Reading", "V: Bật / tắt Bionic Reading");
+    add("?: Mở bảng tất cả phím tắt", "?: Show all keyboard shortcuts", "?: Xem tất cả phím tắt");
+    add("Ghi chú, Từ điển & TTS", "Notes, Dictionary & TTS", "Ghi chú, Từ điển & TTS");
+    add("Ghi chú & Quote Card", "Highlights & Quote Card", "Highlight & Quote Card");
+    add("Tô màu, ghi chú & xuất ảnh PNG", "Highlight, annotate & export PNG cards", "Highlight, ghi chú & xuất ảnh PNG");
+    add("Từ điển & Dịch nhanh", "Dictionary & Translate", "Từ điển & Dịch nhanh");
+    add("Bôi đen từ để tra ngay trên trang", "Select text for instant lookup", "Bôi đen từ để tra ngay trên trang");
+    add("Nghe đọc (TTS)", "Text-to-Speech (TTS)", "Nghe sách (TTS)");
+    add("eSpeak-NG ngoại tuyến & Cloud TTS", "Offline eSpeak-NG & Cloud TTS", "eSpeak-NG Offline & Cloud TTS");
+    add("Sẵn sàng đọc sách!", "Ready to Read!", "Sẵn sàng đọc sách!");
+    add("Mở lại bất cứ lúc nào trong Giới thiệu → Hướng dẫn.", "Replay anytime in About → Guide.", "Xem lại bất cứ lúc nào ở Giới thiệu → Hướng dẫn.");
+    add("Bắt đầu đọc ngay", "Start Reading", "Bắt đầu đọc ngay");
+
+    // --- Recent UI & Settings ---
+    add("Xem lại hướng dẫn từng bước", "Replay step-by-step walkthrough", "Xem lại hướng dẫn từng bước");
+    add("TRONG SÁCH", "IN BOOKS", "TRONG SÁCH");
+    add("Màu nền trang đọc", "Reader background color", "Màu nền trang đọc");
+    add("Báo lỗi & Góp ý", "Bug Report & Feedback", "Báo lỗi & Góp ý");
+    add("Gửi email tới nhatlm0910@gmail.com (log tùy chọn)", "Send email to nhatlm0910@gmail.com (optional log)", "Gửi email tới nhatlm0910@gmail.com (log tùy chọn)");
+    add("Chỉnh mục tiêu đọc mỗi ngày", "Edit daily reading goal", "Chỉnh mục tiêu đọc mỗi ngày");
+    add("Sửa", "Edit", "Sửa");
+
+    // --- Remaining QML UI Strings (100% Coverage) ---
+    add("Đánh giá & Cảm nhận", "Review & Notes", "Đánh giá & Cảm nhận");
+    add("Viết vài dòng cảm nhận về cuốn sách...", "Write a short review or impression...", "Viết vài dòng cảm nhận về cuốn sách...");
+    add("Lưu cảm nhận", "Save Review", "Lưu cảm nhận");
+    add("Đã lưu đánh giá & cảm nhận", "Review saved", "Đã lưu đánh giá & cảm nhận");
+    add("Ẩn trình sửa thông tin", "Hide metadata editor", "Ẩn trình sửa thông tin");
+    add("Sửa thông tin sách (Tên / Tác giả / Bộ)", "Edit Book Info (Title / Author / Series)", "Sửa thông tin sách (Tên / Tác giả / Bộ)");
+    add("Tên sách", "Book title", "Tên sách");
+    add("Bộ truyện (Series)", "Series", "Bộ truyện (Series)");
+    add("Số tập (VD: 1)", "Volume (e.g. 1)", "Số tập (VD: 1)");
+    add("Lưu thay đổi", "Save Changes", "Lưu thay đổi");
+    add("Đã cập nhật thông tin sách", "Book info updated", "Đã cập nhật thông tin sách");
+    add("Mục tiêu:", "Goal:", "Mục tiêu:");
+    add("Ngẫu nhiên", "Shuffle", "Ngẫu nhiên");
+    add("Xóa từ vựng?", "Delete vocabulary word?", "Xóa từ vựng?");
+    add("Bạn có chắc muốn xóa từ này khỏi sổ từ vựng?", "Are you sure you want to remove this word?", "Bạn có chắc muốn xóa từ này khỏi sổ từ vựng?");
+    add("Lưu ảnh trích dẫn", "Save Quote Card", "Lưu Quote Card");
+    add("Đã lưu ảnh trích dẫn: ", "Saved Quote Card: ", "Đã lưu Quote Card: ");
+    add("Không thể tạo ảnh trích dẫn", "Unable to create Quote Card", "Không thể tạo Quote Card");
+    add("Chưa có vị trí trước đó", "No previous position", "Chưa có vị trí trước đó");
+    add("Đã quay lại vị trí trước", "Returned to previous position", "Đã quay lại vị trí trước");
+    add("1x · Cuộn liên tục", "1x · Continuous Scroll", "1x · Cuộn liên tục");
+    add("Phím tắt bàn phím BB10", "BB10 Keyboard Shortcuts", "Phím tắt bàn phím BB10");
+    add("Đã bật thước kẻ đọc", "Reading Ruler enabled", "Đã bật Reading Ruler");
+    add("Đã tắt thước kẻ đọc", "Reading Ruler disabled", "Đã tắt Reading Ruler");
+    add("Đã khóa cuộn ngang PDF", "PDF horizontal scroll locked", "Đã khóa cuộn ngang PDF");
+    add("Đã mở khóa cuộn ngang PDF", "PDF horizontal scroll unlocked", "Đã mở khóa cuộn ngang PDF");
+    add("Đã bật Bionic Reading", "Bionic Reading enabled", "Đã bật Bionic Reading");
+    add("Đã tắt Bionic Reading", "Bionic Reading disabled", "Đã tắt Bionic Reading");
+    add("Bạn đã đọc liên tục một chặng — hãy nghỉ mắt 20 giây nhé!", "You've been reading for a stretch — rest your eyes for 20 seconds!", "Bạn đã đọc khá lâu rồi — nghỉ mắt 20 giây nhé!");
+    add("Xoay trang 90°", "Rotate Page 90°", "Xoay trang 90°");
+    add("Đảo màu đêm", "Night Invert", "Đảo màu Đêm");
+    add("Cuộn liên tục", "Continuous Scroll", "Cuộn liên tục");
+    add("Phóng to trang", "Zoom Page", "Phóng to trang");
+    add("Bionic Reading", "Bionic Reading", "Bionic Reading");
+    add("Nhập số phút mục tiêu mỗi ngày (5 - 240 phút):", "Enter daily goal in minutes (5 - 240 min):", "Nhập số phút mục tiêu mỗi ngày (5 - 240 phút):");
+    add("Báo lỗi / Góp ý (nhatlm0910@gmail.com)", "Bug Report / Feedback (nhatlm0910@gmail.com)", "Báo lỗi / Góp ý (nhatlm0910@gmail.com)");
+    add("Gửi báo lỗi hoặc góp ý qua Email BlackBerry Hub tới nhatlm0910@gmail.com. Đính kèm nhật ký kỹ thuật là tùy chọn.", "Send a bug report or feedback via BlackBerry Hub Email to nhatlm0910@gmail.com. Attaching logs is optional.", "Gửi báo lỗi hoặc góp ý qua Email BlackBerry Hub tới nhatlm0910@gmail.com. Đính kèm file log là tùy chọn.");
+    add("NỘI DUNG BÁO LỖI", "REPORT DETAILS", "NỘI DUNG BÁO LỖI");
+    add("Phân loại", "Category", "Phân loại");
+    add("Báo lỗi (Bug)", "Bug Report", "Báo lỗi (Bug)");
+    add("Lỗi mở/hiển thị sách", "Book open / render issue", "Lỗi mở/hiển thị sách");
+    add("Góp ý tính năng", "Feature suggestion", "Góp ý tính năng");
+    add("Tiêu đề ngắn gọn (ví dụ: Lỗi mở file EPUB)...", "Short subject (e.g. EPUB open issue)...", "Tiêu đề ngắn gọn (ví dụ: Lỗi mở file EPUB)...");
+    add("Mô tả chi tiết lỗi bạn gặp phải hoặc góp ý tính năng...", "Describe the bug or feature suggestion in detail...", "Mô tả chi tiết lỗi bạn gặp phải hoặc góp ý tính năng...");
+    add("TÙY CHỌN KỸ THUẬT", "TECHNICAL OPTIONS", "TÙY CHỌN KỸ THUẬT");
+    add("Đính kèm nhật ký kỹ thuật (Log)", "Attach technical log", "Đính kèm file log");
+    add("Không bắt buộc — gửi kèm ~60 dòng log gần nhất để hỗ trợ sửa lỗi", "Optional — attach ~60 recent log lines to help diagnose issues", "Tùy chọn — gửi kèm ~60 dòng log gần nhất để dễ sửa lỗi");
+    add("Gửi Email tới nhatlm0910@gmail.com", "Send Email to nhatlm0910@gmail.com", "Gửi Email tới nhatlm0910@gmail.com");
+    add("Vui lòng nhập tiêu đề hoặc mô tả trước khi gửi.", "Please enter a subject or description before sending.", "Vui lòng nhập tiêu đề hoặc mô tả trước khi gửi.");
+    add("Đang mở trình soạn Email tới nhatlm0910@gmail.com...", "Opening Email composer to nhatlm0910@gmail.com...", "Đang mở trình soạn Email tới nhatlm0910@gmail.com...");
+    add("Không thể mở ứng dụng Email trên thiết bị.", "Unable to open the Email app on this device.", "Không thể mở ứng dụng Email trên thiết bị.");
+    add("Căn lề văn bản", "Text Alignment", "Căn lề văn bản");
+    add("Căn đều hai bên", "Justify", "Căn đều hai bên");
+    add("Căn trái", "Align Left", "Căn trái");
+    add("Bỏ CSS gốc của sách", "Ignore Book CSS", "Tắt CSS gốc của sách");
+    add("Dùng định dạng chuẩn của Libris thay cho CSS nhúng", "Use Libris styling instead of embedded book CSS", "Dùng định dạng của Libris thay cho CSS nhúng");
+    add("Thụt đầu dòng", "Paragraph Indent", "Thụt đầu dòng");
+    add("Không thụt (0)", "None (0)", "Không thụt (0)");
+    add("Chuẩn (1.5em)", "Standard (1.5em)", "Chuẩn (1.5em)");
+    add("Sâu (2.2em)", "Deep (2.2em)", "Sâu (2.2em)");
+    add("Khoảng cách đoạn", "Paragraph Spacing", "Khoảng cách đoạn");
+    add("Độ đậm chữ", "Font Weight", "Độ đậm chữ");
+    add("Thường (400)", "Regular (400)", "Thường (400)");
+    add("Vừa (500)", "Medium (500)", "Vừa (500)");
+    add("Đậm (600)", "SemiBold (600)", "Đậm (600)");
+    add("Độ sáng chữ nền Tối", "Dark Mode Text Brightness", "Độ sáng chữ nền Tối");
+    add("Sáng rõ", "Crisp", "Sáng rõ");
+    add("Dịu mắt", "Soft", "Dịu mắt");
+    add("Rất dịu (đọc đêm)", "Ultra Soft (Night)", "Rất dịu (đọc đêm)");
+    add("Bionic Reading (Đọc nhanh)", "Bionic Reading", "Bionic Reading");
+    add("Làm đậm nửa đầu mỗi từ giúp mắt bắt nhịp đọc nhanh hơn", "Bold the first half of each word for faster reading", "In đậm nửa đầu mỗi từ giúp mắt bắt nhịp đọc nhanh hơn");
+    add("Thanh tiến độ mảnh", "Thin Progress Bar", "Thanh tiến độ mảnh");
+    add("Hiển thị vạch tiến độ 3px phía trên chân trang", "Show a 3px progress bar above the footer", "Hiển thị vạch tiến độ 3px phía trên chân trang");
+    add("Ước tính thời gian còn lại", "Remaining Time Estimate", "Ước tính thời gian còn lại");
+    add("Hiển thị số phút dự kiến hết chương ở chân trang", "Show estimated minutes left in chapter in footer", "Hiển thị số phút dự kiến hết chương ở chân trang");
+    add("Khôi phục dữ liệu?", "Restore backup?", "Khôi phục dữ liệu?");
+    add("Thao tác này sẽ ghi đè tiến độ đọc, ghi chú và cài đặt hiện tại bằng bản sao lưu. Tiếp tục?", "This will overwrite your current reading progress, notes, and settings with the backup. Continue?", "Thao tác này sẽ ghi đè tiến độ đọc, ghi chú và cài đặt hiện tại bằng bản sao lưu. Tiếp tục?");
+    add("Đảo chiều phím âm lượng", "Invert Volume Keys", "Đảo chiều phím âm lượng");
+    add("Nhấn Tăng âm lượng để sang trang tiếp, Giảm âm lượng để lùi trang", "Press Volume Up for next page, Volume Down for previous page", "Nhấn Tăng âm lượng để sang trang tiếp, Giảm âm lượng để lùi trang");
+    add("Nhắc nghỉ mắt (Pomodoro)", "Eye Break Reminder (Pomodoro)", "Nhắc nghỉ mắt (Pomodoro)");
+
+    // --- Minimal Onboarding Guide ---
+    add("Chào mừng", "Welcome", "Chào mừng");
+    add("Giao diện", "Theme", "Giao diện");
+    add("Thêm sách", "Add Books", "Thêm sách");
+    add("Trình duyệt → BB10", "Browser → BB10", "Trình duyệt → BB10");
+    add("Kho sách online", "Online catalogs", "Kho sách online");
+    add("Điều khiển", "Controls", "Điều khiển");
+    add("Chạm để thử", "Tap to try", "Chạm để thử");
+    add("Vuốt trái · Menu", "Swipe left · Menu", "Vuốt trái · Menu");
+    add("Chạm giữa · Ẩn/hiện thanh", "Tap center · Toggle bars", "Chạm giữa · Ẩn/hiện thanh");
+    add("Chạm cạnh · Lật trang", "Tap edge · Turn page", "Chạm cạnh · Lật trang");
+    add("Space · Lật trang", "Space · Turn page", "Space · Lật trang");
+    add("Z / W · Cỡ chữ", "Z / W · Font size", "Z / W · Cỡ chữ");
+    add("D · Đổi màu nền", "D · Switch theme", "D · Đổi màu nền");
+    add("R · Reading Ruler", "R · Reading Ruler", "R · Reading Ruler");
+    add("V · Bionic Reading", "V · Bionic Reading", "V · Bionic Reading");
+    add("? · Tất cả phím tắt", "? · All shortcuts", "? · Tất cả phím tắt");
+    add("Công cụ đọc", "Reading Tools", "Công cụ đọc");
+    add("Sẵn sàng!", "Ready!", "Sẵn sàng!");
+
+    // --- Interactive BB10 Help Guide ---
+    add("Vuốt trái để tiếp tục ›", "Swipe left to continue ›", "Vuốt trái để tiếp tục ›");
+    add("Tự động quét sách trong máy & thẻ nhớ", "Auto-scans internal storage & SD card", "Tự động quét sách trong máy & thẻ nhớ");
+    add("Mở trình duyệt máy tính để gửi sách không dây", "Open any browser to send books wirelessly", "Mở trình duyệt máy tính để gửi sách không dây");
+    add("Tải sách miễn phí trực tiếp từ kho OPDS", "Browse & download books from OPDS catalogs", "Tải sách miễn phí trực tiếp từ kho OPDS");
+    add("Sự tình cờ may mắn", "Happy accidental discovery", "Sự tình cờ may mắn");
+
+    // --- Letter-only BB10 Passport Shortcuts ---
+    add("Z · W · Cỡ chữ", "Z · W · Font size", "Z · W · Cỡ chữ");
+    add("O · Tất cả phím tắt", "O · All shortcuts", "O · Tất cả phím tắt");
+    add("Space: Lật trang / TTS\nJ / K hoặc N / P: Trang / Chương trước sau\nZ / W: Tăng / giảm cỡ chữ\nD / C / A: Đổi theme / Cuộn / Đọc TTS\nM / H / F / G: Đánh dấu / Ghi chú / Tìm / Mục lục\nL / I / S: Từ điển / Thông tin / Cài đặt\nR / V: Reading Ruler (hoặc xoay PDF) / Bionic Reading\nU / Backspace: Quay lại vị trí trước\nO: Hiện / ẩn bảng phím tắt", "Space: Turn page / TTS\nJ / K or N / P: Page / Chapter prev-next\nZ / W: Increase / decrease font size\nD / C / A: Theme / Scroll / Read aloud (TTS)\nM / H / F / G: Bookmark / Notes / Search / TOC\nL / I / S: Dictionary / Info / Settings\nR / V: Reading Ruler (or Rotate PDF) / Bionic Reading\nU / Backspace: Jump back\nO: Show / hide shortcuts", "Space: Lật trang / TTS\nJ / K hoặc N / P: Trang / Chương trước sau\nZ / W: Tăng / giảm cỡ chữ\nD / C / A: Đổi theme / Cuộn / Đọc TTS\nM / H / F / G: Đánh dấu / Ghi chú / Tìm / Mục lục\nL / I / S: Từ điển / Thông tin / Cài đặt\nR / V: Reading Ruler (hoặc xoay PDF) / Bionic Reading\nU / Backspace: Quay lại vị trí trước\nO: Hiện / ẩn bảng phím tắt");
+
+    // --- Ergonomic BB10 Passport Shortcuts ---
+    add("Z · X · Cỡ chữ", "Z · X · Font size", "Z · X · Cỡ chữ");
+    add("Space / Backspace: Trang sau / trước (hoặc TTS)\nJ / K: Trang sau / trước · N / P: Chương sau / trước\nT / B: Đầu / Cuối sách · U: Quay lại · Enter: Toàn màn hình\nZ / X: Tăng / giảm cỡ chữ · D: Đổi màu nền\nC / R / V: Cuộn / Reading Ruler / Bionic Reading\nG / F / M / H: Mục lục / Tìm / Đánh dấu / Ghi chú\nL / A / I / S: Từ điển / Đọc TTS / Thông tin / Cài đặt\nW / Q: PDF Reflow / Khóa cuộn ngang PDF · O: Bảng này", "Space / Backspace: Next / Prev page (or TTS)\nJ / K: Next / Prev page · N / P: Next / Prev chapter\nT / B: Top / Bottom · U: Jump back · Enter: Fullscreen\nZ / X: Font size + / - · D: Cycle reading theme\nC / R / V: Scroll / Reading Ruler / Bionic Reading\nG / F / M / H: TOC / Search / Bookmark / Notes\nL / A / I / S: Dictionary / Read TTS / Info / Settings\nW / Q: PDF Reflow / Lock PDF scroll · O: This help", "Space / Backspace: Trang sau / trước (hoặc TTS)\nJ / K: Trang sau / trước · N / P: Chương sau / trước\nT / B: Đầu / Cuối sách · U: Quay lại · Enter: Toàn màn hình\nZ / X: Tăng / giảm cỡ chữ · D: Đổi màu nền\nC / R / V: Cuộn / Reading Ruler / Bionic Reading\nG / F / M / H: Mục lục / Tìm / Đánh dấu / Ghi chú\nL / A / I / S: Từ điển / Đọc TTS / Thông tin / Cài đặt\nW / Q: PDF Reflow / Khóa cuộn ngang PDF · O: Bảng này");
+
+    // --- Guided Animated Reader Walkthrough ---
+    add("Lật trang trước / sau (hoặc phát TTS)", "Turn pages prev / next (or play TTS)", "Lật trang trước / sau (hoặc phát TTS)");
+    add("Tăng / giảm cỡ chữ tức thì", "Increase / decrease font size", "Tăng / giảm cỡ chữ nhanh");
+    add("Đổi nền đọc: Tối · Sepia · Sáng", "Cycle theme: Dark · Sepia · Light", "Đổi nền đọc: Tối · Sepia · Sáng");
+    add("Bật Reading Ruler tập trung dòng đọc", "Toggle Reading Ruler focus band", "Bật Reading Ruler tập trung dòng đọc");
+    add("Bật Bionic Reading giúp đọc nhanh hơn", "Toggle Bionic Reading for faster focus", "Bật Bionic Reading giúp đọc nhanh hơn");
+    add("Vuốt trái mở menu · Bấm O xem tất cả phím tắt", "Swipe left for menu · Press O for all shortcuts", "Vuốt trái mở menu · Bấm O xem tất cả phím tắt");
+
+    // --- Visual BlackBerry Passport Keymap (Onboarding Page 4) ---
+    add("ĐIỀU KHIỂN", "CONTROLS", "ĐIỀU KHIỂN");
+    add("Bàn phím Passport & cử chỉ", "Passport Keyboard & Gestures", "Bàn phím Passport & cử chỉ");
+    add("Chạm phím trên hình hoặc bấm trực tiếp phím cứng để xem chức năng", "Tap any key below or press a physical key to inspect", "Chạm phím trên hình hoặc bấm trực tiếp phím cứng để xem chức năng");
+    add("Cử chỉ chạm: Trái / Phải lật trang · Giữa mở thanh công cụ", "Touch gestures: Tap Left / Right to turn page · Center for menu", "Cử chỉ chạm: Trái / Phải lật trang · Giữa mở thanh công cụ");
+    add("PDF", "PDF", "PDF");
+    add("GIAO DIỆN", "APPEARANCE", "GIAO DIỆN");
+    add("CÔNG CỤ", "TOOLS", "CÔNG CỤ");
+    add("ĐIỀU HƯỚNG", "NAVIGATION", "ĐIỀU HƯỚNG");
+
+    add("Khóa cuộn ngang PDF", "Lock PDF horizontal scroll", "Khóa cuộn ngang PDF");
+    add("Bật / tắt PDF Reflow", "Toggle PDF Reflow", "Bật / tắt PDF Reflow");
+    add("Reading Ruler / Xoay PDF", "Reading Ruler / Rotate PDF", "Reading Ruler / Xoay PDF");
+    add("Lên đầu trang / chương", "Jump to top", "Lên đầu trang / chương");
+    add("Quay lại vị trí trước", "Jump back", "Quay lại vị trí trước");
+    add("Thông tin sách", "Book info", "Thông tin sách");
+    add("Bảng phím tắt", "Shortcuts overlay", "Bảng phím tắt");
+    add("Chương trước", "Previous chapter", "Chương trước");
+    add("Đọc thành tiếng (TTS)", "Read aloud (TTS)", "Đọc thành tiếng (TTS)");
+    add("Mở Cài đặt", "Open Settings", "Mở Cài đặt");
+    add("Đổi màu nền đọc", "Cycle reading theme", "Đổi màu nền đọc");
+    add("Tìm kiếm trong sách", "Search in book", "Tìm kiếm trong sách");
+    add("Mở Mục lục (TOC)", "Open Table of Contents", "Mở Mục lục (TOC)");
+    add("Đánh dấu & Ghi chú", "Bookmarks & Notes", "Đánh dấu & Ghi chú");
+    add("Trang sau / Cuộn xuống", "Next page / Scroll down", "Trang sau / Cuộn xuống");
+    add("Trang trước / Cuộn lên", "Prev page / Scroll up", "Trang trước / Cuộn lên");
+    add("Tra từ điển", "Dictionary lookup", "Tra từ điển");
+    add("Trang trước", "Previous page", "Trang trước");
+    add("Tăng cỡ chữ", "Increase font size", "Tăng cỡ chữ");
+    add("Giảm cỡ chữ", "Decrease font size", "Giảm cỡ chữ");
+    add("Đổi kiểu đọc (Trang / Cuộn)", "Toggle Paged / Scroll mode", "Đổi kiểu đọc (Trang / Cuộn)");
+    add("Trang sau / Tạm dừng TTS", "Next page / Play-Pause TTS", "Trang sau / Tạm dừng TTS");
+    add("Xuống cuối trang / chương", "Jump to bottom", "Xuống cuối trang / chương");
+    add("Chương sau", "Next chapter", "Chương sau");
+    add("Đánh dấu trang (Bookmark)", "Toggle Bookmark", "Đánh dấu trang (Bookmark)");
+    add("Chế độ toàn màn hình", "Fullscreen mode", "Chế độ toàn màn hình");
+
+    add("Giữ cố định chiều ngang khi phóng to trang PDF.", "Keep horizontal position locked while zooming PDF pages.", "Giữ cố định chiều ngang khi phóng to trang PDF.");
+    add("Chuyển PDF sang dạng văn bản cuộn dễ đọc hơn.", "Reflow PDF into clean, readable flowing text.", "Chuyển PDF sang dạng văn bản cuộn dễ đọc hơn.");
+    add("Bật thước tập trung dòng đọc hoặc xoay ngang PDF.", "Toggle Reading Ruler focus band, or rotate PDF pages.", "Bật thước tập trung dòng đọc hoặc xoay ngang PDF.");
+    add("Nhảy nhanh về đầu chương hoặc đầu trang hiện tại.", "Jump straight to the top of the current chapter or page.", "Nhảy nhanh về đầu chương hoặc đầu trang hiện tại.");
+    add("Trở về vị trí vừa đọc trước khi nhảy mục lục.", "Return to your previous reading position after jumping.", "Trở về vị trí vừa đọc trước khi nhảy mục lục.");
+    add("Xem chi tiết sách, tiến độ và thống kê đọc.", "View book metadata, progress, and reading statistics.", "Xem chi tiết sách, tiến độ và thống kê đọc.");
+    add("Mở hoặc ẩn nhanh danh sách toàn bộ phím tắt.", "Quickly show or hide the full shortcuts reference.", "Mở hoặc ẩn nhanh danh sách toàn bộ phím tắt.");
+    add("Chuyển lùi về chương trước đó trong sách.", "Move back to the previous chapter in the book.", "Chuyển lùi về chương trước đó trong sách.");
+    add("Bật hoặc tắt đọc sách tự động bằng giọng nói.", "Start or stop automatic text-to-speech playback.", "Bật hoặc tắt đọc sách tự động bằng giọng nói.");
+    add("Mở nhanh trang cài đặt giao diện và đọc sách.", "Open reader appearance and behavior settings.", "Mở nhanh trang cài đặt giao diện và đọc sách.");
+    add("Chuyển qua lại giữa nền Tối, Sepia và Sáng.", "Cycle between Dark, Sepia, and Light reading themes.", "Chuyển qua lại giữa nền Tối, Sepia và Sáng.");
+    add("Tìm từ khóa hoặc cụm từ trong toàn bộ cuốn sách.", "Search for keywords or phrases across the whole book.", "Tìm từ khóa hoặc cụm từ trong toàn bộ cuốn sách.");
+    add("Mở danh sách chương để nhảy đến phần mong muốn.", "Open the chapter list to jump to any section.", "Mở danh sách chương để nhảy đến phần mong muốn.");
+    add("Mở danh sách bookmark, highlight và ghi chú.", "Open your saved bookmarks, highlights, and notes.", "Mở danh sách bookmark, highlight và ghi chú.");
+    add("Sang trang tiếp theo hoặc cuộn xuống một nhịp.", "Advance to the next page or scroll down one step.", "Sang trang tiếp theo hoặc cuộn xuống một nhịp.");
+    add("Quay lại trang trước hoặc cuộn lên một nhịp.", "Go back one page or scroll up one step.", "Quay lại trang trước hoặc cuộn lên một nhịp.");
+    add("Mở từ điển tra nhanh nghĩa từ ngay khi đang đọc.", "Look up word definitions while reading.", "Mở từ điển tra nhanh nghĩa từ ngay khi đang đọc.");
+    add("Lùi về trang trước hoặc cuộn lên một nhịp.", "Go back to the previous page or scroll up one step.", "Lùi về trang trước hoặc cuộn lên một nhịp.");
+    add("Phóng to chữ đọc thêm 1 nấc ngay lập tức.", "Increase reading font size by one step immediately.", "Phóng to chữ đọc thêm 1 nấc ngay lập tức.");
+    add("Thu nhỏ chữ đọc đi 1 nấc ngay lập tức.", "Decrease reading font size by one step immediately.", "Thu nhỏ chữ đọc đi 1 nấc ngay lập tức.");
+    add("Chuyển giữa lật từng trang và cuộn liên tục.", "Switch between paginated turning and continuous scroll.", "Chuyển giữa lật từng trang và cuộn liên tục.");
+    add("Tô đậm đầu từ giúp mắt lướt và đọc nhanh hơn.", "Bold word prefixes to help your eyes scan faster.", "Tô đậm đầu từ giúp mắt lướt và đọc nhanh hơn.");
+    add("Sang trang tiếp theo, hoặc phát / tạm dừng TTS.", "Turn to next page, or play / pause TTS when active.", "Sang trang tiếp theo, hoặc phát / tạm dừng TTS.");
+    add("Nhảy nhanh xuống cuối chương hoặc cuối trang hiện tại.", "Jump straight to the bottom of the current chapter or page.", "Nhảy nhanh xuống cuối chương hoặc cuối trang hiện tại.");
+    add("Chuyển nhanh sang chương kế tiếp trong sách.", "Advance quickly to the next chapter in the book.", "Chuyển nhanh sang chương kế tiếp trong sách.");
+    add("Lưu hoặc bỏ đánh dấu trang đang đọc hiện tại.", "Save or remove a bookmark on the current page.", "Lưu hoặc bỏ đánh dấu trang đang đọc hiện tại.");
+    add("Ẩn hoặc hiện thanh trạng thái để tập trung đọc.", "Hide or show the status bar for distraction-free reading.", "Ẩn hoặc hiện thanh trạng thái để tập trung đọc.");
+
+    // --- Hybrid Reading Statistics UI ---
+    add("Đã hoàn thành mục tiêu hôm nay", "Daily reading goal completed!", "Đã hoàn thành mục tiêu hôm nay");
+    add("Còn", "Need", "Còn");
+    add("phút nữa", "min left", "phút nữa");
+
+    // --- Multi-Device Onboarding Keymap & Per-Format Brightness ---
+    add("Bàn phím & cử chỉ", "Keyboard & Gestures", "Bàn phím & cử chỉ");
+    add("Độ sáng", "Brightness", "Độ sáng");
+    add("Độ sáng màn hình đọc", "Reader Screen Brightness", "Độ sáng màn hình đọc");
+    add("Lưu riêng cho từng định dạng sách (EPUB, PDF, CBZ...)", "Saved independently per book format (EPUB, PDF, CBZ...)", "Lưu riêng cho từng định dạng sách (EPUB, PDF, CBZ...)");
 }
 
 void AppTranslator::setLanguage(const QString &lang)

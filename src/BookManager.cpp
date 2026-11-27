@@ -14,6 +14,9 @@
 #include <bb/device/DisplayInfo>
 #include <bb/multimedia/MediaKeyWatcher>
 #include <bb/multimedia/MediaKey>
+#include <bb/system/InvokeManager>
+#include <bb/system/InvokeRequest>
+#include <bb/system/InvokeTargetReply>
 #include <QDir>
 #include <QFileInfo>
 #include <QSettings>
@@ -348,7 +351,7 @@ BookManager::BookManager(QObject *parent)
     : QObject(parent)
     , m_pdfParser(NULL)
     , m_translator(new AppTranslator(this))
-    , m_language("vi")
+    , m_language("en")
     , m_tts(NULL)
     , m_model(new bb::cascades::GroupDataModel(QStringList() << "modifiedIso", this))
     , m_folderModel(new bb::cascades::GroupDataModel(QStringList() << "folderName", this))
@@ -430,6 +433,7 @@ BookManager::BookManager(QObject *parent)
     , m_devServerIp("192.168.0.108")
     , m_isAppSleeping(false)
     , m_suppressPersistentSync(false)
+    , m_shutdownSaved(false)
     , m_pendingTtsAfterPdfRender(false)
     , m_pendingJumpPageAfterPdfOpen(-1)
     , m_opdsManager(NULL)
@@ -455,6 +459,7 @@ BookManager::BookManager(QObject *parent)
     m_readingHistoryModel->setSortedAscending(true);
 
     connect(&m_readingHeartbeatTimer, SIGNAL(timeout()), this, SLOT(onReadingHeartbeat()));
+    connect(this, SIGNAL(currentBookChanged()), this, SIGNAL(readerBrightnessChanged()));
 
     loadSettings();
     applyVisualStyle();
@@ -498,6 +503,7 @@ BookManager::BookManager(QObject *parent)
     m_pdfParser->setScreenWidth(m_screenWidth);
 
     connect(m_pdfParser, SIGNAL(pageRendered(int)), this, SLOT(onPdfPageRendered(int)));
+    connect(m_pdfParser, SIGNAL(streamPageRendered(int)), this, SLOT(onPdfStreamPageRendered(int)));
     connect(m_pdfParser, SIGNAL(needIndicator(bool)), this, SLOT(onPdfIndicatorRequested(bool)));
     connect(m_pdfParser, SIGNAL(errorWhileOpening(int)),
             this, SLOT(onPdfError(int)));
@@ -533,6 +539,9 @@ BookManager::BookManager(QObject *parent)
     m_invertVolumeKeys = false;
     m_sessionReadingSeconds = 0;
     m_bionicReading = false;
+    m_onboardingCompleted = false;
+    m_pdfPagesModel = new bb::cascades::ArrayDataModel(this);
+    m_pdfZoomMode = false;
 
     // Load persisted library cache immediately for instant startup without blocking scan
     loadLibraryCache();
@@ -682,8 +691,10 @@ BookManager::~BookManager()
     m_scanWatchdogTimer.stop();
     m_watchdogTimer.stop();
     m_persistSyncTimer.stop();
-    saveCurrentProgress();
-    syncToPersistentStorage();
+    if (!m_shutdownSaved) {
+        saveCurrentProgress();
+        syncToPersistentStorage();
+    }
 
     cancelWorkers();
 }
@@ -2910,18 +2921,36 @@ void BookManager::setAppTheme(const QString &theme)
 {
     if (theme != m_appTheme && (theme == "dark" || theme == "light")) {
         m_appTheme = theme;
+        if (m_theme != "sepia" && m_theme != m_appTheme) {
+            m_theme = m_appTheme;
+            m_cachedContentHtml.clear();
+            emit themeChanged();
+        }
         applyVisualStyle();
         emit appThemeChanged();
         saveSettings();
     }
 }
 
+void BookManager::setOnboardingCompleted(bool completed)
+{
+    if (m_onboardingCompleted != completed) {
+        m_onboardingCompleted = completed;
+        saveSettings();
+        emit onboardingCompletedChanged();
+    }
+}
+
+void BookManager::requestOnboardingGuide()
+{
+    emit openOnboardingGuideRequested();
+}
+
 void BookManager::applyVisualStyle()
 {
     if (bb::cascades::Application::instance() && bb::cascades::Application::instance()->themeSupport()) {
-        bb::cascades::VisualStyle::Type style = (m_appTheme == "dark")
-            ? bb::cascades::VisualStyle::Dark
-            : bb::cascades::VisualStyle::Bright;
+        // Keep native BlackBerry 10 dark chrome for top TitleBars & bottom ActionBars even in Light Mode
+        bb::cascades::VisualStyle::Type style = bb::cascades::VisualStyle::Dark;
         bb::cascades::Color primary = bb::cascades::Color::fromARGB(0xFFD4A359);
         bb::cascades::Color primaryBase = bb::cascades::Color::fromARGB(0xFFA87932);
         bb::cascades::Application::instance()->themeSupport()->setVisualStyleAndPrimaryColor(style, primary, primaryBase);
@@ -2943,6 +2972,8 @@ void BookManager::setTheme(const QString &theme)
                 m_pdfParser->switchInvertedColors();
                 m_pdfInverted = m_pdfParser->isInvertedColors();
                 emit pdfInvertedChanged();
+                resetPdfPagesModelImages();
+                requestPdfStreamPage(m_currentChapterIndex);
             }
         }
     }
@@ -3298,6 +3329,19 @@ void BookManager::toggleTts()
 void BookManager::nextChapter()
 {
     if (isPdf()) {
+        if (!m_isPdfReflow && !m_pdfZoomMode) {
+            if (m_currentChapterIndex < m_totalChapters) {
+                m_currentChapterIndex++;
+                m_currentPageInChapter = m_currentChapterIndex;
+                m_totalPagesInChapter = m_totalChapters;
+                emit readingProgressChanged();
+                emit pagePositionChanged();
+                emit pdfJumpToPageRequested(m_currentChapterIndex);
+                requestPdfStreamPage(m_currentChapterIndex);
+                m_progressSaveTimer.start(1500);
+            }
+            return;
+        }
         if (m_pdfParser) {
             m_pdfParser->nextPage();
         }
@@ -3321,6 +3365,19 @@ void BookManager::nextChapter()
 void BookManager::prevChapter()
 {
     if (isPdf()) {
+        if (!m_isPdfReflow && !m_pdfZoomMode) {
+            if (m_currentChapterIndex > 1) {
+                m_currentChapterIndex--;
+                m_currentPageInChapter = m_currentChapterIndex;
+                m_totalPagesInChapter = m_totalChapters;
+                emit readingProgressChanged();
+                emit pagePositionChanged();
+                emit pdfJumpToPageRequested(m_currentChapterIndex);
+                requestPdfStreamPage(m_currentChapterIndex);
+                m_progressSaveTimer.start(1500);
+            }
+            return;
+        }
         if (m_pdfParser) {
             m_pdfParser->prevPage();
         }
@@ -3344,8 +3401,21 @@ void BookManager::prevChapter()
 void BookManager::goToChapter(int index)
 {
     if (isPdf()) {
-        if (m_pdfParser && index >= 1 && index <= m_totalChapters) {
-            m_pdfParser->navigateToPage(index);
+        if (index >= 1 && index <= m_totalChapters) {
+            if (!m_isPdfReflow && !m_pdfZoomMode) {
+                m_currentChapterIndex = index;
+                m_currentPageInChapter = index;
+                m_totalPagesInChapter = m_totalChapters;
+                emit readingProgressChanged();
+                emit pagePositionChanged();
+                emit pdfJumpToPageRequested(index);
+                requestPdfStreamPage(index);
+                m_progressSaveTimer.start(1500);
+                return;
+            }
+            if (m_pdfParser) {
+                m_pdfParser->navigateToPage(index);
+            }
         }
         return;
     }
@@ -4194,6 +4264,13 @@ bool BookManager::openBook(const QString &filePath)
     if (m_pdfParser) {
         m_pdfParser->close();
     }
+    if (m_pdfPagesModel) {
+        m_pdfPagesModel->clear();
+    }
+    if (m_pdfZoomMode) {
+        m_pdfZoomMode = false;
+        emit pdfZoomModeChanged();
+    }
 
     if (!m_bookReadingSeconds.contains(filePath)) {
         m_bookReadingSeconds[filePath] = settings.value(QString("stats/bookSeconds/%1").arg(filePath), 0).toInt();
@@ -4437,6 +4514,11 @@ void BookManager::onPdfFileOpened(const QString &file)
         settings.setValue(QString("totalPages/%1").arg(m_currentFilePath), m_totalChapters);
         updateTocList();
         ensureBookInLibrary(m_currentFilePath);
+        if (m_totalChapters > 0 && m_pdfPagesModel && m_pdfPagesModel->size() != m_totalChapters) {
+            rebuildPdfPagesModel(m_totalChapters);
+            emit pdfJumpToPageRequested(m_currentChapterIndex);
+            requestPdfStreamPage(m_currentChapterIndex);
+        }
         emit currentBookChanged();
         emit readingProgressChanged();
         if (m_pendingJumpPageAfterPdfOpen > 0) {
@@ -4641,6 +4723,11 @@ void BookManager::onPdfPageRendered(int pageNumber)
     m_totalChapters = m_pdfParser->chapterCount();
     m_currentPageInChapter = pageNumber;
     m_totalPagesInChapter = m_totalChapters;
+    if (m_totalChapters > 0 && m_pdfPagesModel && m_pdfPagesModel->size() != m_totalChapters) {
+        rebuildPdfPagesModel(m_totalChapters);
+        emit pdfJumpToPageRequested(m_currentChapterIndex);
+        requestPdfStreamPage(m_currentChapterIndex);
+    }
 
     // Extract text layer from PDF page (for OCR search, dictionary, and text reflow)
     m_currentPdfText = m_pdfParser->currentText();
@@ -4685,6 +4772,8 @@ void BookManager::rotatePdf()
 {
     if (isPdf() && m_pdfParser) {
         m_pdfParser->rotate();
+        resetPdfPagesModelImages();
+        requestPdfStreamPage(m_currentChapterIndex);
     }
 }
 
@@ -4694,6 +4783,8 @@ void BookManager::togglePdfInvert()
         m_pdfParser->switchInvertedColors();
         m_pdfInverted = m_pdfParser->isInvertedColors();
         emit pdfInvertedChanged();
+        resetPdfPagesModelImages();
+        requestPdfStreamPage(m_currentChapterIndex);
     }
 }
 
@@ -4713,6 +4804,10 @@ void BookManager::setIsPdfAutoCrop(bool enabled)
     }
     emit pdfAutoCropChanged();
     saveSettings();
+    if (isPdf()) {
+        resetPdfPagesModelImages();
+        requestPdfStreamPage(m_currentChapterIndex);
+    }
 }
 
 void BookManager::togglePdfAutoCrop()
@@ -4723,6 +4818,9 @@ void BookManager::togglePdfAutoCrop()
 void BookManager::zoomPdfIn()
 {
     if (isPdf() && m_pdfParser) {
+        if (!m_pdfZoomMode) {
+            enterPdfZoomMode(m_currentChapterIndex);
+        }
         m_pdfParser->zoomIn();
     }
 }
@@ -4738,6 +4836,155 @@ void BookManager::zoomPdfFit()
 {
     if (isPdf() && m_pdfParser) {
         m_pdfParser->resetZoom();
+        if (m_pdfZoomMode) {
+            exitPdfZoomMode();
+        }
+    }
+}
+
+void BookManager::rebuildPdfPagesModel(int totalPages)
+{
+    if (!m_pdfPagesModel) return;
+    m_pdfPagesModel->clear();
+    if (totalPages <= 0) return;
+
+    bb::cascades::Image emptyImg;
+    QVariant emptyImgVar = QVariant::fromValue(emptyImg);
+    for (int i = 1; i <= totalPages; ++i) {
+        QVariantMap item;
+        item["pageNumber"] = i;
+        item["isLoaded"] = false;
+        item["aspectRatio"] = 1.414;
+        item["image"] = emptyImgVar;
+        m_pdfPagesModel->append(item);
+    }
+}
+
+void BookManager::resetPdfPagesModelImages()
+{
+    if (!m_pdfPagesModel) return;
+    bb::cascades::Image emptyImg;
+    QVariant emptyImgVar = QVariant::fromValue(emptyImg);
+    int n = m_pdfPagesModel->size();
+    for (int i = 0; i < n; ++i) {
+        QVariantMap item = m_pdfPagesModel->value(i).toMap();
+        if (item.value("isLoaded").toBool()) {
+            item["isLoaded"] = false;
+            item["image"] = emptyImgVar;
+            m_pdfPagesModel->replace(i, item);
+        }
+    }
+}
+
+void BookManager::onPdfStreamPageRendered(int pageNumber)
+{
+    if (!m_pdfParser || !m_pdfPagesModel) return;
+    if (pageNumber < 1 || pageNumber > m_pdfPagesModel->size()) return;
+
+    bb::ImageData imgData = m_pdfParser->streamPageImageData(pageNumber);
+    if (imgData.width() <= 0 || imgData.height() <= 0) return;
+
+    QVariantMap item = m_pdfPagesModel->value(pageNumber - 1).toMap();
+    item["pageNumber"] = pageNumber;
+    item["isLoaded"] = true;
+    item["aspectRatio"] = (double)imgData.height() / (double)imgData.width();
+    item["image"] = QVariant::fromValue(bb::cascades::Image(imgData));
+    m_pdfPagesModel->replace(pageNumber - 1, item);
+}
+
+void BookManager::requestPdfStreamPage(int pageNumber)
+{
+    if (!isPdf() || !m_pdfParser || !m_pdfPagesModel || m_totalChapters <= 0) return;
+    int pg = qBound(1, pageNumber, m_totalChapters);
+
+    m_pdfParser->requestStreamPage(pg, true);
+    if (pg + 1 <= m_totalChapters) m_pdfParser->requestStreamPage(pg + 1, false);
+    if (pg - 1 >= 1) m_pdfParser->requestStreamPage(pg - 1, false);
+
+    // Tight LRU memory eviction on model items far from current viewport (keep aspectRatio!)
+    bb::cascades::Image emptyImg;
+    QVariant emptyImgVar = QVariant::fromValue(emptyImg);
+    int n = m_pdfPagesModel->size();
+    for (int i = 0; i < n; ++i) {
+        if (qAbs((i + 1) - pg) > 2) {
+            QVariantMap item = m_pdfPagesModel->value(i).toMap();
+            if (item.value("isLoaded").toBool()) {
+                item["isLoaded"] = false;
+                item["image"] = emptyImgVar;
+                m_pdfPagesModel->replace(i, item);
+            }
+        }
+    }
+}
+
+void BookManager::setPdfVisiblePage(int pageNumber)
+{
+    if (!isPdf() || m_totalChapters <= 0) return;
+    int pg = qBound(1, pageNumber, m_totalChapters);
+    if (pg != m_currentChapterIndex) {
+        m_currentChapterIndex = pg;
+        m_currentPageInChapter = pg;
+        m_totalPagesInChapter = m_totalChapters;
+        emit readingProgressChanged();
+        emit pagePositionChanged();
+        m_progressSaveTimer.start(1500);
+    }
+}
+
+void BookManager::setPdfZoomMode(bool enabled)
+{
+    if (enabled) {
+        enterPdfZoomMode(m_currentChapterIndex);
+    } else {
+        exitPdfZoomMode();
+    }
+}
+
+void BookManager::releaseReaderMemory()
+{
+    m_currentPdfImage = bb::cascades::Image();
+    emit currentPdfImageChanged();
+    resetPdfPagesModelImages();
+    if (m_pdfPagesModel) {
+        m_pdfPagesModel->clear();
+    }
+    if (m_pdfParser) {
+        m_pdfParser->invalidateStreamCache();
+    }
+    m_cachedContentHtml.clear();
+    m_cachedContentChapter = -1;
+}
+
+void BookManager::enterPdfZoomMode(int pageNumber)
+{
+    if (!isPdf() || !m_pdfParser) return;
+    int pg = qBound(1, pageNumber, qMax(1, m_totalChapters));
+    m_currentChapterIndex = pg;
+    m_currentPageInChapter = pg;
+    m_totalPagesInChapter = m_totalChapters;
+
+    if (!m_pdfZoomMode) {
+        m_pdfZoomMode = true;
+        emit pdfZoomModeChanged();
+    }
+
+    bb::ImageData cached = m_pdfParser->streamPageImageData(pg);
+    if (cached.width() > 0 && cached.height() > 0) {
+        m_currentPdfImage = bb::cascades::Image(cached);
+        emit currentPdfImageChanged();
+    } else {
+        m_pdfParser->navigateToPage(pg);
+    }
+    emit readingProgressChanged();
+    emit pagePositionChanged();
+}
+
+void BookManager::exitPdfZoomMode()
+{
+    if (m_pdfZoomMode) {
+        m_pdfZoomMode = false;
+        emit pdfZoomModeChanged();
+        emit pdfJumpToPageRequested(m_currentChapterIndex);
     }
 }
 
@@ -5299,6 +5546,7 @@ void BookManager::saveSettings()
 {
     QSettings settings("Libris", "Libris");
     settings.setValue("app/language", m_language);
+    settings.setValue("app/onboardingCompleted", m_onboardingCompleted);
     settings.setValue("reader/fontSize", m_fontSize);
     settings.setValue("reader/fontFamily", m_fontFamily);
     settings.setValue("reader/theme", m_theme);
@@ -5330,6 +5578,11 @@ void BookManager::saveSettings()
     settings.setValue("reader/pdfAutoCrop", m_isPdfAutoCrop);
     settings.setValue("reader/warmFilterEnabled", m_warmFilterEnabled);
     settings.setValue("reader/warmFilterIntensity", m_warmFilterIntensity);
+    QMap<QString, int>::const_iterator itBr = m_formatBrightness.constBegin();
+    while (itBr != m_formatBrightness.constEnd()) {
+        settings.setValue("reader/brightness_" + itBr.key(), itBr.value());
+        ++itBr;
+    }
     settings.setValue("reader/autoNightTheme", m_autoNightTheme);
     settings.setValue("reader/focusModeEnabled", m_focusModeEnabled);
     settings.setValue("reader/volumeKeyTurn", m_volumeKeyTurnEnabled);
@@ -5449,6 +5702,7 @@ void BookManager::saveForShutdown()
     saveSettings();
     m_suppressPersistentSync = false;
     syncToPersistentStorage();
+    m_shutdownSaved = true;
 }
 
 void BookManager::pauseTimersForSleep(bool saveProgress)
@@ -5498,12 +5752,15 @@ void BookManager::loadSettings()
 
 void BookManager::loadSettingsFromQSettings(QSettings &settings)
 {
-    QString defaultLang = QLocale::system().name().startsWith("vi") ? "vi" : "en";
-    m_language = settings.value("app/language", defaultLang).toString();
+    m_language = settings.value("app/language", "en").toString();
+    m_onboardingCompleted = settings.value("app/onboardingCompleted", false).toBool();
     m_fontSize = settings.value("reader/fontSize", 18).toInt();
     m_fontFamily = settings.value("reader/fontFamily", "sans").toString();
     m_theme = settings.value("reader/theme", "dark").toString();
     m_appTheme = settings.value("app/theme", "dark").toString();
+    if (m_theme != "sepia" && m_theme != m_appTheme) {
+        m_theme = m_appTheme;
+    }
     m_readingMode = settings.value("reader/readingMode", "paged").toString();
     QString loadedColumnLayout = settings.value("reader/columnLayout", "single").toString();
     m_columnLayout = (loadedColumnLayout == "double") ? "double" : "single";
@@ -5544,6 +5801,12 @@ void BookManager::loadSettingsFromQSettings(QSettings &settings)
     m_dailyGoalMinutes = qMax(5, settings.value("stats/dailyGoalMinutes", 30).toInt());
     m_warmFilterEnabled = settings.value("reader/warmFilterEnabled", false).toBool();
     m_warmFilterIntensity = qMax(10, qMin(60, settings.value("reader/warmFilterIntensity", 25).toInt()));
+    const char *fmts[] = {"epub", "pdf", "djvu", "cbz", "txt", "fb2", "mobi"};
+    for (int i = 0; i < 7; ++i) {
+        QString fmtKey = QString::fromLatin1(fmts[i]);
+        int val = qMax(20, qMin(100, settings.value("reader/brightness_" + fmtKey, 100).toInt()));
+        m_formatBrightness.insert(fmtKey, val);
+    }
     m_autoNightTheme = settings.value("reader/autoNightTheme", false).toBool();
     m_focusModeEnabled = settings.value("reader/focusModeEnabled", false).toBool();
     m_volumeKeyTurnEnabled = settings.value("reader/volumeKeyTurn", false).toBool();
@@ -8962,6 +9225,75 @@ void BookManager::sendLog(const QString &targetIp)
     qDebug() << "[BookManager::sendLog] Send log feature disabled.";
 }
 
+bool BookManager::sendBugReportEmail(const QString &category, const QString &subject, const QString &description, bool includeLog)
+{
+    QString catClean = category.trimmed();
+    if (catClean.isEmpty()) catClean = "Bug";
+    QString subjClean = subject.trimmed();
+    if (subjClean.isEmpty()) subjClean = "Bug Report";
+
+    QString fullSubject = QString("[Libris v%1 Build %2][%3] %4")
+                              .arg(appVersion())
+                              .arg(buildNumber())
+                              .arg(catClean)
+                              .arg(subjClean);
+
+    QString fullBody;
+    QString descClean = description.trimmed();
+    if (!descClean.isEmpty()) {
+        fullBody += descClean + "\n\n";
+    }
+    fullBody += "--- Device & App Info ---\n";
+    fullBody += QString("App: Libris v%1 (Build %2)\n").arg(appVersion()).arg(buildNumber());
+    fullBody += QString("Screen: %1x%2 | Theme: %3 | Lang: %4\n")
+                    .arg(m_screenWidth).arg(m_screenHeight).arg(m_appTheme).arg(m_language);
+    if (!m_currentFormat.isEmpty()) {
+        fullBody += QString("Current Format: %1\n").arg(m_currentFormat);
+    }
+
+    if (includeLog) {
+        QStringList logCandidates;
+        logCandidates << "/accounts/1000/shared/documents/libris.log" << (QDir::homePath() + "/data/libris.log");
+        QString logTail;
+        for (int i = 0; i < logCandidates.size(); ++i) {
+            QFile f(logCandidates.at(i));
+            if (f.exists() && f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                qint64 sz = f.size();
+                if (sz > 4096) {
+                    f.seek(sz - 4096);
+                }
+                QString raw = QString::fromUtf8(f.readAll());
+                f.close();
+                QStringList lines = raw.split('\n');
+                if (lines.size() > 60) {
+                    lines = lines.mid(lines.size() - 60);
+                }
+                logTail = lines.join("\n").trimmed();
+                if (!logTail.isEmpty()) break;
+            }
+        }
+        if (!logTail.isEmpty()) {
+            fullBody += "\n--- Technical Log (Optional) ---\n" + logTail;
+        }
+    }
+
+    if (fullBody.length() > 6000) {
+        fullBody = fullBody.left(6000) + "\n...[truncated]";
+    }
+
+    QString mailto = QString("mailto:nhatlm0910@gmail.com?subject=%1&body=%2")
+                         .arg(QString::fromUtf8(QUrl::toPercentEncoding(fullSubject)))
+                         .arg(QString::fromUtf8(QUrl::toPercentEncoding(fullBody)));
+
+    bb::system::InvokeManager invokeManager;
+    bb::system::InvokeRequest request;
+    request.setTarget("sys.pim.uib.email.hybridcomposer");
+    request.setAction("bb.action.SENDEMAIL");
+    request.setUri(QUrl::fromEncoded(mailto.toUtf8()));
+    bb::system::InvokeTargetReply *reply = invokeManager.invoke(request);
+    return (reply != NULL);
+}
+
 // =============================================================================
 // PERSISTENT SHARED STORAGE (SURVIVES APP REINSTALLATION)
 // =============================================================================
@@ -9984,6 +10316,31 @@ void BookManager::setWarmFilterIntensity(int intensity)
 void BookManager::toggleWarmFilter()
 {
     setWarmFilterEnabled(!m_warmFilterEnabled);
+}
+
+QString BookManager::normalizedBrightnessFormat() const
+{
+    QString f = m_currentFormat.trimmed().toLower();
+    if (f == "azw" || f == "azw3" || f == "kf8" || f == "prc") return "mobi";
+    if (f == "djv") return "djvu";
+    if (f.isEmpty()) return "epub";
+    return f;
+}
+
+int BookManager::readerBrightness() const
+{
+    return m_formatBrightness.value(normalizedBrightnessFormat(), 100);
+}
+
+void BookManager::setReaderBrightness(int brightness)
+{
+    int clamped = qMax(20, qMin(100, brightness));
+    QString fmt = normalizedBrightnessFormat();
+    if (m_formatBrightness.value(fmt, 100) != clamped) {
+        m_formatBrightness.insert(fmt, clamped);
+        emit readerBrightnessChanged();
+        saveSettings();
+    }
 }
 
 bool BookManager::autoNightTheme() const

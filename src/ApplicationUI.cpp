@@ -398,14 +398,15 @@ void ApplicationUI::exitApp()
     }
     m_bookManager.cancelWorkers();
 
-    // Start a 600ms watchdog timer: if the Cascades/Navigator handshake takes too long
-    // or any native thread fails to join, force clean process termination so the icon
-    // on the BlackBerry 10 home screen never gets dimmed/frozen.
-    QTimer::singleShot(600, this, SLOT(onHardExitTimeout()));
+    // Start a 3000ms safety watchdog only for genuine hangs, and schedule a clean
+    // Qt event-loop quit fallback after 200ms so ~Application() and ~ApplicationUI()
+    // always run and tear down the Cascades window cleanly without greyed-out artifacts.
+    QTimer::singleShot(3000, this, SLOT(onHardExitTimeout()));
 
     qDebug() << "[ApplicationUI] exitApp: Requesting application exit via Navigator...";
     if (Application::instance()) {
         Application::instance()->requestExit();
+        QTimer::singleShot(200, Application::instance(), SLOT(quit()));
     }
 }
 

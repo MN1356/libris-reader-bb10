@@ -25,7 +25,7 @@ Container {
         horizontalAlignment: HorizontalAlignment.Center
         text: trendBarItem.durationText !== "" ? trendBarItem.durationText : " "
         opacity: trendBarItem.durationText !== "" ? 1.0 : 0.0
-        textStyle.base: SystemDefaults.TextStyles.SmallText
+        textStyle.base: bookManager.isHiRes ? SystemDefaults.TextStyles.BodyText : SystemDefaults.TextStyles.SmallText
         textStyle.fontWeight: (trendBarItem.isToday || trendBarItem.durationText !== "") ? FontWeight.Bold : FontWeight.Normal
         textStyle.color: Color.create(bookManager.uiAccent)
         autoSize.maxLineCount: 1
@@ -36,7 +36,7 @@ Container {
         topMargin: bookManager.dp(4)
         bottomMargin: bookManager.dp(4)
         horizontalAlignment: HorizontalAlignment.Center
-        preferredWidth: bookManager.dp(24)
+        preferredWidth: bookManager.isHiRes ? bookManager.dp(34) : bookManager.dp(24)
         preferredHeight: trendBarItem.trackHeight
         background: Color.Transparent
         layout: DockLayout {}
@@ -57,7 +57,7 @@ Container {
     Label {
         horizontalAlignment: HorizontalAlignment.Center
         text: trendBarItem.dayNum
-        textStyle.base: SystemDefaults.TextStyles.SmallText
+        textStyle.base: bookManager.isHiRes ? SystemDefaults.TextStyles.BodyText : SystemDefaults.TextStyles.SmallText
         textStyle.fontWeight: trendBarItem.isToday ? FontWeight.Bold : FontWeight.Normal
         textStyle.color: trendBarItem.isToday ? Color.create(bookManager.uiAccent) : Color.create(bookManager.uiInk)
         autoSize.maxLineCount: 1

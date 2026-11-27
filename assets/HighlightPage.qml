@@ -54,7 +54,7 @@ Page {
         },
         ActionItem {
             title: qsTr("Xuất Markdown") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_download.png"
+            imageSource: "asset:///icons/ic_export.png"
             ActionBar.placement: ActionBarPlacement.OnBar
             onTriggered: {
                 mainHighlightView.exportMarkdown();

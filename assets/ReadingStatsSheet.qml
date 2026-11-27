@@ -1,4 +1,5 @@
 import bb.cascades 1.3
+import bb.system 1.2
 
 Sheet {
     id: statsSheet
@@ -28,8 +29,12 @@ Sheet {
     // Responsive sizing for 1:1 square screens: 720x720 (Q10/Classic) vs 1440x1440 (Passport)
     property bool isHiRes: bookManager.isHiRes
     property real uiScale: bookManager.uiScale
-    property int calendarCellHeight: isHiRes ? 116 : 74
-    property int trendTrackHeight: isHiRes ? 132 : 84
+    property int calendarCellHeight: isHiRes ? 128 : 86
+    property int trendTrackHeight: isHiRes ? 176 : 116
+    property variant sharedCellPaint: bookManager.appTheme === "dark" ? cellPaintDark.imagePaint : cellPaintLight.imagePaint
+    property variant sharedCellSelPaint: bookManager.appTheme === "dark" ? cellSelPaintDark.imagePaint : cellSelPaintLight.imagePaint
+    property variant sharedCellTodayPaint: bookManager.appTheme === "dark" ? cellTodayPaintDark.imagePaint : cellTodayPaintLight.imagePaint
+    property variant sharedCellOutPaint: bookManager.appTheme === "dark" ? cellOutPaintDark.imagePaint : cellOutPaintLight.imagePaint
 
     function sp(px) {
         return bookManager.dp(px);
@@ -65,6 +70,20 @@ Sheet {
     function calcGoalPct(secs, goalMins) {
         if (secs <= 0) return 0;
         return Math.min(100, Math.round(calcDisplayMins(secs) * 100 / Math.max(1, goalMins)));
+    }
+
+    function calcRingStep(secs, goalMins) {
+        var p = calcGoalPct(secs, goalMins);
+        return Math.min(100, Math.max(0, Math.round(p / 5) * 5));
+    }
+
+    function calcRemainingText(secs, goalMins) {
+        var done = calcDisplayMins(secs);
+        var rem = Math.max(0, goalMins - done);
+        if (rem === 0 && secs > 0) {
+            return qsTr("Đã hoàn thành mục tiêu hôm nay");
+        }
+        return qsTr("Còn") + " " + rem + " " + (bookManager.language === "en" ? "min left" : qsTr("phút nữa"));
     }
 
     onOpened: {
@@ -275,6 +294,10 @@ Sheet {
         var cells = getCellsList();
         for (var i = 0; i < 42; ++i) {
             cells[i].isSelected = (cells[i].dateStr === selectedDate);
+            cells[i].cellPaint = statsSheet.sharedCellPaint;
+            cells[i].cellSelPaint = statsSheet.sharedCellSelPaint;
+            cells[i].cellTodayPaint = statsSheet.sharedCellTodayPaint;
+            cells[i].cellOutPaint = statsSheet.sharedCellOutPaint;
         }
     }
 
@@ -337,7 +360,7 @@ Sheet {
             card.uiScale = statsSheet.uiScale;
             card.appTheme = bookManager.appTheme;
             card.openOnRowTap = true;
-            card.showActionButton = true;
+            card.showActionButton = false;
             card.isSelected = false;
             card.filePath = b.filePath;
             card.titleText = b.title;
@@ -357,7 +380,6 @@ Sheet {
         var os = bookManager.getOverallStats();
         allTimeTotalLabel.text = (os.shortTotalReadingTimeStr && os.shortTotalReadingTimeStr !== "") ? os.shortTotalReadingTimeStr : os.totalReadingTimeStr;
         allTimeDaysLabel.text = formatDays(os.totalReadingDays);
-        allTimeCurrentStreakLabel.text = formatConsecutiveDays(os.currentStreak);
         allTimeMaxStreakLabel.text = formatDays(os.allTimeStreak);
         if (os.bestDaySeconds > 0) {
             var bp = os.bestDayDate.split("-");
@@ -431,6 +453,7 @@ Sheet {
                 slot.progressText = b.progressStr ? b.progressStr : "";
                 slot.progressVal = b.progress ? b.progress : 0;
                 slot.isSelected = (b.filePath === selectedBookPath);
+                slot.editorialMode = true;
                 slot.bookSelected.connect(statsSheet.selectBookFromStats);
                 slot.bookOpened.connect(statsSheet.openBookFromStats);
                 allBooksListContainer.add(slot);
@@ -532,9 +555,41 @@ Sheet {
     }
 
     attachedObjects: [
+        ImagePaintDefinition { id: cardPaintDark; imageSource: "asset:///stats/card_dark.amd" },
+        ImagePaintDefinition { id: cardPaintLight; imageSource: "asset:///stats/card_light.amd" },
+        ImagePaintDefinition { id: pillAccentDark; imageSource: "asset:///stats/pill_accent_dark.amd" },
+        ImagePaintDefinition { id: pillAccentLight; imageSource: "asset:///stats/pill_accent_light.amd" },
+        ImagePaintDefinition { id: btnPrimaryDark; imageSource: "asset:///stats/btn_primary_dark.amd" },
+        ImagePaintDefinition { id: btnPrimaryLight; imageSource: "asset:///stats/btn_primary_light.amd" },
+        ImagePaintDefinition { id: cellPaintDark; imageSource: "asset:///stats/cell_dark.amd" },
+        ImagePaintDefinition { id: cellPaintLight; imageSource: "asset:///stats/cell_light.amd" },
+        ImagePaintDefinition { id: cellSelPaintDark; imageSource: "asset:///stats/cell_sel_dark.amd" },
+        ImagePaintDefinition { id: cellSelPaintLight; imageSource: "asset:///stats/cell_sel_light.amd" },
+        ImagePaintDefinition { id: cellTodayPaintDark; imageSource: "asset:///stats/cell_today_dark.amd" },
+        ImagePaintDefinition { id: cellTodayPaintLight; imageSource: "asset:///stats/cell_today_light.amd" },
+        ImagePaintDefinition { id: cellOutPaintDark; imageSource: "asset:///stats/cell_out_dark.amd" },
+        ImagePaintDefinition { id: cellOutPaintLight; imageSource: "asset:///stats/cell_out_light.amd" },
         ComponentDefinition {
             id: bookSlotDef
             source: "asset:///ReadingBookSlotItem.qml"
+        },
+        SystemPrompt {
+            id: dailyGoalPrompt
+            title: qsTr("Chỉnh mục tiêu đọc mỗi ngày") + Retranslate.onLanguageChanged
+            body: qsTr("Nhập số phút mục tiêu mỗi ngày (5 - 240 phút):") + Retranslate.onLanguageChanged
+            inputField.inputMode: SystemUiInputMode.NumbersAndPunctuation
+            inputField.emptyText: "30"
+            confirmButton.label: qsTr("Lưu") + Retranslate.onLanguageChanged
+            cancelButton.label: qsTr("Hủy") + Retranslate.onLanguageChanged
+            onFinished: {
+                if (value === SystemUiResult.ConfirmButtonSelection) {
+                    var parsed = parseInt(dailyGoalPrompt.inputFieldTextEntry(), 10);
+                    if (!isNaN(parsed) && parsed > 0) {
+                        bookManager.setDailyGoalMinutes(parsed);
+                        statsSheet.refreshAll();
+                    }
+                }
+            }
         }
     ]
 
@@ -560,10 +615,71 @@ Sheet {
             horizontalAlignment: HorizontalAlignment.Fill
             verticalAlignment: VerticalAlignment.Fill
             background: Color.create(bookManager.uiBg)
+            layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+            // =========================================================
+            // PINNED 3 TABS: [ Tổng quan ] [ Lịch đọc ] [ Theo sách ]
+            // =========================================================
+            Container {
+                horizontalAlignment: HorizontalAlignment.Fill
+                topPadding: statsSheet.sp(10)
+                bottomPadding: statsSheet.sp(8)
+                leftPadding: statsSheet.sp(14)
+                rightPadding: statsSheet.sp(14)
+                background: Color.create(bookManager.uiBg)
+                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                SegmentedControl {
+                    id: statsModeControl
+                    horizontalAlignment: HorizontalAlignment.Fill
+
+                    Option {
+                        id: optOverview
+                        text: qsTr("Tổng quan") + Retranslate.onLanguageChanged
+                        value: "overview"
+                        selected: true
+                    }
+                    Option {
+                        id: optCalendar
+                        text: qsTr("Lịch đọc") + Retranslate.onLanguageChanged
+                        value: "calendar"
+                    }
+                    Option {
+                        id: optByBook
+                        text: qsTr("Theo sách") + Retranslate.onLanguageChanged
+                        value: "by_book"
+                    }
+
+                    onSelectedValueChanged: {
+                        statsSheet.mainMode = selectedValue;
+                        statsScrollView.resetViewableArea(ScrollAnimation.Default);
+                        if (selectedValue === "overview") {
+                            statsSheet.refreshOverallStats();
+                            statsSheet.refreshTrendsStats();
+                        } else if (selectedValue === "calendar") {
+                            if (statsSheet.viewMode === "month") {
+                                statsSheet.refreshCalendarAndMonthStats();
+                                statsSheet.refreshSelectedDayDetails();
+                            } else {
+                                statsSheet.refreshWeekView();
+                            }
+                        } else if (selectedValue === "by_book") {
+                            statsSheet.refreshByBookStats();
+                        }
+                    }
+                }
+            }
+
+            Container {
+                horizontalAlignment: HorizontalAlignment.Fill
+                preferredHeight: 1
+                background: Color.create(bookManager.uiHairline)
+            }
 
             ScrollView {
                 id: statsScrollView
                 scrollRole: ScrollRole.Main
+                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
                 horizontalAlignment: HorizontalAlignment.Fill
                 verticalAlignment: VerticalAlignment.Fill
                 scrollViewProperties.scrollMode: ScrollMode.Vertical
@@ -571,58 +687,14 @@ Sheet {
                 Container {
                     horizontalAlignment: HorizontalAlignment.Fill
                     background: Color.create(bookManager.uiBg)
-                    topPadding: statsSheet.sp(10)
+                    topPadding: statsSheet.sp(12)
                     bottomPadding: statsSheet.sp(24)
                     leftPadding: statsSheet.sp(14)
                     rightPadding: statsSheet.sp(14)
                     layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
                     // =========================================================
-                    // 3 BALANCED TABS: [ Tổng quan ] [ Lịch đọc ] [ Theo sách ]
-                    // =========================================================
-                    SegmentedControl {
-                        id: statsModeControl
-                        horizontalAlignment: HorizontalAlignment.Fill
-                        bottomMargin: statsSheet.sp(12)
-
-                        Option {
-                            id: optOverview
-                            text: qsTr("Tổng quan") + Retranslate.onLanguageChanged
-                            value: "overview"
-                            selected: true
-                        }
-                        Option {
-                            id: optCalendar
-                            text: qsTr("Lịch đọc") + Retranslate.onLanguageChanged
-                            value: "calendar"
-                        }
-                        Option {
-                            id: optByBook
-                            text: qsTr("Theo sách") + Retranslate.onLanguageChanged
-                            value: "by_book"
-                        }
-
-                        onSelectedValueChanged: {
-                            statsSheet.mainMode = selectedValue;
-                            statsScrollView.resetViewableArea(ScrollAnimation.Default);
-                            if (selectedValue === "overview") {
-                                statsSheet.refreshOverallStats();
-                                statsSheet.refreshTrendsStats();
-                            } else if (selectedValue === "calendar") {
-                                if (statsSheet.viewMode === "month") {
-                                    statsSheet.refreshCalendarAndMonthStats();
-                                    statsSheet.refreshSelectedDayDetails();
-                                } else {
-                                    statsSheet.refreshWeekView();
-                                }
-                            } else if (selectedValue === "by_book") {
-                                statsSheet.refreshByBookStats();
-                            }
-                        }
-                    }
-
-                    // =========================================================
-                    // TAB 1: TỔNG QUAN (GOAL + 7-DAY TREND + ALL-TIME + FORMATS)
+                    // TAB 1: TỔNG QUAN (P3 GOAL HERO + P1 BENTO CARDS)
                     // =========================================================
                     Container {
                         id: overviewModeContainer
@@ -630,24 +702,50 @@ Sheet {
                         horizontalAlignment: HorizontalAlignment.Fill
                         layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
-                        // 1. Today's Goal & Streak Card
+                        // 1. P3 Focus Hero Goal Card (Rounded 9-slice + Circular Ring + Edit Button)
                         Container {
-                            bottomMargin: statsSheet.sp(14)
+                            bottomMargin: statsSheet.sp(12)
                             horizontalAlignment: HorizontalAlignment.Fill
-                            background: Color.create(bookManager.uiCard)
+                            background: bookManager.appTheme === "dark" ? cardPaintDark.imagePaint : cardPaintLight.imagePaint
                             topPadding: statsSheet.sp(14)
                             bottomPadding: statsSheet.sp(14)
                             leftPadding: statsSheet.sp(14)
                             rightPadding: statsSheet.sp(14)
-                            layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
+                            // Circular Progress Ring
                             Container {
-                                horizontalAlignment: HorizontalAlignment.Fill
-                                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                                verticalAlignment: VerticalAlignment.Center
+                                preferredWidth: statsSheet.isHiRes ? statsSheet.sp(104) : statsSheet.sp(82)
+                                preferredHeight: statsSheet.isHiRes ? statsSheet.sp(104) : statsSheet.sp(82)
+                                layout: DockLayout {}
+
+                                ImageView {
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    verticalAlignment: VerticalAlignment.Fill
+                                    scalingMethod: ScalingMethod.AspectFit
+                                    imageSource: "asset:///stats/rings/ring_" + (bookManager.appTheme === "dark" ? "dark_" : "light_") + statsSheet.calcRingStep(bookManager.todayReadingSeconds, bookManager.dailyGoalMinutes) + ".png"
+                                }
 
                                 Label {
-                                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                    horizontalAlignment: HorizontalAlignment.Center
                                     verticalAlignment: VerticalAlignment.Center
+                                    text: statsSheet.calcGoalPct(bookManager.todayReadingSeconds, bookManager.dailyGoalMinutes) + "%"
+                                    textStyle.base: statsSheet.isHiRes ? SystemDefaults.TextStyles.TitleText : SystemDefaults.TextStyles.BodyText
+                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.color: Color.create(bookManager.uiAccent)
+                                }
+                            }
+
+                            // Goal Minutes + Streak + Remaining
+                            Container {
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                leftMargin: statsSheet.sp(14)
+                                rightMargin: statsSheet.sp(10)
+                                verticalAlignment: VerticalAlignment.Center
+                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                                Label {
                                     text: qsTr("MỤC TIÊU HÔM NAY") + Retranslate.onLanguageChanged
                                     textStyle.base: SystemDefaults.TextStyles.SmallText
                                     textStyle.fontWeight: FontWeight.Bold
@@ -655,95 +753,84 @@ Sheet {
                                 }
 
                                 Label {
-                                    verticalAlignment: VerticalAlignment.Center
-                                    text: statsSheet.formatDays(bookManager.currentStreak) + Retranslate.onLanguageChanged
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                                    textStyle.fontWeight: FontWeight.Bold
-                                    textStyle.color: Color.create(bookManager.uiAccent)
-                                }
-                            }
-
-                            Container {
-                                horizontalAlignment: HorizontalAlignment.Fill
-                                topMargin: statsSheet.sp(6)
-                                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-
-                                Label {
-                                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                    verticalAlignment: VerticalAlignment.Center
+                                    topMargin: statsSheet.sp(2)
                                     text: (statsSheet.calcDisplayMins(bookManager.todayReadingSeconds) + " / " + bookManager.dailyGoalMinutes + " " + (bookManager.language === "en" ? "min" : qsTr("phút"))) + Retranslate.onLanguageChanged
-                                    textStyle.base: SystemDefaults.TextStyles.BodyText
+                                    textStyle.base: SystemDefaults.TextStyles.TitleText
                                     textStyle.fontWeight: FontWeight.Bold
                                     textStyle.color: Color.create(bookManager.uiInk)
                                 }
 
                                 Label {
-                                    verticalAlignment: VerticalAlignment.Center
-                                    text: statsSheet.calcGoalPct(bookManager.todayReadingSeconds, bookManager.dailyGoalMinutes) + "%"
+                                    topMargin: statsSheet.sp(3)
+                                    multiline: true
+                                    text: (statsSheet.formatDays(bookManager.currentStreak) + " · " + statsSheet.calcRemainingText(bookManager.todayReadingSeconds, bookManager.dailyGoalMinutes)) + Retranslate.onLanguageChanged
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
+                                    textStyle.color: Color.create(bookManager.uiAccent)
+                                }
+                            }
+
+                            // Rounded Edit Button
+                            Container {
+                                verticalAlignment: VerticalAlignment.Center
+                                background: bookManager.appTheme === "dark" ? pillAccentDark.imagePaint : pillAccentLight.imagePaint
+                                topPadding: statsSheet.sp(8)
+                                bottomPadding: statsSheet.sp(8)
+                                leftPadding: statsSheet.sp(16)
+                                rightPadding: statsSheet.sp(16)
+                                onTouch: {
+                                    if (event.isUp()) {
+                                        dailyGoalPrompt.inputField.defaultText = "" + bookManager.dailyGoalMinutes;
+                                        dailyGoalPrompt.show();
+                                    }
+                                }
+                                Label {
+                                    text: qsTr("Sửa") + Retranslate.onLanguageChanged
                                     textStyle.base: SystemDefaults.TextStyles.BodyText
                                     textStyle.fontWeight: FontWeight.Bold
                                     textStyle.color: Color.create(bookManager.uiAccent)
                                 }
                             }
+                        }
 
+                        // 2. Unified Single-Column Stack (consistent across Passport, Q10, Z10, Z30)
+                        Container {
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            layout: StackLayout {
+                                orientation: LayoutOrientation.TopToBottom
+                            }
+
+                            // 7-Day Reading Activity
                             Container {
+                                bottomMargin: statsSheet.sp(12)
                                 horizontalAlignment: HorizontalAlignment.Fill
-                                topMargin: statsSheet.sp(8)
-                                preferredHeight: statsSheet.sp(6)
-                                background: Color.create(bookManager.uiHairline)
-                                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                                background: bookManager.appTheme === "dark" ? cardPaintDark.imagePaint : cardPaintLight.imagePaint
+                                topPadding: statsSheet.sp(12)
+                                bottomPadding: statsSheet.sp(12)
+                                leftPadding: statsSheet.sp(12)
+                                rightPadding: statsSheet.sp(12)
+                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
                                 Container {
-                                    visible: bookManager.todayReadingSeconds > 0
-                                    verticalAlignment: VerticalAlignment.Fill
-                                    background: Color.create(bookManager.uiAccent)
-                                    layoutProperties: StackLayoutProperties {
-                                        spaceQuota: Math.max(0.001, statsSheet.calcGoalPct(bookManager.todayReadingSeconds, bookManager.dailyGoalMinutes))
+                                    horizontalAlignment: HorizontalAlignment.Fill
+                                    bottomMargin: statsSheet.sp(8)
+                                    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                                    Label {
+                                        layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                        verticalAlignment: VerticalAlignment.Center
+                                        text: qsTr("7 NGÀY GẦN NHẤT") + Retranslate.onLanguageChanged
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.fontWeight: FontWeight.Bold
+                                        textStyle.color: Color.create(bookManager.uiAccent)
+                                    }
+
+                                    Label {
+                                        verticalAlignment: VerticalAlignment.Center
+                                        text: qsTr("Mục tiêu: ") + bookManager.dailyGoalMinutes + " " + qsTr("phút/ngày") + Retranslate.onLanguageChanged
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.color: Color.create(bookManager.uiMuted)
                                     }
                                 }
-                                Container {
-                                    visible: statsSheet.calcGoalPct(bookManager.todayReadingSeconds, bookManager.dailyGoalMinutes) < 100
-                                    verticalAlignment: VerticalAlignment.Fill
-                                    background: Color.Transparent
-                                    layoutProperties: StackLayoutProperties {
-                                        spaceQuota: Math.max(0.001, 100 - statsSheet.calcGoalPct(bookManager.todayReadingSeconds, bookManager.dailyGoalMinutes))
-                                    }
-                                }
-                            }
-                        }
-
-                        // 2. 7-Day Reading Activity
-                        Container {
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            bottomMargin: statsSheet.sp(6)
-                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-
-                            Label {
-                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                verticalAlignment: VerticalAlignment.Center
-                                text: qsTr("7 NGÀY GẦN NHẤT") + Retranslate.onLanguageChanged
-                                textStyle.base: SystemDefaults.TextStyles.SmallText
-                                textStyle.fontWeight: FontWeight.Bold
-                                textStyle.color: Color.create(bookManager.uiAccent)
-                            }
-
-                            Label {
-                                verticalAlignment: VerticalAlignment.Center
-                                text: qsTr("Mục tiêu: ") + bookManager.dailyGoalMinutes + " " + qsTr("phút/ngày") + Retranslate.onLanguageChanged
-                                textStyle.base: SystemDefaults.TextStyles.SmallText
-                                textStyle.color: Color.create(bookManager.uiMuted)
-                            }
-                        }
-
-                        Container {
-                            bottomMargin: statsSheet.sp(14)
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            background: Color.create(bookManager.uiCard)
-                            topPadding: statsSheet.sp(12)
-                            bottomPadding: statsSheet.sp(12)
-                            leftPadding: statsSheet.sp(12)
-                            rightPadding: statsSheet.sp(12)
-                            layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
                             // 3 Inline Metric Columns separated by 1px Hairline dividers
                             Container {
@@ -858,24 +945,29 @@ Sheet {
                             }
                         }
 
-                        // 3. All-Time Summary & Records
-                        Label {
-                            bottomMargin: statsSheet.sp(6)
-                            text: qsTr("TÍCH LŨY") + Retranslate.onLanguageChanged
-                            textStyle.base: SystemDefaults.TextStyles.SmallText
-                            textStyle.fontWeight: FontWeight.Bold
-                            textStyle.color: Color.create(bookManager.uiAccent)
-                        }
-
+                        // All-Time + Format Distribution
                         Container {
-                            bottomMargin: statsSheet.sp(14)
                             horizontalAlignment: HorizontalAlignment.Fill
-                            background: Color.create(bookManager.uiCard)
-                            topPadding: statsSheet.sp(14)
-                            bottomPadding: statsSheet.sp(10)
-                            leftPadding: statsSheet.sp(14)
-                            rightPadding: statsSheet.sp(14)
                             layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                            // 3. All-Time Summary & Records (Rounded Card)
+                            Container {
+                                bottomMargin: statsSheet.sp(12)
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                background: bookManager.appTheme === "dark" ? cardPaintDark.imagePaint : cardPaintLight.imagePaint
+                                topPadding: statsSheet.sp(12)
+                                bottomPadding: statsSheet.sp(10)
+                                leftPadding: statsSheet.sp(14)
+                                rightPadding: statsSheet.sp(14)
+                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                                Label {
+                                    bottomMargin: statsSheet.sp(8)
+                                    text: qsTr("TÍCH LŨY") + Retranslate.onLanguageChanged
+                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.color: Color.create(bookManager.uiAccent)
+                                }
 
                             // Hero 2-Column All-Time Figures
                             Container {
@@ -941,50 +1033,18 @@ Sheet {
                                 background: Color.create(bookManager.uiHairline)
                             }
 
-                            // 4 Clean Key-Value Rows
+                            // 3 Clean Key-Value Rows (streak already in Goal Hero)
                             Container {
                                 horizontalAlignment: HorizontalAlignment.Fill
-                                topPadding: statsSheet.sp(9)
-                                bottomPadding: statsSheet.sp(9)
-                                layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-                                Label {
-                                    layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                    rightMargin: statsSheet.sp(10)
-                                    verticalAlignment: VerticalAlignment.Center
-                                    text: qsTr("Chuỗi ngày đọc hiện tại") + Retranslate.onLanguageChanged
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                                    textStyle.color: Color.create(bookManager.uiMuted)
-                                    multiline: true
-                                }
-                                Label {
-                                    id: allTimeCurrentStreakLabel
-                                    verticalAlignment: VerticalAlignment.Center
-                                    text: "--"
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                                    textStyle.fontWeight: FontWeight.Bold
-                                    textStyle.textAlign: TextAlign.Right
-                                    textStyle.color: Color.create(bookManager.uiAccent)
-                                    autoSize.maxLineCount: 1
-                                }
-                            }
-
-                            Container {
-                                horizontalAlignment: HorizontalAlignment.Fill
-                                preferredHeight: 1
-                                background: Color.create(bookManager.uiHairline)
-                            }
-
-                            Container {
-                                horizontalAlignment: HorizontalAlignment.Fill
-                                topPadding: statsSheet.sp(9)
-                                bottomPadding: statsSheet.sp(9)
+                                topPadding: statsSheet.sp(8)
+                                bottomPadding: statsSheet.sp(8)
                                 layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
                                 Label {
                                     layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
                                     rightMargin: statsSheet.sp(10)
                                     verticalAlignment: VerticalAlignment.Center
                                     text: qsTr("Kỷ lục chuỗi ngày dài nhất") + Retranslate.onLanguageChanged
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
                                     textStyle.color: Color.create(bookManager.uiMuted)
                                     multiline: true
                                 }
@@ -992,7 +1052,7 @@ Sheet {
                                     id: allTimeMaxStreakLabel
                                     verticalAlignment: VerticalAlignment.Center
                                     text: "--"
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
                                     textStyle.fontWeight: FontWeight.Bold
                                     textStyle.textAlign: TextAlign.Right
                                     textStyle.color: Color.create(bookManager.uiAccent)
@@ -1016,7 +1076,7 @@ Sheet {
                                     rightMargin: statsSheet.sp(10)
                                     verticalAlignment: VerticalAlignment.Center
                                     text: qsTr("Kỷ lục ngày đọc nhiều nhất") + Retranslate.onLanguageChanged
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
                                     textStyle.color: Color.create(bookManager.uiMuted)
                                     multiline: true
                                 }
@@ -1024,7 +1084,7 @@ Sheet {
                                     id: allTimeBestDayLabel
                                     verticalAlignment: VerticalAlignment.Center
                                     text: "--"
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
                                     textStyle.fontWeight: FontWeight.Bold
                                     textStyle.textAlign: TextAlign.Right
                                     textStyle.color: Color.create(bookManager.uiInk)
@@ -1049,7 +1109,7 @@ Sheet {
                                     rightMargin: statsSheet.sp(10)
                                     verticalAlignment: VerticalAlignment.Center
                                     text: qsTr("Tổng kết tủ sách") + Retranslate.onLanguageChanged
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
                                     textStyle.color: Color.create(bookManager.uiMuted)
                                     multiline: true
                                 }
@@ -1057,7 +1117,7 @@ Sheet {
                                     id: allTimeBooksLabel
                                     verticalAlignment: VerticalAlignment.Center
                                     text: "--"
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
                                     textStyle.fontWeight: FontWeight.Bold
                                     textStyle.textAlign: TextAlign.Right
                                     textStyle.color: Color.create(bookManager.uiInk)
@@ -1067,24 +1127,24 @@ Sheet {
                             }
                         }
 
-                        // 4. Active Format Distribution (hides 0-min formats into a single muted footnote)
-                        Label {
-                            bottomMargin: statsSheet.sp(6)
-                            text: qsTr("THEO ĐỊNH DẠNG") + Retranslate.onLanguageChanged
-                            textStyle.base: SystemDefaults.TextStyles.SmallText
-                            textStyle.fontWeight: FontWeight.Bold
-                            textStyle.color: Color.create(bookManager.uiAccent)
-                        }
+                            // 4. Active Format Distribution (Rounded Card)
+                            Container {
+                                bottomMargin: statsSheet.sp(12)
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                background: bookManager.appTheme === "dark" ? cardPaintDark.imagePaint : cardPaintLight.imagePaint
+                                topPadding: statsSheet.sp(12)
+                                bottomPadding: statsSheet.sp(12)
+                                leftPadding: statsSheet.sp(14)
+                                rightPadding: statsSheet.sp(14)
+                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
-                        Container {
-                            bottomMargin: statsSheet.sp(16)
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            background: Color.create(bookManager.uiCard)
-                            topPadding: statsSheet.sp(14)
-                            bottomPadding: statsSheet.sp(14)
-                            leftPadding: statsSheet.sp(14)
-                            rightPadding: statsSheet.sp(14)
-                            layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+                                Label {
+                                    bottomMargin: statsSheet.sp(8)
+                                    text: qsTr("THEO ĐỊNH DẠNG") + Retranslate.onLanguageChanged
+                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.color: Color.create(bookManager.uiAccent)
+                                }
 
                             // EPUB
                             Container {
@@ -1331,22 +1391,31 @@ Sheet {
                                 textStyle.color: Color.create(bookManager.uiMuted)
                             }
                         }
+                        } // End Right Column
+                        } // End Bento Grid
                     } // End of overviewModeContainer
 
                     // =========================================================
-                    // TAB 2: LỊCH ĐỌC (CALENDAR VIEW - CLEAN, ZERO DUPLICATE CHARTS)
+                    // TAB 2: LỊCH ĐỌC (P3 ROUNDED + P4 BOTTOM BAR, SINGLE-COLUMN)
                     // =========================================================
                     Container {
                         id: calendarModeContainer
                         visible: statsSheet.mainMode === "calendar"
                         horizontalAlignment: HorizontalAlignment.Fill
-                        layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+                        layout: StackLayout {
+                            orientation: LayoutOrientation.TopToBottom
+                        }
+
+                        // Period Bar + Calendar Grid / Week List
+                        Container {
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
                         // 1. Unified Period Control Bar ([Tháng | Tuần] + ‹ Title ›)
                         Container {
                             horizontalAlignment: HorizontalAlignment.Fill
                             bottomMargin: statsSheet.sp(10)
-                            background: Color.create(bookManager.uiCard)
+                            background: bookManager.appTheme === "dark" ? cardPaintDark.imagePaint : cardPaintLight.imagePaint
                             topPadding: statsSheet.sp(6)
                             bottomPadding: statsSheet.sp(6)
                             leftPadding: statsSheet.sp(8)
@@ -1495,191 +1564,12 @@ Sheet {
                             }
                         }
 
-                        // 2A. Unified Month Summary Strip (1 Card, 3 Clean Columns)
-                        Container {
-                            visible: statsSheet.viewMode === "month"
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            bottomMargin: statsSheet.sp(10)
-                            background: Color.create(bookManager.uiCard)
-                            topPadding: statsSheet.sp(10)
-                            bottomPadding: statsSheet.sp(10)
-                            leftPadding: statsSheet.sp(12)
-                            rightPadding: statsSheet.sp(12)
-                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-
-                            Container {
-                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                rightPadding: statsSheet.sp(6)
-                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
-                                Label {
-                                    text: qsTr("TỔNG THÁNG") + Retranslate.onLanguageChanged
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                                    textStyle.color: Color.create(bookManager.uiMuted)
-                                    autoSize.maxLineCount: 1
-                                }
-                                Label {
-                                    topMargin: statsSheet.sp(2)
-                                    text: statsSheet.monthTotalShortStr
-                                    textStyle.base: SystemDefaults.TextStyles.BodyText
-                                    textStyle.fontWeight: FontWeight.Bold
-                                    textStyle.color: Color.create(bookManager.uiAccent)
-                                    autoSize.maxLineCount: 1
-                                }
-                            }
-
-                            Container {
-                                preferredWidth: 1
-                                verticalAlignment: VerticalAlignment.Fill
-                                leftMargin: statsSheet.sp(4)
-                                rightMargin: statsSheet.sp(10)
-                                background: Color.create(bookManager.uiHairline)
-                            }
-
-                            Container {
-                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                rightPadding: statsSheet.sp(6)
-                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
-                                Label {
-                                    text: qsTr("NGÀY ĐỌC") + Retranslate.onLanguageChanged
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                                    textStyle.color: Color.create(bookManager.uiMuted)
-                                    autoSize.maxLineCount: 1
-                                }
-                                Label {
-                                    topMargin: statsSheet.sp(2)
-                                    text: statsSheet.monthDaysValStr
-                                    textStyle.base: SystemDefaults.TextStyles.BodyText
-                                    textStyle.fontWeight: FontWeight.Bold
-                                    textStyle.color: Color.create(bookManager.uiInk)
-                                    autoSize.maxLineCount: 1
-                                }
-                            }
-
-                            Container {
-                                preferredWidth: 1
-                                verticalAlignment: VerticalAlignment.Fill
-                                leftMargin: statsSheet.sp(4)
-                                rightMargin: statsSheet.sp(10)
-                                background: Color.create(bookManager.uiHairline)
-                            }
-
-                            Container {
-                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
-                                Label {
-                                    text: qsTr("TB / NGÀY") + Retranslate.onLanguageChanged
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                                    textStyle.color: Color.create(bookManager.uiMuted)
-                                    autoSize.maxLineCount: 1
-                                }
-                                Label {
-                                    topMargin: statsSheet.sp(2)
-                                    text: statsSheet.monthAvgShortStr
-                                    textStyle.base: SystemDefaults.TextStyles.BodyText
-                                    textStyle.fontWeight: FontWeight.Bold
-                                    textStyle.color: Color.create(bookManager.uiAccent)
-                                    autoSize.maxLineCount: 1
-                                }
-                            }
-                        }
-
-                        // 2B. Unified Week Summary Strip (1 Card, 3 Clean Columns)
-                        Container {
-                            visible: statsSheet.viewMode === "week"
-                            horizontalAlignment: HorizontalAlignment.Fill
-                            bottomMargin: statsSheet.sp(12)
-                            background: Color.create(bookManager.uiCard)
-                            topPadding: statsSheet.sp(10)
-                            bottomPadding: statsSheet.sp(10)
-                            leftPadding: statsSheet.sp(12)
-                            rightPadding: statsSheet.sp(12)
-                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
-
-                            Container {
-                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                rightPadding: statsSheet.sp(6)
-                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
-                                Label {
-                                    text: qsTr("TỔNG TUẦN") + Retranslate.onLanguageChanged
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                                    textStyle.color: Color.create(bookManager.uiMuted)
-                                    autoSize.maxLineCount: 1
-                                }
-                                Label {
-                                    id: weekTotalTimeLabel
-                                    topMargin: statsSheet.sp(2)
-                                    text: "--"
-                                    textStyle.base: SystemDefaults.TextStyles.BodyText
-                                    textStyle.fontWeight: FontWeight.Bold
-                                    textStyle.color: Color.create(bookManager.uiAccent)
-                                    autoSize.maxLineCount: 1
-                                }
-                            }
-
-                            Container {
-                                preferredWidth: 1
-                                verticalAlignment: VerticalAlignment.Fill
-                                leftMargin: statsSheet.sp(4)
-                                rightMargin: statsSheet.sp(10)
-                                background: Color.create(bookManager.uiHairline)
-                            }
-
-                            Container {
-                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                rightPadding: statsSheet.sp(6)
-                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
-                                Label {
-                                    text: qsTr("NGÀY ĐỌC") + Retranslate.onLanguageChanged
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                                    textStyle.color: Color.create(bookManager.uiMuted)
-                                    autoSize.maxLineCount: 1
-                                }
-                                Label {
-                                    id: weekReadingDaysLabel
-                                    topMargin: statsSheet.sp(2)
-                                    text: "--"
-                                    textStyle.base: SystemDefaults.TextStyles.BodyText
-                                    textStyle.fontWeight: FontWeight.Bold
-                                    textStyle.color: Color.create(bookManager.uiInk)
-                                    autoSize.maxLineCount: 1
-                                }
-                            }
-
-                            Container {
-                                preferredWidth: 1
-                                verticalAlignment: VerticalAlignment.Fill
-                                leftMargin: statsSheet.sp(4)
-                                rightMargin: statsSheet.sp(10)
-                                background: Color.create(bookManager.uiHairline)
-                            }
-
-                            Container {
-                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
-                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
-                                Label {
-                                    text: qsTr("TB / NGÀY") + Retranslate.onLanguageChanged
-                                    textStyle.base: SystemDefaults.TextStyles.SmallText
-                                    textStyle.color: Color.create(bookManager.uiMuted)
-                                    autoSize.maxLineCount: 1
-                                }
-                                Label {
-                                    id: weekAvgDailyTimeLabel
-                                    topMargin: statsSheet.sp(2)
-                                    text: "--"
-                                    textStyle.base: SystemDefaults.TextStyles.BodyText
-                                    textStyle.fontWeight: FontWeight.Bold
-                                    textStyle.color: Color.create(bookManager.uiAccent)
-                                    autoSize.maxLineCount: 1
-                                }
-                            }
-                        }
-
-                        // 3. 7-Column Monthly Calendar Grid
+                        // 3. 7-Column Monthly Calendar Grid (P3 Rounded Container)
                         Container {
                             visible: statsSheet.viewMode === "month"
                             bottomMargin: statsSheet.sp(10)
                             horizontalAlignment: HorizontalAlignment.Fill
-                            background: Color.create(bookManager.uiCard)
+                            background: bookManager.appTheme === "dark" ? cardPaintDark.imagePaint : cardPaintLight.imagePaint
                             topPadding: statsSheet.sp(8)
                             bottomPadding: statsSheet.sp(8)
                             leftPadding: statsSheet.sp(6)
@@ -1835,7 +1725,7 @@ Sheet {
                                 CalendarDayCell { id: c41; uiScale: statsSheet.uiScale; cellHeight: statsSheet.calendarCellHeight; onTapped: statsSheet.selectDay(date) }
                             }
 
-                            // Heatmap Legend
+                            // Bottom-Bar Intensity Legend (matches P4 bottom bar)
                             Container {
                                 topMargin: statsSheet.sp(8)
                                 horizontalAlignment: HorizontalAlignment.Center
@@ -1849,43 +1739,36 @@ Sheet {
                                 }
 
                                 Container {
-                                    leftMargin: statsSheet.sp(6)
+                                    leftMargin: statsSheet.sp(8)
                                     verticalAlignment: VerticalAlignment.Center
-                                    preferredWidth: statsSheet.sp(12)
-                                    preferredHeight: statsSheet.sp(12)
-                                    background: Color.create(bookManager.uiSurface)
+                                    preferredWidth: statsSheet.sp(18)
+                                    preferredHeight: statsSheet.sp(4)
+                                    background: bookManager.appTheme === "dark" ? Color.create("#5C431C") : Color.create("#EBD2A3")
                                 }
                                 Container {
-                                    leftMargin: statsSheet.sp(4)
+                                    leftMargin: statsSheet.sp(5)
                                     verticalAlignment: VerticalAlignment.Center
-                                    preferredWidth: statsSheet.sp(12)
-                                    preferredHeight: statsSheet.sp(12)
-                                    background: bookManager.appTheme === "dark" ? Color.create("#231C11") : Color.create("#FAF2E1")
+                                    preferredWidth: statsSheet.sp(18)
+                                    preferredHeight: statsSheet.sp(4)
+                                    background: bookManager.appTheme === "dark" ? Color.create("#8C672E") : Color.create("#D9B06A")
                                 }
                                 Container {
-                                    leftMargin: statsSheet.sp(4)
+                                    leftMargin: statsSheet.sp(5)
                                     verticalAlignment: VerticalAlignment.Center
-                                    preferredWidth: statsSheet.sp(12)
-                                    preferredHeight: statsSheet.sp(12)
-                                    background: bookManager.appTheme === "dark" ? Color.create("#3B2C16") : Color.create("#F2DFBA")
+                                    preferredWidth: statsSheet.sp(18)
+                                    preferredHeight: statsSheet.sp(4)
+                                    background: bookManager.appTheme === "dark" ? Color.create("#C99A4E") : Color.create("#B57F2A")
                                 }
                                 Container {
-                                    leftMargin: statsSheet.sp(4)
+                                    leftMargin: statsSheet.sp(5)
                                     verticalAlignment: VerticalAlignment.Center
-                                    preferredWidth: statsSheet.sp(12)
-                                    preferredHeight: statsSheet.sp(12)
-                                    background: bookManager.appTheme === "dark" ? Color.create("#5C431C") : Color.create("#E6C58D")
-                                }
-                                Container {
-                                    leftMargin: statsSheet.sp(4)
-                                    verticalAlignment: VerticalAlignment.Center
-                                    preferredWidth: statsSheet.sp(12)
-                                    preferredHeight: statsSheet.sp(12)
-                                    background: bookManager.appTheme === "dark" ? Color.create("#855E24") : Color.create("#D9AB60")
+                                    preferredWidth: statsSheet.sp(18)
+                                    preferredHeight: statsSheet.sp(4)
+                                    background: Color.create(bookManager.uiAccent)
                                 }
 
                                 Label {
-                                    leftMargin: statsSheet.sp(6)
+                                    leftMargin: statsSheet.sp(8)
                                     verticalAlignment: VerticalAlignment.Center
                                     text: qsTr("Nhiều hơn") + Retranslate.onLanguageChanged
                                     textStyle.base: SystemDefaults.TextStyles.SmallText
@@ -1919,12 +1802,198 @@ Sheet {
                             CalendarWeekDayItem { id: weekDay6; uiScale: statsSheet.uiScale; appTheme: bookManager.appTheme; onDaySelected: statsSheet.selectDay(date); onBookOpened: statsSheet.openBookFromStats(path) }
                         }
 
+                        } // End Left Column
+
+                        // Summary + Selected Day Detail
+                        Container {
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                        // 2A. Unified Month Summary Strip (Rounded Card)
+                        Container {
+                            visible: statsSheet.viewMode === "month"
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            bottomMargin: statsSheet.sp(10)
+                            background: bookManager.appTheme === "dark" ? cardPaintDark.imagePaint : cardPaintLight.imagePaint
+                            topPadding: statsSheet.sp(10)
+                            bottomPadding: statsSheet.sp(10)
+                            leftPadding: statsSheet.sp(12)
+                            rightPadding: statsSheet.sp(12)
+                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                            Container {
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                rightPadding: statsSheet.sp(4)
+                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+                                Label {
+                                    text: qsTr("TỔNG THÁNG") + Retranslate.onLanguageChanged
+                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.color: Color.create(bookManager.uiMuted)
+                                    autoSize.maxLineCount: 1
+                                }
+                                Label {
+                                    topMargin: statsSheet.sp(2)
+                                    text: statsSheet.monthTotalShortStr
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
+                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.color: Color.create(bookManager.uiAccent)
+                                    autoSize.maxLineCount: 1
+                                }
+                            }
+
+                            Container {
+                                preferredWidth: 1
+                                verticalAlignment: VerticalAlignment.Fill
+                                leftMargin: statsSheet.sp(4)
+                                rightMargin: statsSheet.sp(8)
+                                background: Color.create(bookManager.uiHairline)
+                            }
+
+                            Container {
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                rightPadding: statsSheet.sp(4)
+                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+                                Label {
+                                    text: qsTr("NGÀY ĐỌC") + Retranslate.onLanguageChanged
+                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.color: Color.create(bookManager.uiMuted)
+                                    autoSize.maxLineCount: 1
+                                }
+                                Label {
+                                    topMargin: statsSheet.sp(2)
+                                    text: statsSheet.monthDaysValStr
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
+                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.color: Color.create(bookManager.uiInk)
+                                    autoSize.maxLineCount: 1
+                                }
+                            }
+
+                            Container {
+                                preferredWidth: 1
+                                verticalAlignment: VerticalAlignment.Fill
+                                leftMargin: statsSheet.sp(4)
+                                rightMargin: statsSheet.sp(8)
+                                background: Color.create(bookManager.uiHairline)
+                            }
+
+                            Container {
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+                                Label {
+                                    text: qsTr("TB / NGÀY") + Retranslate.onLanguageChanged
+                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.color: Color.create(bookManager.uiMuted)
+                                    autoSize.maxLineCount: 1
+                                }
+                                Label {
+                                    topMargin: statsSheet.sp(2)
+                                    text: statsSheet.monthAvgShortStr
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
+                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.color: Color.create(bookManager.uiAccent)
+                                    autoSize.maxLineCount: 1
+                                }
+                            }
+                        }
+
+                        // 2B. Unified Week Summary Strip (Rounded Card)
+                        Container {
+                            visible: statsSheet.viewMode === "week"
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            bottomMargin: statsSheet.sp(12)
+                            background: bookManager.appTheme === "dark" ? cardPaintDark.imagePaint : cardPaintLight.imagePaint
+                            topPadding: statsSheet.sp(10)
+                            bottomPadding: statsSheet.sp(10)
+                            leftPadding: statsSheet.sp(12)
+                            rightPadding: statsSheet.sp(12)
+                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                            Container {
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                rightPadding: statsSheet.sp(4)
+                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+                                Label {
+                                    text: qsTr("TỔNG TUẦN") + Retranslate.onLanguageChanged
+                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.color: Color.create(bookManager.uiMuted)
+                                    autoSize.maxLineCount: 1
+                                }
+                                Label {
+                                    id: weekTotalTimeLabel
+                                    topMargin: statsSheet.sp(2)
+                                    text: "--"
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
+                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.color: Color.create(bookManager.uiAccent)
+                                    autoSize.maxLineCount: 1
+                                }
+                            }
+
+                            Container {
+                                preferredWidth: 1
+                                verticalAlignment: VerticalAlignment.Fill
+                                leftMargin: statsSheet.sp(4)
+                                rightMargin: statsSheet.sp(8)
+                                background: Color.create(bookManager.uiHairline)
+                            }
+
+                            Container {
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                rightPadding: statsSheet.sp(4)
+                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+                                Label {
+                                    text: qsTr("NGÀY ĐỌC") + Retranslate.onLanguageChanged
+                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.color: Color.create(bookManager.uiMuted)
+                                    autoSize.maxLineCount: 1
+                                }
+                                Label {
+                                    id: weekReadingDaysLabel
+                                    topMargin: statsSheet.sp(2)
+                                    text: "--"
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
+                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.color: Color.create(bookManager.uiInk)
+                                    autoSize.maxLineCount: 1
+                                }
+                            }
+
+                            Container {
+                                preferredWidth: 1
+                                verticalAlignment: VerticalAlignment.Fill
+                                leftMargin: statsSheet.sp(4)
+                                rightMargin: statsSheet.sp(8)
+                                background: Color.create(bookManager.uiHairline)
+                            }
+
+                            Container {
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+                                Label {
+                                    text: qsTr("TB / NGÀY") + Retranslate.onLanguageChanged
+                                    textStyle.base: SystemDefaults.TextStyles.SmallText
+                                    textStyle.color: Color.create(bookManager.uiMuted)
+                                    autoSize.maxLineCount: 1
+                                }
+                                Label {
+                                    id: weekAvgDailyTimeLabel
+                                    topMargin: statsSheet.sp(2)
+                                    text: "--"
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
+                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.color: Color.create(bookManager.uiAccent)
+                                    autoSize.maxLineCount: 1
+                                }
+                            }
+                        }
+
                         // 5. Selected Day Detail Card (Month mode only)
                         Container {
                             visible: statsSheet.viewMode === "month"
                             bottomMargin: statsSheet.sp(14)
                             horizontalAlignment: HorizontalAlignment.Fill
-                            background: Color.create(bookManager.uiCard)
+                            background: bookManager.appTheme === "dark" ? cardPaintDark.imagePaint : cardPaintLight.imagePaint
                             topPadding: statsSheet.sp(12)
                             bottomPadding: statsSheet.sp(12)
                             leftPadding: statsSheet.sp(12)
@@ -1985,38 +2054,38 @@ Sheet {
                                 layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
                             }
                         }
+                        } // End Right Column
                     } // End of calendarModeContainer
 
                     // =========================================================
-                    // TAB 3: THEO SÁCH (BY BOOK VIEW)
+                    // TAB 3: THEO SÁCH (P2 BB10 EDITORIAL + P3 ROUNDED HARMONY)
                     // =========================================================
                     Container {
                         id: byBookModeContainer
                         visible: statsSheet.mainMode === "by_book"
                         horizontalAlignment: HorizontalAlignment.Fill
-                        layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
-
-                        Label {
-                            visible: statsSheet.hasAnyBookStats
-                            bottomMargin: statsSheet.sp(6)
-                            text: qsTr("SÁCH ĐANG CHỌN") + Retranslate.onLanguageChanged
-                            textStyle.base: SystemDefaults.TextStyles.SmallText
-                            textStyle.fontWeight: FontWeight.Bold
-                            textStyle.color: Color.create(bookManager.uiAccent)
+                        layout: StackLayout {
+                            orientation: LayoutOrientation.TopToBottom
                         }
 
-                        // Hero Card for Selected Book
+                        // Hero Section (Flat Editorial: no card box, 1px hairline dividers, P3 rounded CTA)
                         Container {
                             id: byBookHeroContainer
                             visible: statsSheet.hasAnyBookStats
                             bottomMargin: statsSheet.sp(14)
                             horizontalAlignment: HorizontalAlignment.Fill
-                            background: Color.create(bookManager.uiCard)
-                            topPadding: statsSheet.sp(14)
-                            bottomPadding: statsSheet.sp(14)
-                            leftPadding: statsSheet.sp(14)
-                            rightPadding: statsSheet.sp(14)
+                            background: Color.Transparent
+                            topPadding: statsSheet.sp(4)
+                            bottomPadding: statsSheet.sp(4)
                             layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                            Label {
+                                bottomMargin: statsSheet.sp(8)
+                                text: qsTr("SÁCH ĐANG CHỌN") + Retranslate.onLanguageChanged
+                                textStyle.base: SystemDefaults.TextStyles.SmallText
+                                textStyle.fontWeight: FontWeight.Bold
+                                textStyle.color: Color.create(bookManager.uiAccent)
+                            }
 
                             // Book Header: Cover + Title + Format + Author + Progress
                             Container {
@@ -2284,13 +2353,24 @@ Sheet {
                                 }
                             }
 
-                            Button {
+                            // P3 Rounded Primary CTA Button
+                            Container {
                                 horizontalAlignment: HorizontalAlignment.Fill
                                 topMargin: statsSheet.sp(14)
-                                text: qsTr("Đọc tiếp cuốn sách này") + Retranslate.onLanguageChanged
-                                appearance: ControlAppearance.Primary
-                                onClicked: {
-                                    statsSheet.openBookFromStats(statsSheet.selectedBookPath);
+                                background: bookManager.appTheme === "dark" ? btnPrimaryDark.imagePaint : btnPrimaryLight.imagePaint
+                                topPadding: statsSheet.sp(11)
+                                bottomPadding: statsSheet.sp(11)
+                                onTouch: {
+                                    if (event.isUp()) {
+                                        statsSheet.openBookFromStats(statsSheet.selectedBookPath);
+                                    }
+                                }
+                                Label {
+                                    horizontalAlignment: HorizontalAlignment.Center
+                                    text: qsTr("Đọc tiếp cuốn sách này") + Retranslate.onLanguageChanged
+                                    textStyle.base: SystemDefaults.TextStyles.BodyText
+                                    textStyle.fontWeight: FontWeight.Bold
+                                    textStyle.color: bookManager.appTheme === "dark" ? Color.create("#0D0B09") : Color.White
                                 }
                             }
                         }
@@ -2302,7 +2382,7 @@ Sheet {
                             topMargin: statsSheet.sp(6)
                             bottomMargin: statsSheet.sp(14)
                             horizontalAlignment: HorizontalAlignment.Fill
-                            background: Color.create(bookManager.uiCard)
+                            background: bookManager.appTheme === "dark" ? cardPaintDark.imagePaint : cardPaintLight.imagePaint
                             topPadding: statsSheet.sp(24)
                             bottomPadding: statsSheet.sp(24)
                             leftPadding: statsSheet.sp(16)
@@ -2319,20 +2399,32 @@ Sheet {
                             }
                         }
 
-                        Label {
-                            visible: statsSheet.hasAnyBookStats && statsSheet.trackedBooksCount > 1
-                            bottomMargin: statsSheet.sp(4)
-                            text: qsTr("TẤT CẢ SÁCH TRONG THỐNG KÊ") + Retranslate.onLanguageChanged
-                            textStyle.base: SystemDefaults.TextStyles.SmallText
-                            textStyle.fontWeight: FontWeight.Bold
-                            textStyle.color: Color.create(bookManager.uiAccent)
-                        }
-
+                        // Book List Section (Editorial Flat List)
                         Container {
-                            id: allBooksListContainer
                             visible: statsSheet.hasAnyBookStats && statsSheet.trackedBooksCount > 1
                             horizontalAlignment: HorizontalAlignment.Fill
+                            topPadding: statsSheet.sp(4)
                             layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                            Label {
+                                bottomMargin: statsSheet.sp(6)
+                                text: qsTr("TẤT CẢ SÁCH TRONG THỐNG KÊ") + Retranslate.onLanguageChanged
+                                textStyle.base: SystemDefaults.TextStyles.SmallText
+                                textStyle.fontWeight: FontWeight.Bold
+                                textStyle.color: Color.create(bookManager.uiAccent)
+                            }
+
+                            Container {
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                preferredHeight: 1
+                                background: Color.create(bookManager.uiHairline)
+                            }
+
+                            Container {
+                                id: allBooksListContainer
+                                horizontalAlignment: HorizontalAlignment.Fill
+                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+                            }
                         }
                     } // End of byBookModeContainer
                 }

@@ -49,6 +49,12 @@ public:
     QString currentText() const;
     bool hasText() const;
 
+    // Continuous stream rendering
+    void requestStreamPage(int pageNumber, bool highPriority = true);
+    bb::ImageData streamPageImageData(int pageNumber) const;
+    void invalidateStreamCache();
+    void storeStreamPage(int generation, int pageNumber, const bb::ImageData &img);
+
     // Display & Layout Controls
     void setScreenWidth(int width);
     void setZoom(double zoom);
@@ -70,6 +76,7 @@ public:
 
 Q_SIGNALS:
     void pageRendered(int pageNumber);
+    void streamPageRendered(int pageNumber);
     void needIndicator(bool enabled);
     void errorWhileOpening(int errorCode);
     void fileOpened(const QString &filePath);
@@ -77,6 +84,7 @@ Q_SIGNALS:
 
 private Q_SLOTS:
     void onCorePageRendered(int number);
+    void onStreamPageReady(int generation, int pageNumber);
     void onCoreSessionFileOpened(const QString &file);
     void onCoreSessionFileClosed(const QString &file);
     void onCoreNeedIndicator(bool enabled);

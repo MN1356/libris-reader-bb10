@@ -107,7 +107,7 @@ Page {
         },
         ActionItem {
             title: qsTr("Mở Tệp") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_open.png"
+            imageSource: "asset:///icons/ic_open_file.png"
             ActionBar.placement: ActionBarPlacement.OnBar
             shortcuts: [
                 Shortcut { key: "O" }
@@ -140,6 +140,12 @@ Page {
         horizontalAlignment: HorizontalAlignment.Fill
         verticalAlignment: VerticalAlignment.Fill
         background: Color.create(bookManager.uiBg)
+
+        Container {
+            horizontalAlignment: HorizontalAlignment.Fill
+            preferredHeight: 1
+            background: Color.create(bookManager.uiHairline)
+        }
 
         // 1. COLLAPSIBLE LIVE SEARCH BAR
         Container {
@@ -400,19 +406,21 @@ Page {
 
                             Container {
                                 horizontalAlignment: HorizontalAlignment.Fill
-                                minHeight: bookManager.dp(88)
-                                topPadding: bookManager.dp(10)
-                                bottomPadding: bookManager.dp(10)
+                                minHeight: (ListItemData.itemType === "folder" || ListItemData.isDir) ? bookManager.dp(76) : bookManager.dp(140)
+                                topPadding: (ListItemData.itemType === "folder" || ListItemData.isDir) ? bookManager.dp(10) : bookManager.dp(6)
+                                bottomPadding: (ListItemData.itemType === "folder" || ListItemData.isDir) ? bookManager.dp(10) : bookManager.dp(6)
                                 leftPadding: bookManager.dp(14)
                                 rightPadding: bookManager.dp(14)
                                 layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
                                 // Left Icon / Thumbnail
                                 Container {
-                                    preferredWidth: (ListItemData.itemType === "folder" || ListItemData.isDir) ? bookManager.dp(56) : bookManager.dp(64)
-                                    preferredHeight: (ListItemData.itemType === "folder" || ListItemData.isDir) ? bookManager.dp(56) : bookManager.dp(92)
-                                    minWidth: (ListItemData.itemType === "folder" || ListItemData.isDir) ? bookManager.dp(56) : bookManager.dp(64)
-                                    minHeight: (ListItemData.itemType === "folder" || ListItemData.isDir) ? bookManager.dp(56) : bookManager.dp(92)
+                                    preferredWidth: (ListItemData.itemType === "folder" || ListItemData.isDir) ? bookManager.dp(56) : bookManager.dp(88)
+                                    preferredHeight: (ListItemData.itemType === "folder" || ListItemData.isDir) ? bookManager.dp(56) : bookManager.dp(128)
+                                    minWidth: (ListItemData.itemType === "folder" || ListItemData.isDir) ? bookManager.dp(56) : bookManager.dp(88)
+                                    maxWidth: (ListItemData.itemType === "folder" || ListItemData.isDir) ? bookManager.dp(56) : bookManager.dp(88)
+                                    minHeight: (ListItemData.itemType === "folder" || ListItemData.isDir) ? bookManager.dp(56) : bookManager.dp(128)
+                                    maxHeight: (ListItemData.itemType === "folder" || ListItemData.isDir) ? bookManager.dp(56) : bookManager.dp(128)
                                     verticalAlignment: VerticalAlignment.Center
                                     background: Color.create(bookManager.uiSurface)
                                     layout: DockLayout {}
@@ -468,7 +476,7 @@ Page {
                                     Label {
                                         text: ListItemData.name ? ListItemData.name : (ListItemData.title ? ListItemData.title : "")
                                         textStyle.base: SystemDefaults.TextStyles.TitleText
-                                        textStyle.fontWeight: FontWeight.Bold
+                                        textStyle.fontWeight: (ListItemData.itemType === "folder" || ListItemData.isDir) ? FontWeight.Bold : FontWeight.Normal
                                         textStyle.color: Color.create(bookManager.uiInk)
                                         multiline: true
                                         autoSize.maxLineCount: 2
@@ -476,9 +484,20 @@ Page {
 
                                     Label {
                                         topMargin: bookManager.dp(2)
-                                        text: (ListItemData.pageInfoStr ? (ListItemData.pageInfoStr + " • ") : (ListItemData.totalPages > 0 ? (ListItemData.totalPages + (bookManager.language === "en" ? (ListItemData.format === "epub" || ListItemData.format === "fb2" ? " chapters • " : " pages • ") : (ListItemData.format === "epub" || ListItemData.format === "fb2" ? " chương • " : " trang • "))) : "")) + (ListItemData.subtext ? ListItemData.subtext : (ListItemData.fileSize ? ListItemData.fileSize : ""))
+                                        text: (ListItemData.itemType === "folder" || ListItemData.isDir)
+                                            ? (ListItemData.subtext ? ListItemData.subtext : "")
+                                            : ((ListItemData.author && ListItemData.author !== "") ? ListItemData.author : (qsTr("Tác giả không rõ") + Retranslate.onLanguageChanged))
                                         textStyle.base: SystemDefaults.TextStyles.SmallText
                                         textStyle.color: Color.create(bookManager.uiMuted)
+                                        autoSize.maxLineCount: 1
+                                    }
+
+                                    Label {
+                                        visible: !(ListItemData.itemType === "folder" || ListItemData.isDir) && (ListItemData.pageInfoStr !== undefined && ListItemData.pageInfoStr !== "")
+                                        topMargin: bookManager.dp(2)
+                                        text: ListItemData.pageInfoStr ? ListItemData.pageInfoStr : ""
+                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                        textStyle.color: Color.create(bookManager.uiAccent)
                                         autoSize.maxLineCount: 1
                                     }
 
@@ -508,23 +527,37 @@ Page {
                                     }
                                 }
 
-                                // Monochrome Format / Status Pill
+                                // Monochrome Format / Status Pill + File Size
                                 Container {
                                     visible: ListItemData.itemType === "book" && !ListItemData.isDir && ListItemData.format !== undefined && ListItemData.format !== ""
                                     verticalAlignment: VerticalAlignment.Center
-                                    background: ListItemData.progress >= 100 ? Color.create("#D4A359") : Color.create(bookManager.uiSurface)
-                                    topPadding: bookManager.dp(4)
-                                    bottomPadding: bookManager.dp(4)
-                                    leftPadding: bookManager.dp(10)
-                                    rightPadding: bookManager.dp(10)
+                                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                                    Container {
+                                        horizontalAlignment: HorizontalAlignment.Right
+                                        background: ListItemData.progress >= 100 ? Color.create("#D4A359") : Color.create(bookManager.uiSurface)
+                                        topPadding: bookManager.dp(4)
+                                        bottomPadding: bookManager.dp(4)
+                                        leftPadding: bookManager.dp(10)
+                                        rightPadding: bookManager.dp(10)
+
+                                        Label {
+                                            text: ListItemData.progress >= 100 ?
+                                                  (qsTr("Xong") + Retranslate.onLanguageChanged) :
+                                                  (ListItemData.format ? ListItemData.format.toUpperCase() : "")
+                                            textStyle.base: SystemDefaults.TextStyles.SmallText
+                                            textStyle.fontWeight: FontWeight.Bold
+                                            textStyle.color: ListItemData.progress >= 100 ? Color.create("#0D0B09") : Color.create(bookManager.uiInk)
+                                        }
+                                    }
 
                                     Label {
-                                        text: ListItemData.progress >= 100 ?
-                                              (qsTr("Xong") + Retranslate.onLanguageChanged) :
-                                              (ListItemData.format ? ListItemData.format.toUpperCase() : "")
+                                        visible: ListItemData.fileSize !== undefined && ListItemData.fileSize !== ""
+                                        topMargin: bookManager.dp(4)
+                                        horizontalAlignment: HorizontalAlignment.Right
+                                        text: ListItemData.fileSize ? ListItemData.fileSize : ""
                                         textStyle.base: SystemDefaults.TextStyles.SmallText
-                                        textStyle.fontWeight: FontWeight.Bold
-                                        textStyle.color: ListItemData.progress >= 100 ? Color.create("#0D0B09") : Color.create(bookManager.uiInk)
+                                        textStyle.color: Color.create(bookManager.uiMuted)
                                     }
                                 }
                             }

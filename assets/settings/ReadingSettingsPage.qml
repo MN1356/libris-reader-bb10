@@ -149,6 +149,11 @@ Page {
                         title: qsTr("Mục tiêu đọc hằng ngày") + Retranslate.onLanguageChanged
 
                         Option {
+                            text: "10 " + (bookManager.language === "en" ? "min" : "phút")
+                            value: 10
+                            selected: bookManager.dailyGoalMinutes === 10
+                        }
+                        Option {
                             text: "15 " + (bookManager.language === "en" ? "min" : "phút")
                             value: 15
                             selected: bookManager.dailyGoalMinutes === 15
@@ -172,6 +177,11 @@ Page {
                             text: "90 " + (bookManager.language === "en" ? "min" : "phút")
                             value: 90
                             selected: bookManager.dailyGoalMinutes === 90
+                        }
+                        Option {
+                            text: "120 " + (bookManager.language === "en" ? "min" : "phút")
+                            value: 120
+                            selected: bookManager.dailyGoalMinutes === 120
                         }
 
                         onSelectedValueChanged: {

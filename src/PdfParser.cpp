@@ -14,6 +14,12 @@
 #include <QTextCodec>
 #include <QCryptographicHash>
 #include <QDebug>
+#include <QThread>
+#include <QMutex>
+#include <QMutexLocker>
+#include <QWaitCondition>
+#include <QMap>
+#include <QMetaObject>
 
 class LibrisPdfSettings : public INSRSettings {
 public:
@@ -35,6 +41,182 @@ public:
     virtual bool isStarting() const { return starting; }
 };
 
+class PdfStreamWorker : public QThread {
+public:
+    explicit PdfStreamWorker(PdfParser *parser)
+        : QThread(parser)
+        , m_parser(parser)
+        , m_doc(NULL)
+        , m_pendingDoc(NULL)
+        , m_hasPendingDoc(false)
+        , m_stop(false)
+        , m_generation(0)
+        , m_pageWidth(720)
+        , m_inverted(false)
+        , m_autoCrop(false)
+        , m_rotation(NSRAbstractDocument::NSR_DOCUMENT_ROTATION_0)
+    {}
+
+    virtual ~PdfStreamWorker() {
+        stopWorker();
+    }
+
+    void setDocument(NSRAbstractDocument *doc, int gen, int pageWidth, bool inverted, bool autoCrop,
+                     NSRAbstractDocument::NSRDocumentRotation rot) {
+        QMutexLocker lock(&m_mutex);
+        if (m_hasPendingDoc && m_pendingDoc && m_pendingDoc != doc) {
+            delete m_pendingDoc;
+        }
+        m_pendingDoc = doc;
+        m_hasPendingDoc = true;
+        m_generation = gen;
+        m_pageWidth = qMax(240, pageWidth);
+        m_inverted = inverted;
+        m_autoCrop = autoCrop;
+        m_rotation = rot;
+        m_queue.clear();
+        m_cond.wakeOne();
+    }
+
+    void updateSettings(int gen, int pageWidth, bool inverted, bool autoCrop,
+                        NSRAbstractDocument::NSRDocumentRotation rot) {
+        QMutexLocker lock(&m_mutex);
+        m_generation = gen;
+        m_pageWidth = qMax(240, pageWidth);
+        m_inverted = inverted;
+        m_autoCrop = autoCrop;
+        m_rotation = rot;
+        m_queue.clear();
+        m_cond.wakeOne();
+    }
+
+    void enqueuePage(int pageNumber, int gen, bool highPriority) {
+        if (pageNumber < 1) return;
+        QMutexLocker lock(&m_mutex);
+        if (gen != m_generation || m_stop) return;
+        if (!m_doc && !m_hasPendingDoc) return;
+        int idx = m_queue.indexOf(pageNumber);
+        if (idx >= 0) {
+            if (!highPriority || idx == 0) return;
+            m_queue.removeAt(idx);
+        }
+        if (highPriority) {
+            m_queue.prepend(pageNumber);
+        } else {
+            m_queue.append(pageNumber);
+        }
+        m_cond.wakeOne();
+    }
+
+    void stopWorker() {
+        {
+            QMutexLocker lock(&m_mutex);
+            m_stop = true;
+            m_queue.clear();
+            m_cond.wakeAll();
+        }
+        if (isRunning()) {
+            wait(3000);
+        }
+        if (m_pendingDoc) {
+            delete m_pendingDoc;
+            m_pendingDoc = NULL;
+            m_hasPendingDoc = false;
+        }
+        if (m_doc) {
+            delete m_doc;
+            m_doc = NULL;
+        }
+    }
+
+protected:
+    virtual void run() {
+        for (;;) {
+            int pageNumber = 0;
+            int gen = 0;
+            int pageWidth = 720;
+            bool inverted = false;
+            bool autoCrop = false;
+            NSRAbstractDocument::NSRDocumentRotation rot = NSRAbstractDocument::NSR_DOCUMENT_ROTATION_0;
+
+            {
+                QMutexLocker lock(&m_mutex);
+                while (!m_stop && !m_hasPendingDoc && m_queue.isEmpty()) {
+                    m_cond.wait(&m_mutex);
+                }
+                if (m_hasPendingDoc) {
+                    NSRAbstractDocument *oldDoc = m_doc;
+                    m_doc = m_pendingDoc;
+                    m_pendingDoc = NULL;
+                    m_hasPendingDoc = false;
+                    lock.unlock();
+                    if (oldDoc) delete oldDoc;
+                    lock.relock();
+                }
+                if (m_stop) {
+                    break;
+                }
+                if (m_queue.isEmpty() || !m_doc) {
+                    continue;
+                }
+                pageNumber = m_queue.takeFirst();
+                gen = m_generation;
+                pageWidth = m_pageWidth;
+                inverted = m_inverted;
+                autoCrop = m_autoCrop;
+                rot = m_rotation;
+            }
+
+            if (!m_doc || pageNumber < 1 || pageNumber > m_doc->getPageCount()) {
+                continue;
+            }
+
+            m_doc->setPageWidth(pageWidth);
+            m_doc->setZoomToWidth(true);
+            m_doc->setInvertedColors(inverted);
+            m_doc->setAutoCrop(autoCrop);
+            m_doc->setRotation(rot);
+            m_doc->setTextOnly(false);
+
+            NSRRenderInfo info = m_doc->renderPage(pageNumber);
+            bb::ImageData img;
+            if (info.isSuccessRender()) {
+                img = m_doc->getCurrentPage();
+            }
+
+            bool validGen = false;
+            {
+                QMutexLocker lock(&m_mutex);
+                validGen = (!m_stop && !m_hasPendingDoc && gen == m_generation);
+            }
+            if (validGen && img.width() > 0 && img.height() > 0 && m_parser) {
+                m_parser->storeStreamPage(gen, pageNumber, img);
+                QMetaObject::invokeMethod(m_parser, "onStreamPageReady", Qt::QueuedConnection,
+                                          Q_ARG(int, gen), Q_ARG(int, pageNumber));
+            }
+        }
+        if (m_doc) {
+            delete m_doc;
+            m_doc = NULL;
+        }
+    }
+
+private:
+    PdfParser *m_parser;
+    QMutex m_mutex;
+    QWaitCondition m_cond;
+    NSRAbstractDocument *m_doc;
+    NSRAbstractDocument *m_pendingDoc;
+    bool m_hasPendingDoc;
+    bool m_stop;
+    int m_generation;
+    int m_pageWidth;
+    bool m_inverted;
+    bool m_autoCrop;
+    NSRAbstractDocument::NSRDocumentRotation m_rotation;
+    QList<int> m_queue;
+};
+
 struct PdfParserPrivate {
     QString filePath;
     QString title;
@@ -54,6 +236,12 @@ struct PdfParserPrivate {
     LibrisPdfSession *session;
     int screenWidth;
 
+    PdfStreamWorker *streamWorker;
+    mutable QMutex streamMutex;
+    QMap<int, bb::ImageData> streamCache;
+    QList<int> streamLru;
+    int streamGeneration;
+
     PdfParserPrivate()
         : seriesIndex(0)
         , currentPage(1)
@@ -62,6 +250,8 @@ struct PdfParserPrivate {
         , core(NULL)
         , session(NULL)
         , screenWidth(720)
+        , streamWorker(NULL)
+        , streamGeneration(0)
     {
     }
 };
@@ -73,6 +263,8 @@ PdfParser::PdfParser(QObject *parent)
     d->pdfSettings = new LibrisPdfSettings();
     d->session = new LibrisPdfSession();
     d->core = new LibrisPdfCore(d->pdfSettings, NULL, this);
+    d->streamWorker = new PdfStreamWorker(this);
+    d->streamWorker->start();
 
     connect(d->core, SIGNAL(pageRendered(int)), this, SLOT(onCorePageRendered(int)));
     connect(d->core, SIGNAL(sessionFileOpened(QString)), this, SLOT(onCoreSessionFileOpened(QString)));
@@ -86,6 +278,11 @@ PdfParser::~PdfParser()
 {
     prepareForDestruction();
     if (d) {
+        if (d->streamWorker) {
+            d->streamWorker->stopWorker();
+            delete d->streamWorker;
+            d->streamWorker = NULL;
+        }
         if (d->core) {
             delete d->core;
             d->core = NULL;
@@ -105,8 +302,13 @@ PdfParser::~PdfParser()
 
 void PdfParser::prepareForDestruction()
 {
-    if (d && d->core) {
-        d->core->prepareForDestruction();
+    if (d) {
+        if (d->streamWorker) {
+            d->streamWorker->stopWorker();
+        }
+        if (d->core) {
+            d->core->prepareForDestruction();
+        }
     }
 }
 
@@ -135,12 +337,36 @@ bool PdfParser::open(const QString &filePath, int targetPage)
     d->core->loadSession(d->session);
     d->core->setZoom(0.0, LibrisPdfRenderRequest::NSR_RENDER_REASON_ZOOM_TO_WIDTH);
 
+    {
+        QMutexLocker lock(&d->streamMutex);
+        d->streamGeneration++;
+        d->streamCache.clear();
+        d->streamLru.clear();
+    }
+    if (d->streamWorker) {
+        NSRAbstractDocument *streamDoc = d->core->fileHandlerByPath(filePath);
+        d->streamWorker->setDocument(streamDoc, d->streamGeneration, d->screenWidth,
+                                     d->pdfSettings ? d->pdfSettings->invertedColors : false,
+                                     d->pdfSettings ? d->pdfSettings->autoCrop : false,
+                                     NSRAbstractDocument::NSR_DOCUMENT_ROTATION_0);
+    }
+
     return true;
 }
 
 void PdfParser::close()
 {
     if (!d) return;
+    {
+        QMutexLocker lock(&d->streamMutex);
+        d->streamGeneration++;
+        d->streamCache.clear();
+        d->streamLru.clear();
+    }
+    if (d->streamWorker) {
+        d->streamWorker->setDocument(NULL, d->streamGeneration, d->screenWidth, false, false,
+                                     NSRAbstractDocument::NSR_DOCUMENT_ROTATION_0);
+    }
     if (d->core && d->core->isSessionLoaded()) {
         d->core->resetSession();
     }
@@ -190,6 +416,7 @@ void PdfParser::setScreenWidth(int width)
         if (d->core) {
             d->core->setScreenWidth(width);
         }
+        invalidateStreamCache();
     }
 }
 
@@ -249,6 +476,7 @@ void PdfParser::rotate()
 {
     if (d && d->core && d->core->isSessionLoaded()) {
         d->core->rotate(LibrisPdfCore::ROTATE_DIRECTION_RIGHT);
+        invalidateStreamCache();
     }
 }
 
@@ -302,6 +530,7 @@ void PdfParser::switchInvertedColors()
 {
     if (d && d->core && d->core->isSessionLoaded()) {
         d->core->switchInvertedColors();
+        invalidateStreamCache();
     }
 }
 
@@ -320,6 +549,7 @@ void PdfParser::setAutoCrop(bool enabled)
         if (d->core && d->core->isSessionLoaded()) {
             d->core->reloadSettings();
         }
+        invalidateStreamCache();
     }
 }
 
@@ -417,13 +647,91 @@ QString PdfParser::extractCover(const QString &cacheDir)
 
 void PdfParser::onCorePageRendered(int number)
 {
+    int gen = 0;
     if (d) {
         d->currentPage = number;
         if (d->core) {
             d->pageCount = d->core->getPagesCount();
         }
+        {
+            QMutexLocker lock(&d->streamMutex);
+            gen = d->streamGeneration;
+        }
+        bb::ImageData imgData = currentImageData();
+        if (imgData.width() > 0 && imgData.height() > 0) {
+            storeStreamPage(gen, number, imgData);
+            emit streamPageRendered(number);
+        }
     }
     emit pageRendered(number);
+}
+
+void PdfParser::requestStreamPage(int pageNumber, bool highPriority)
+{
+    if (!d || !d->streamWorker || pageNumber < 1) return;
+    int gen = 0;
+    {
+        QMutexLocker lock(&d->streamMutex);
+        if (d->streamCache.contains(pageNumber)) {
+            emit streamPageRendered(pageNumber);
+            return;
+        }
+        gen = d->streamGeneration;
+    }
+    d->streamWorker->enqueuePage(pageNumber, gen, highPriority);
+}
+
+bb::ImageData PdfParser::streamPageImageData(int pageNumber) const
+{
+    if (!d) return bb::ImageData();
+    QMutexLocker lock(&d->streamMutex);
+    return d->streamCache.value(pageNumber);
+}
+
+void PdfParser::invalidateStreamCache()
+{
+    if (!d) return;
+    int gen = 0;
+    {
+        QMutexLocker lock(&d->streamMutex);
+        d->streamGeneration++;
+        d->streamCache.clear();
+        d->streamLru.clear();
+        gen = d->streamGeneration;
+    }
+    if (d->streamWorker && d->core) {
+        bool inv = d->core->isInvertedColors();
+        bool ac = d->pdfSettings ? d->pdfSettings->autoCrop : false;
+        NSRAbstractDocument::NSRDocumentRotation rot = d->core->getRotation();
+        d->streamWorker->updateSettings(gen, d->screenWidth, inv, ac, rot);
+    }
+}
+
+void PdfParser::storeStreamPage(int generation, int pageNumber, const bb::ImageData &img)
+{
+    if (!d || img.width() <= 0 || img.height() <= 0) return;
+    QMutexLocker lock(&d->streamMutex);
+    if (generation != d->streamGeneration) return;
+    d->streamCache.insert(pageNumber, img);
+    d->streamLru.removeAll(pageNumber);
+    d->streamLru.append(pageNumber);
+    while (d->streamLru.size() > 5) {
+        int evictPage = d->streamLru.takeFirst();
+        d->streamCache.remove(evictPage);
+    }
+}
+
+void PdfParser::onStreamPageReady(int generation, int pageNumber)
+{
+    if (!d) return;
+    bool valid = false;
+    {
+        QMutexLocker lock(&d->streamMutex);
+        valid = (generation == d->streamGeneration && d->streamCache.contains(pageNumber));
+    }
+    if (valid) {
+        emit streamPageRendered(pageNumber);
+    }
 }
 
 void PdfParser::onCoreSessionFileOpened(const QString &file)

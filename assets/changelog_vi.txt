@@ -1,4 +1,45 @@
-Phiên bản 2.0.0 (Build 211) - 2026-11-27:
+Phiên bản 2.3.0 (Build 257) - 2026-11-27:
+- Thiết kế lại toàn bộ Onboarding Guide (7 trang) theo chuẩn Native BlackBerry 10 Cascades (`RadioGroup`, `SegmentedControl`, `Button Primary`, thanh ActionBar tối, vuốt ngang chuyển trang, căn giữa màn hình vuông Passport).
+- Nâng cấp Trang 4 (Controls) thành màn hình đọc sách mô phỏng toàn khung kèm hộp thoại nổi và animation minh họa từng phím tắt; vẽ hình minh họa đúng dáng máy BlackBerry Passport cho trang Giao diện & Thêm sách.
+- Chuẩn hóa toàn bộ phím tắt chỉ dùng phím chữ cái (`A–Z`, `Space`, `Backspace`) thuận tay cho bàn phím vật lý Passport (`Z / X` cỡ chữ, `N / P` chuyển chương, `W / Q` PDF, `O` bảng phím tắt).
+- Hoàn thiện 100% Việt hóa tự nhiên (giữ các thuật ngữ tiếng Anh quen thuộc), đồng bộ dịch tức thì toàn bộ Guide và đặt Tiếng Anh là ngôn ngữ mặc định lần đầu.
+- Sửa lỗi hiện Kệ sách tự tạo (Custom Shelves) ngay trên Tủ sách bằng dải thẻ cuộn ngang + kéo rộng nút Đọc tiếp (Continue) ở Trang chủ.
+- Bổ sung cơ chế tự động tăng tiến phiên bản và gộp các bản build trong phạm vi 1 giờ.
+- Thu gọn thẻ Mục tiêu đọc hôm nay, chỉ giữ nút Sửa mở hộp thoại nhập phút
+- Tái thiết kế trang Điều khiển trong Hướng dẫn thành bản đồ bàn phím BlackBerry Passport trực quan (chạm hoặc bấm phím cứng để xem chức năng)
+- Tái thiết kế trang Thống Kê Đọc Sách thích ứng Passport/Q10/Z10/Z30: bo góc P3 đồng bộ, vòng tiến độ Mục tiêu P3, Bento Tổng quan P1, lịch thanh đáy P4 và tab Theo sách phẳng P2
+- Hỗ trợ chuyển đổi minh họa bàn phím Q10, Classic (Q20) và Passport trong Hướng dẫn; thêm thanh chỉnh độ sáng màn hình đọc lưu riêng theo từng định dạng
+- Căn chỉnh lại toàn bộ TTS Quick HUD cân đối và thẳng hàng (nút đồng bộ kích thước, chip cài đặt nhanh đều nhau)
+- Thay danh sách chọn font trong Quick HUD bằng DropDown mở hộp thoại cuộn chọn chuẩn BB10 như trong Cài đặt
+- Bỏ ô nền vàng trên số ngày hôm nay trong Lịch đọc, chỉ giữ viền màu bao quanh
+- Chuyển bố cục Thống kê đọc sách trên Passport về 1 cột đồng nhất với các dòng BB10 khác
+- Sửa lỗi thiếu dấu phẩy trong attachedObjects của CalendarDayCell.qml
+- Tăng kích thước vòng tiến độ mục tiêu, cột biểu đồ 7 ngày, ô lịch gần vuông (tránh đè thanh đáy), tăng cỡ chữ chi tiết và bỏ nút Đọc ở danh sách sách trong Lịch đọc
+- Sửa lỗi icon/màn hình app bị mờ (greyed out) khi bấm nút Thoát bằng cách cho phép Application/ApplicationUI hủy sạch thay vì _exit() sớm
+- Tối ưu RAM & GPU: gộp chung 336 texture ô lịch xuống 4, lazy-load 5 sheet nặng khi mở, giảm cache PDF từ 12 xuống 5 trang và giải phóng bộ nhớ khi đóng sách
+
+Phiên bản 2.2.1 (Build 222) - 2026-11-27:
+- Tinh chỉnh thẻ sách chế độ Chi tiết, đặt nút Mở Tệp kiểu Signature Action ở giữa Trang chủ và làm menu vuốt phải trong trình đọc tự thích ứng theo định dạng sách.
+- Cho phép chỉnh trực tiếp Mục tiêu đọc hằng ngày trong màn hình Tiến độ và thêm trang Báo lỗi & Góp ý gửi email tới nhatlm0910@gmail.com (đính kèm log tùy chọn).
+- Giữ nguyên thanh tiêu đề & ActionBar tối chuẩn BB10 trong Light Mode và tách riêng mục Màu nền trang đọc ("Trong sách") trong Cài đặt Hiển thị.
+
+Phiên bản 2.2.0 (Build 215) - 2026-11-27:
+- Nâng cấp trình đọc PDF/DjVu sang chế độ cuộn liên tục theo chuỗi trang mượt mà thay vì phải lật từng trang rời rạc.
+- Tích hợp bộ render nền bất đồng bộ (tải trước các trang lân cận và tự giải phóng bộ nhớ trang ở xa) cùng chạm đúp để phóng to/thoát phóng to nhanh.
+
+Phiên bản 2.1.3 (Build 214) - 2026-11-27:
+- Đổi biểu tượng Tiến độ đọc sách sang hình Lịch có dấu kiểm (`ic_calendar`) để nhận diện trực quan ngay cả khi tắt nhãn chữ.
+- Nâng cấp bộ biểu tượng trực quan hơn khi ẩn nhãn: Trang chủ (ngôi nhà), Cài đặt (bánh răng), Mở tệp (thư mục mở), Quản lý kệ (kệ sách +), Kho OPDS (đám mây tải về), Ghi chú (bút đánh dấu) và Xuất Markdown/Quote (mũi tên xuất).
+
+Phiên bản 2.1.2 (Build 213) - 2026-11-27:
+- Thêm màn hình Hướng dẫn từng bước (5 bước) tự động mở ở lần chạy đầu tiên: thiết lập nhanh ngôn ngữ/giao diện, cách thêm sách, phím tắt BB10 và các tính năng đọc.
+- Hỗ trợ mở lại hướng dẫn bất cứ lúc nào từ Giới thiệu / Cài đặt → Hướng dẫn.
+
+Phiên bản 2.1.1 (Build 212) - 2026-11-27:
+- Tự động đồng bộ màu nền trình đọc (Sáng/Tối) theo chủ đề ứng dụng, giữ nguyên lựa chọn Sepia nếu người dùng đang bật.
+- Tinh chỉnh bảng màu Light Mode đồng bộ hơn, thêm viền phân tách thanh tiêu đề/thanh công cụ trên-dưới và tăng độ tương phản cho huy hiệu đếm ngày & ô lịch đọc sách.
+
+Phiên bản 2.1.0 (Build 211) - 2026-11-27:
 - Active Frame thông minh: hiện bìa sách & % tiến độ khi đang đọc; hiện thời gian hôm nay / mục tiêu ngày trên nền bìa chìm khi ở màn hình chính.
 - Bổ sung Bionic Reading (phím V), Thước kẻ đọc (phím R), Bảng phím tắt (?), Lịch sử nhảy vị trí (U/Backspace) và ước tính thời gian hết chương.
 - Hỗ trợ đọc Markdown (.md), HTML, giải mã TXT chuẩn VNI và chuẩn hóa phát âm TTS.

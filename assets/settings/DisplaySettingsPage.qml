@@ -64,10 +64,10 @@ Page {
                 bottomPadding: bookManager.dp(32)
 
                 // =========================================================
-                // Section 1: GIAO DIỆN
+                // Section 1: GIAO DIỆN ỨNG DỤNG
                 // =========================================================
                 Header {
-                    title: qsTr("GIAO DIỆN") + Retranslate.onLanguageChanged
+                    title: qsTr("GIAO DIỆN ỨNG DỤNG") + Retranslate.onLanguageChanged
                 }
 
                 Container {
@@ -121,11 +121,25 @@ Page {
                             }
                         }
                     }
+                }
+
+                // =========================================================
+                // Section 1B: TRONG SÁCH (IN BOOKS)
+                // =========================================================
+                Header {
+                    title: qsTr("TRONG SÁCH") + Retranslate.onLanguageChanged
+                }
+
+                Container {
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    topPadding: bookManager.dp(10)
+                    bottomPadding: bookManager.dp(16)
 
                     DropDown {
                         id: themeDropDown
-                        topMargin: bookManager.dp(12)
-                        title: qsTr("Màu nền") + Retranslate.onLanguageChanged
+                        title: qsTr("Màu nền trang đọc") + Retranslate.onLanguageChanged
 
                         Option {
                             text: qsTr("Tối") + Retranslate.onLanguageChanged
@@ -532,9 +546,60 @@ Page {
                     title: qsTr("Tự động chế độ Đêm (20:00 - 06:00)") + Retranslate.onLanguageChanged
                     subtitle: qsTr("Tự chuyển nền đọc Tối AMOLED vào buổi tối và Sepia ban ngày") + Retranslate.onLanguageChanged
                     checked: bookManager.autoNightTheme
-                    showDivider: false
+                    showDivider: true
                     onToggled: {
                         bookManager.setAutoNightTheme(checked);
+                    }
+                }
+
+                // Per-Format Reader Screen Brightness
+                Container {
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    topPadding: bookManager.dp(10)
+                    bottomPadding: bookManager.dp(10)
+                    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                    Container {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+                        Label {
+                            text: (qsTr("Độ sáng màn hình đọc") + (bookManager.currentFormat !== "" ? (" (" + bookManager.currentFormat.toUpperCase() + ")") : "")) + Retranslate.onLanguageChanged
+                            textStyle.base: SystemDefaults.TextStyles.BodyText
+                            textStyle.fontWeight: FontWeight.Bold
+                            textStyle.color: Color.create(bookManager.uiInk)
+                            layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                        }
+                        Label {
+                            text: bookManager.readerBrightness + "%"
+                            textStyle.base: SystemDefaults.TextStyles.BodyText
+                            textStyle.fontWeight: FontWeight.Bold
+                            textStyle.color: Color.create(bookManager.uiAccent)
+                        }
+                    }
+
+                    Label {
+                        topMargin: bookManager.dp(2)
+                        text: qsTr("Lưu riêng cho từng định dạng sách (EPUB, PDF, CBZ...)") + Retranslate.onLanguageChanged
+                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                        textStyle.color: Color.create(bookManager.uiMuted)
+                        multiline: true
+                    }
+
+                    Slider {
+                        id: settingsBrightnessSlider
+                        topMargin: bookManager.dp(6)
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        fromValue: 20
+                        toValue: 100
+                        value: bookManager.readerBrightness
+                        onImmediateValueChanged: {
+                            var v = Math.round(immediateValue);
+                            if (v !== bookManager.readerBrightness) {
+                                bookManager.setReaderBrightness(v);
+                            }
+                        }
                     }
                 }
 

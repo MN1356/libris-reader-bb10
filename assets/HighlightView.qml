@@ -48,6 +48,12 @@ Container {
     verticalAlignment: VerticalAlignment.Fill
     background: Color.create(bookManager.uiBg)
 
+    Container {
+        horizontalAlignment: HorizontalAlignment.Fill
+        preferredHeight: 1
+        background: Color.create(bookManager.uiHairline)
+    }
+
     // 1. COLLAPSIBLE LIVE SEARCH BAR
     Container {
         id: searchInputContainer
@@ -310,7 +316,7 @@ Container {
                                 }
                                 ActionItem {
                                     title: qsTr("Lưu ảnh trích dẫn") + Retranslate.onLanguageChanged
-                                    imageSource: "asset:///icons/ic_download.png"
+                                    imageSource: "asset:///icons/ic_export.png"
                                     onTriggered: { hlItemCell.ListItem.view.triggerExportQuoteCard(ListItemData); }
                                 }
                                 DeleteActionItem {

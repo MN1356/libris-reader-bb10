@@ -55,6 +55,7 @@ class BookManager : public QObject {
 
     // Application UI Theme: "dark" or "light"
     Q_PROPERTY(QString appTheme READ appTheme WRITE setAppTheme NOTIFY appThemeChanged)
+    Q_PROPERTY(bool onboardingCompleted READ onboardingCompleted WRITE setOnboardingCompleted NOTIFY onboardingCompletedChanged)
     Q_PROPERTY(QString textAlign READ textAlign WRITE setTextAlign NOTIFY textAlignChanged)
     Q_PROPERTY(bool overridePublisherCss READ overridePublisherCss WRITE setOverridePublisherCss NOTIFY overridePublisherCssChanged)
     Q_PROPERTY(QString paragraphIndent READ paragraphIndent WRITE setParagraphIndent NOTIFY typographyChanged)
@@ -178,6 +179,7 @@ class BookManager : public QObject {
     Q_PROPERTY(QString theme READ theme WRITE setTheme NOTIFY themeChanged)
     Q_PROPERTY(bool warmFilterEnabled READ warmFilterEnabled WRITE setWarmFilterEnabled NOTIFY warmFilterChanged)
     Q_PROPERTY(int warmFilterIntensity READ warmFilterIntensity WRITE setWarmFilterIntensity NOTIFY warmFilterChanged)
+    Q_PROPERTY(int readerBrightness READ readerBrightness WRITE setReaderBrightness NOTIFY readerBrightnessChanged)
     Q_PROPERTY(bool autoNightTheme READ autoNightTheme WRITE setAutoNightTheme NOTIFY autoNightThemeChanged)
     Q_PROPERTY(bool focusModeEnabled READ focusModeEnabled WRITE setFocusModeEnabled NOTIFY focusModeChanged)
     Q_PROPERTY(bool volumeKeyTurnEnabled READ volumeKeyTurnEnabled WRITE setVolumeKeyTurnEnabled NOTIFY volumeKeyTurnEnabledChanged)
@@ -197,6 +199,8 @@ class BookManager : public QObject {
     Q_PROPERTY(QString currentPdfPagePath READ currentPdfPagePath NOTIFY currentPdfImageChanged)
     Q_PROPERTY(bool isPdfInverted READ isPdfInverted NOTIFY pdfInvertedChanged)
     Q_PROPERTY(bool isPdfAutoCrop READ isPdfAutoCrop WRITE setIsPdfAutoCrop NOTIFY pdfAutoCropChanged)
+    Q_PROPERTY(bb::cascades::DataModel* pdfPagesModel READ pdfPagesModel CONSTANT)
+    Q_PROPERTY(bool pdfZoomMode READ pdfZoomMode WRITE setPdfZoomMode NOTIFY pdfZoomModeChanged)
 
     // Last read book (Hero Card)
     Q_PROPERTY(bool hasLastBook READ hasLastBook NOTIFY lastBookChanged)
@@ -333,6 +337,8 @@ public:
     int warmFilterIntensity() const;
     Q_INVOKABLE void setWarmFilterIntensity(int intensity);
     Q_INVOKABLE void toggleWarmFilter();
+    int readerBrightness() const;
+    Q_INVOKABLE void setReaderBrightness(int brightness);
     bool autoNightTheme() const;
     Q_INVOKABLE void setAutoNightTheme(bool enabled);
     Q_INVOKABLE void checkAutoNightTheme();
@@ -351,14 +357,17 @@ public:
     Q_INVOKABLE void setTheme(const QString &theme);
     QString appTheme() const;
     Q_INVOKABLE void setAppTheme(const QString &theme);
+    bool onboardingCompleted() const { return m_onboardingCompleted; }
+    Q_INVOKABLE void setOnboardingCompleted(bool completed);
+    Q_INVOKABLE void requestOnboardingGuide();
     bool isHiRes() const { return m_screenWidth >= 1200; }
     double uiScale() const { return (m_screenWidth >= 1200) ? 1.5 : 1.0; }
     Q_INVOKABLE int dp(double px) const { return (px == 0.0) ? 0 : qRound(px * uiScale()); }
-    QString uiBg() const { return (m_appTheme == "dark") ? QString("#0E0C0A") : QString("#F4EFE6"); }
+    QString uiBg() const { return (m_appTheme == "dark") ? QString("#0E0C0A") : QString("#ECEAE6"); }
     QString uiCard() const { return (m_appTheme == "dark") ? QString("#181512") : QString("#FFFFFF"); }
-    QString uiSurface() const { return (m_appTheme == "dark") ? QString("#221E1A") : QString("#EAE3D6"); }
-    QString uiActive() const { return (m_appTheme == "dark") ? QString("#261F15") : QString("#EFE4CF"); }
-    QString uiHairline() const { return (m_appTheme == "dark") ? QString("#26211B") : QString("#E0D7C7"); }
+    QString uiSurface() const { return (m_appTheme == "dark") ? QString("#221E1A") : QString("#DFDCD5"); }
+    QString uiActive() const { return (m_appTheme == "dark") ? QString("#261F15") : QString("#E3D5BD"); }
+    QString uiHairline() const { return (m_appTheme == "dark") ? QString("#26211B") : QString("#CCC6BC"); }
     QString uiInk() const { return (m_appTheme == "dark") ? QString("#F5EFE6") : QString("#1C1916"); }
     QString uiMuted() const { return (m_appTheme == "dark") ? QString("#9C9488") : QString("#635B51"); }
     QString uiAccent() const { return (m_appTheme == "dark") ? QString("#D9AB60") : QString("#8A5D16"); }
@@ -528,6 +537,14 @@ public Q_SLOTS:
     Q_INVOKABLE void zoomPdfIn();
     Q_INVOKABLE void zoomPdfOut();
     Q_INVOKABLE void zoomPdfFit();
+    bb::cascades::DataModel* pdfPagesModel() const { return m_pdfPagesModel; }
+    bool pdfZoomMode() const { return m_pdfZoomMode; }
+    Q_INVOKABLE void setPdfZoomMode(bool enabled);
+    Q_INVOKABLE void enterPdfZoomMode(int pageNumber);
+    Q_INVOKABLE void exitPdfZoomMode();
+    Q_INVOKABLE void releaseReaderMemory();
+    Q_INVOKABLE void requestPdfStreamPage(int pageNumber);
+    Q_INVOKABLE void setPdfVisiblePage(int pageNumber);
 
     // TOC, Search, Reflow and Dictionary
     DictManager* dictManager() { return &m_dictManager; }
@@ -599,6 +616,7 @@ public Q_SLOTS:
     QString devServerIp() const;
     Q_INVOKABLE void setDevServerIp(const QString &ip);
     Q_INVOKABLE void sendLog(const QString &targetIp = QString());
+    Q_INVOKABLE bool sendBugReportEmail(const QString &category, const QString &subject, const QString &description, bool includeLog);
 
     // Persistent Shared Storage
     Q_INVOKABLE QString persistentDataDir() const;
@@ -645,6 +663,7 @@ public slots:
     void onWatchdogTimeout();
     void scanLibrary();
     void onPdfPageRendered(int pageNumber);
+    void onPdfStreamPageRendered(int pageNumber);
     void onPdfIndicatorRequested(bool enabled);
     void onPdfError(int error);
     void onPdfFileOpened(const QString &file);
@@ -676,12 +695,15 @@ signals:
     void customFontsChanged();
     void themeChanged();
     void warmFilterChanged();
+    void readerBrightnessChanged();
     void autoNightThemeChanged();
     void focusModeChanged();
     void volumeKeyTurnEnabledChanged();
     void volumePageNextRequested();
     void volumePagePrevRequested();
     void appThemeChanged();
+    void onboardingCompletedChanged();
+    void openOnboardingGuideRequested();
     void readingModeChanged();
     void columnLayoutChanged();
     void mangaRtlModeChanged();
@@ -692,6 +714,8 @@ signals:
     void pdfInvertedChanged();
     void pdfAutoCropChanged();
     void pdfOpenError(const QString &errorMsg);
+    void pdfZoomModeChanged();
+    void pdfJumpToPageRequested(int pageNumber);
     void pageRenderTimeout();
 
     void lastBookChanged();
@@ -915,6 +939,7 @@ private:
     QString m_devServerIp;
     bool m_isAppSleeping;
     bool m_suppressPersistentSync;
+    bool m_shutdownSaved;
     bool m_pendingTtsAfterPdfRender;
     int m_pendingJumpPageAfterPdfOpen;
     OpdsManager *m_opdsManager;
@@ -926,6 +951,8 @@ private:
     QVariantList m_customFonts;
     bool m_warmFilterEnabled;
     int m_warmFilterIntensity;
+    QMap<QString, int> m_formatBrightness;
+    QString normalizedBrightnessFormat() const;
     bool m_autoNightTheme;
     bool m_focusModeEnabled;
     bool m_volumeKeyTurnEnabled;
@@ -941,6 +968,12 @@ private:
     bool m_invertVolumeKeys;
     int m_sessionReadingSeconds;
     bool m_bionicReading;
+    bool m_onboardingCompleted;
+    bb::cascades::ArrayDataModel *m_pdfPagesModel;
+    bool m_pdfZoomMode;
+
+    void rebuildPdfPagesModel(int totalPages);
+    void resetPdfPagesModelImages();
 
     void updateVolumeKeyWatchers();
     void loadCustomShelvesFromSettings(QSettings &settings);

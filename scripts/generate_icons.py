@@ -57,6 +57,15 @@ ICONS = {
         'fill="#FFFFFF" stroke="#FFFFFF" stroke-width="1.85"/>'
     ),
     "bookmarks": '<path d="M6.5 5A1.5 1.5 0 0 1 8 3.5h8A1.5 1.5 0 0 1 17.5 5v15.5l-5.5-3.7-5.5 3.7V5z"/>',
+    "calendar": (
+        '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/>'
+        '<path d="M8 3.2v3.3M16 3.2v3.3M3.5 9.8h17"/>'
+        '<circle cx="7.5" cy="13.3" r="0.95" fill="#FFFFFF" stroke="none"/>'
+        '<circle cx="12" cy="13.3" r="0.95" fill="#FFFFFF" stroke="none"/>'
+        '<circle cx="16.5" cy="13.3" r="0.95" fill="#FFFFFF" stroke="none"/>'
+        '<circle cx="7.5" cy="17.2" r="0.95" fill="#FFFFFF" stroke="none"/>'
+        '<path d="M13.6 16.8l1.6 1.6 3.1-3.1"/>'
+    ),
     "chart": (
         '<path d="M3.5 19.5h17"/>'
         '<rect x="5" y="12.5" width="3.5" height="7" rx="0.7"/>'
@@ -72,6 +81,10 @@ ICONS = {
     "done": '<path d="M4.5 12.5l5 5 10-10.5"/>',
     "download": '<path d="M12 4v11M7.5 11l4.5 4.5L16.5 11M4.5 16.5V18a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1.5"/>',
     "exit": '<path d="M10.5 4.5H6A1.5 1.5 0 0 0 4.5 6v12A1.5 1.5 0 0 0 6 19.5h4.5M15 8l4.5 4-4.5 4M9.5 12h10"/>',
+    "export": (
+        '<path d="M12 14.5V4M8 8l4-4 4 4"/>'
+        '<path d="M4.5 14.5V18a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5"/>'
+    ),
     "filter": '<path d="M4 5h16l-6.2 7.3v5.4l-3.6 1.8v-7.2L4 5z"/>',
     "folder": '<path d="M3.5 7A1.5 1.5 0 0 1 5 5.5h4.2l1.8 2H19A1.5 1.5 0 0 1 20.5 9v9A1.5 1.5 0 0 1 19 19.5H5A1.5 1.5 0 0 1 3.5 18V7z"/>',
     "grid": (
@@ -84,6 +97,11 @@ ICONS = {
         '<path d="M16 4l4 4-9 9-4.5.5.5-4.5L16 4z"/>'
         '<path d="M13.5 6.5l4 4"/>'
         '<path d="M4.5 20.2h15"/>'
+    ),
+    "home": (
+        '<path d="M3.8 11.2L12 4.2l8.2 7"/>'
+        '<path d="M5.8 9.8V19a1.2 1.2 0 0 0 1.2 1.2h10a1.2 1.2 0 0 0 1.2-1.2V9.8"/>'
+        '<path d="M9.8 20.2v-5.4a1 1 0 0 1 1-1h2.4a1 1 0 0 1 1 1v5.4"/>'
     ),
     "import": (
         '<path d="M12 4v10M8.2 10.5L12 14.3l3.8-3.8"/>'
@@ -124,6 +142,14 @@ ICONS = {
         '<path d="M10.5 5H6A1.5 1.5 0 0 0 4.5 6.5v11A1.5 1.5 0 0 0 6 19h11a1.5 1.5 0 0 0 1.5-1.5V13"/>'
         '<path d="M14 5h5v5M11 13l8-8"/>'
     ),
+    "open_file": (
+        '<path d="M3.5 18.2V6.8A1.5 1.5 0 0 1 5 5.3h4.2l1.8 2h7A1.5 1.5 0 0 1 19.5 8.8v1.7"/>'
+        '<path d="M3.5 18.2l2.1-6.7A1.5 1.5 0 0 1 7 10.5h12.8a1.2 1.2 0 0 1 1.15 1.55l-1.9 6.2A1.5 1.5 0 0 1 17.6 19.3H5A1.5 1.5 0 0 1 3.5 18.2z"/>'
+    ),
+    "opds": (
+        '<path d="M7 16.5H6a3.5 3.5 0 0 1-.4-6.98A5.2 5.2 0 0 1 15.8 8a3.8 3.8 0 0 1 2.2 7.2"/>'
+        '<path d="M12 11.5v8M9.3 16.8L12 19.5l2.7-2.7"/>'
+    ),
     "page": (
         '<rect x="5" y="4.5" width="14" height="15" rx="1.5"/>'
         '<path d="M10.2 10L8 12l2.2 2M13.8 10L16 12l-2.2 2M8.5 12h7"/>'
@@ -153,9 +179,16 @@ ICONS = {
     ),
     "search": '<circle cx="10.5" cy="10.5" r="6.2"/><path d="M15.2 15.2l4.5 4.5"/>',
     "settings": (
-        '<path d="M4 6.5h3M11 6.5h9"/><circle cx="9" cy="6.5" r="2"/>'
-        '<path d="M4 12h9.5M17.5 12h2.5"/><circle cx="15.5" cy="12" r="2"/>'
-        '<path d="M4 17.5h3.5M11.5 17.5h8.5"/><circle cx="9.5" cy="17.5" r="2"/>'
+        '<circle cx="12" cy="12" r="3.2"/>'
+        '<circle cx="12" cy="12" r="6.4"/>'
+        '<path d="M12 3.3v2.3M12 18.4v2.3M3.3 12h2.3M18.4 12h2.3'
+        'M5.85 5.85l1.62 1.62M16.53 16.53l1.62 1.62M18.15 5.85l-1.62 1.62M7.47 16.53l-1.62 1.62"/>'
+    ),
+    "shelf_manage": (
+        '<path d="M3.5 19.5h8.5"/>'
+        '<path d="M5 19.5V6.5h3.2v13M5 9.8h3.2"/>'
+        '<path d="M8.2 19.5V4.5h3.5v15M8.2 8.2h3.5"/>'
+        '<path d="M17 11.5v7M13.5 15h7"/>'
     ),
     "star": f'<path d="{STAR_PATH}"/>',
     "star_filled": f'<path d="{STAR_PATH}" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="1.85"/>',

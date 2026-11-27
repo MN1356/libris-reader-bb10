@@ -2,16 +2,12 @@ import bb.cascades 1.3
 
 Container {
     id: bookSlotItem
-    topMargin: bookManager.dp(8)
+    topMargin: editorialMode ? 0 : bookManager.dp(8)
     horizontalAlignment: HorizontalAlignment.Fill
-    background: isSelected ?
-                Color.create(bookManager.uiActive) :
-                Color.create(bookManager.uiCard)
-    topPadding: bookManager.dp(12)
-    bottomPadding: bookManager.dp(12)
-    leftPadding: bookManager.dp(12)
-    rightPadding: bookManager.dp(12)
-    layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+    background: editorialMode ?
+                (isSelected ? Color.create(bookManager.uiActive) : Color.Transparent) :
+                (isSelected ? Color.create(bookManager.uiActive) : Color.create(bookManager.uiCard))
+    layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
 
     property real uiScale: 1.0
     property string filePath: ""
@@ -26,10 +22,19 @@ Container {
     property bool isSelected: false
     property bool openOnRowTap: false
     property bool showActionButton: true
+    property bool editorialMode: false
     property string appTheme: "dark"
 
     signal bookSelected(string path)
     signal bookOpened(string path)
+
+    Container {
+        horizontalAlignment: HorizontalAlignment.Fill
+        topPadding: bookManager.dp(10)
+        bottomPadding: bookManager.dp(10)
+        leftPadding: editorialMode ? bookManager.dp(6) : bookManager.dp(12)
+        rightPadding: editorialMode ? bookManager.dp(6) : bookManager.dp(12)
+        layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
     // Selection indicator bar on left
     Container {
@@ -233,15 +238,23 @@ Container {
         ]
     }
 
-    gestureHandlers: [
-        TapHandler {
-            onTapped: {
-                if (bookSlotItem.openOnRowTap) {
-                    bookSlotItem.bookOpened(bookSlotItem.filePath);
-                } else {
-                    bookSlotItem.bookSelected(bookSlotItem.filePath);
+        gestureHandlers: [
+            TapHandler {
+                onTapped: {
+                    if (bookSlotItem.openOnRowTap) {
+                        bookSlotItem.bookOpened(bookSlotItem.filePath);
+                    } else {
+                        bookSlotItem.bookSelected(bookSlotItem.filePath);
+                    }
                 }
             }
-        }
-    ]
+        ]
+    }
+
+    Container {
+        visible: bookSlotItem.editorialMode
+        horizontalAlignment: HorizontalAlignment.Fill
+        preferredHeight: 1
+        background: Color.create(bookManager.uiHairline)
+    }
 }

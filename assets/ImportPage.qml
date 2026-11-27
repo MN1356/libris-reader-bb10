@@ -56,7 +56,7 @@ Page {
         },
         ActionItem {
             title: qsTr("Mở Tệp") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_open.png"
+            imageSource: "asset:///icons/ic_open_file.png"
             ActionBar.placement: ActionBarPlacement.InOverflow
             shortcuts: [
                 Shortcut { key: "O" }
@@ -72,6 +72,20 @@ Page {
         verticalAlignment: VerticalAlignment.Fill
         background: Color.create(bookManager.uiBg)
         layout: DockLayout {}
+
+        Container {
+            horizontalAlignment: HorizontalAlignment.Fill
+            verticalAlignment: VerticalAlignment.Top
+            preferredHeight: 1
+            background: Color.create(bookManager.uiHairline)
+        }
+
+        Container {
+            horizontalAlignment: HorizontalAlignment.Fill
+            verticalAlignment: VerticalAlignment.Bottom
+            preferredHeight: 1
+            background: Color.create(bookManager.uiHairline)
+        }
 
         ScrollView {
             scrollRole: ScrollRole.Main
@@ -205,7 +219,7 @@ Page {
                             preferredWidth: bookManager.dp(36)
                             preferredHeight: bookManager.dp(36)
                             verticalAlignment: VerticalAlignment.Center
-                            imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_download.png" : "asset:///icons/ic_download_dark.png"
+                            imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_opds.png" : "asset:///icons/ic_opds_dark.png"
                             scalingMethod: ScalingMethod.AspectFit
                         }
 
@@ -276,7 +290,7 @@ Page {
                             preferredWidth: bookManager.dp(36)
                             preferredHeight: bookManager.dp(36)
                             verticalAlignment: VerticalAlignment.Center
-                            imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_open.png" : "asset:///icons/ic_open_dark.png"
+                            imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_open_file.png" : "asset:///icons/ic_open_file_dark.png"
                             scalingMethod: ScalingMethod.AspectFit
                         }
 

@@ -1,4 +1,45 @@
-Version 2.0.0 (Build 211) - 2026-11-27:
+Version 2.3.0 (Build 257) - 2026-11-27:
+- Rebuilt the 7-page Onboarding Guide with authentic Native BlackBerry 10 Cascades controls (`RadioGroup`, `SegmentedControl`, `Button Primary`, dark BB10 ActionBar chrome, horizontal swipe navigation, and centered Passport layout).
+- Upgraded Page 4 (Controls) into a full-stage realistic Libris Reader mockup with a floating callout dialog and tailored Cascades animations for each shortcut, plus authentic BlackBerry Passport device illustrations.
+- Standardized all physical keyboard shortcuts to ergonomic letter-only keys for BlackBerry Passport (`Z / X` font size, `N / P` chapters, `W / Q` PDF, `O` shortcuts overlay).
+- Achieved 100% EN/VI QML translation coverage with natural Vietnamese copy, instant live language switching across the Guide, and English as the default first-launch language.
+- Added a live horizontal Custom Shelves strip on the Bookshelf and stretched the Home Continue Reading button to full width.
+- Added automatic semantic version bumping with 1-hour build-window merging.
+- Simplified Today's Reading Goal card to keep only the Edit button
+- Redesigned Onboarding Controls page into an interactive BlackBerry Passport physical keymap (tap or press hardware keys to inspect functions)
+- Redesigned adaptive Reading Statistics UI for Passport/Q10/Z10/Z30 with P3 rounded 9-slice styling, Goal Ring Hero, P1 Bento Overview, P4 bottom-bar Calendar, and P2 Editorial By-Book layout
+- Added Q10, Classic (Q20), and Passport keyboard selector in Onboarding Controls; added per-format reader screen brightness slider
+- Aligned TTS Quick HUD controls, uniform button heights, and equal-width quick settings chips
+- Replaced Quick HUD inline font list with native BB10 DropDown dialog matching Settings
+- Removed yellow badge box on Today's date in Reading Calendar, keeping only a clean colored outline
+- Unified Reading Statistics on Passport to single-column layout consistent with all BB10 devices
+- Fixed missing commas in CalendarDayCell.qml attachedObjects
+- Enlarged Goal ring, taller 7-day bars, near-square calendar cells to clear bottom bars, larger detail text, and removed Read button on calendar book rows
+- Fixed greyed-out app on exit by allowing clean Application/ApplicationUI destruction and adding clean Qt::quit() fallback
+- Reduced RAM & GPU footprint: deduplicated 336 calendar cell paints to 4, lazy-loaded 5 heavy sheets, trimmed PDF cache from 12 to 5 pages, and freed reader memory on book close
+
+Version 2.2.1 (Build 222) - 2026-11-27:
+- Refined Detailed Mode book cards, centered the Home Open File Signature Action, and made the Reader right-swipe overflow menu adapt dynamically to each format.
+- Added inline daily reading goal adjustment in Reading Progress and a Bug Report & Feedback email form to nhatlm0910@gmail.com (optional log).
+- Preserved native BB10 dark chrome for TitleBars/ActionBars in Light Mode and separated Reader Background Color into its own "In Books" section.
+
+Version 2.2.0 (Build 215) - 2026-11-27:
+- Upgraded PDF/DjVu reader to smooth continuous vertical page scrolling instead of single-page stepping.
+- Added async background page streaming with neighbor prefetching, LRU memory eviction, and double-tap zoom mode toggle.
+
+Version 2.1.3 (Build 214) - 2026-11-27:
+- Changed Reading Progress icon to a Calendar with checkmark (`ic_calendar`) for instant recognition even when icon labels are hidden.
+- Upgraded key icons for label-free clarity: Home (house), Settings (cogwheel), Open File (open folder), Manage Shelves (shelf +), OPDS Catalog (cloud download), Highlights (marker pen), and Export Markdown/Quote (upload/export arrow).
+
+Version 2.1.2 (Build 213) - 2026-11-27:
+- Added a 5-step first-launch Onboarding Guide screen covering quick language/theme setup, book importing, BB10 keyboard shortcuts, and reading tools.
+- Added a button in About / Settings → Help to replay the step-by-step guide anytime.
+
+Version 2.1.1 (Build 212) - 2026-11-27:
+- Automatically synced Reader Light/Dark background with App Theme while preserving Sepia when explicitly selected.
+- Refined Light Mode palette, added crisp top/bottom chrome dividers, and boosted contrast on streak day badges and calendar cells.
+
+Version 2.1.0 (Build 211) - 2026-11-27:
 - Context-aware Active Frame: shows book cover & progress % while reading; shows today's time / daily goal over a dimmed cover on the main UI.
 - Added Bionic Reading (V), Reading Ruler (R), Keyboard Shortcuts overlay (?), Jump History (U/Backspace), and chapter time-left estimate.
 - Added Markdown (.md) & HTML reading, TXT VNI decoding, and TTS pronunciation normalization.

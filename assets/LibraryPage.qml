@@ -6,6 +6,32 @@ Page {
     id: libraryPage
 
     actionBarVisibility: ChromeVisibility.Visible
+    property bool hasCustomShelves: false
+
+    function refreshCustomShelvesBar() {
+        customShelvesChipModel.clear();
+        var shelves = bookManager.customShelves;
+        if (!shelves || shelves.length === 0) {
+            hasCustomShelves = false;
+            return;
+        }
+        hasCustomShelves = true;
+        for (var i = 0; i < shelves.length; ++i) {
+            var name = shelves[i];
+            customShelvesChipModel.append({
+                "name": name,
+                "count": bookManager.getShelfBookCount(name),
+                "isActive": (bookManager.categoryFilter === ("shelf:" + name)),
+                "isAdd": false
+            });
+        }
+        customShelvesChipModel.append({
+            "name": "+",
+            "count": 0,
+            "isActive": false,
+            "isAdd": true
+        });
+    }
 
     Menu.definition: MenuDefinition {
         id: appMenu
@@ -62,7 +88,7 @@ Page {
         },
         ActionItem {
             title: qsTr("Quản lý Kệ sách") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_library.png"
+            imageSource: "asset:///icons/ic_shelf_manage.png"
             ActionBar.placement: ActionBarPlacement.OnBar
             onTriggered: {
                 shelfManagerSheet.openForManage();
@@ -70,7 +96,7 @@ Page {
         },
         ActionItem {
             title: qsTr("Mở Tệp") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_open.png"
+            imageSource: "asset:///icons/ic_open_file.png"
             ActionBar.placement: ActionBarPlacement.InOverflow
             shortcuts: [
                 Shortcut { key: "O" },
@@ -82,7 +108,7 @@ Page {
         },
         ActionItem {
             title: qsTr("Kho sách OPDS") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_download.png"
+            imageSource: "asset:///icons/ic_opds.png"
             ActionBar.placement: ActionBarPlacement.InOverflow
             shortcuts: [
                 Shortcut { key: "K" }
@@ -165,6 +191,12 @@ Page {
             horizontalAlignment: HorizontalAlignment.Fill
             verticalAlignment: VerticalAlignment.Fill
             layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+            Container {
+                horizontalAlignment: HorizontalAlignment.Fill
+                preferredHeight: 1
+                background: Color.create(bookManager.uiHairline)
+            }
 
             // 1. INLINE LIBRARY SEARCH BAR
             Container {
@@ -261,6 +293,65 @@ Page {
                     onSelectedValueChanged: {
                         if (!syncingFilter && selectedValue && selectedValue !== bookManager.categoryFilter) {
                             bookManager.setCategoryFilter(selectedValue);
+                        }
+                    }
+                }
+
+                // Horizontal Custom Shelves Strip
+                Container {
+                    id: customShelvesBar
+                    visible: libraryPage.hasCustomShelves
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    topMargin: bookManager.dp(8)
+
+                    ListView {
+                        id: customShelvesListView
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        preferredHeight: bookManager.dp(38)
+                        layout: StackListLayout {
+                            orientation: LayoutOrientation.LeftToRight
+                        }
+                        dataModel: customShelvesChipModel
+
+                        listItemComponents: [
+                            ListItemComponent {
+                                type: ""
+                                Container {
+                                    rightPadding: bookManager.dp(8)
+                                    verticalAlignment: VerticalAlignment.Center
+
+                                    Container {
+                                        background: Color.create(ListItemData.isActive ? bookManager.uiAccent : bookManager.uiHairline)
+                                        topPadding: 1; bottomPadding: 1; leftPadding: 1; rightPadding: 1
+
+                                        Container {
+                                            background: Color.create(ListItemData.isActive ? bookManager.uiActive : bookManager.uiSurface)
+                                            topPadding: bookManager.dp(6)
+                                            bottomPadding: bookManager.dp(6)
+                                            leftPadding: bookManager.dp(12)
+                                            rightPadding: bookManager.dp(12)
+
+                                            Label {
+                                                text: ListItemData.isAdd ? "+" : (ListItemData.name + " (" + ListItemData.count + ")")
+                                                textStyle.base: SystemDefaults.TextStyles.SmallText
+                                                textStyle.fontWeight: ListItemData.isActive || ListItemData.isAdd ? FontWeight.Bold : FontWeight.Normal
+                                                textStyle.color: Color.create(ListItemData.isActive || ListItemData.isAdd ? bookManager.uiAccent : bookManager.uiInk)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+
+                        onTriggered: {
+                            var item = dataModel.data(indexPath);
+                            if (!item) return;
+                            if (item.isAdd) {
+                                shelfManagerSheet.openForManage();
+                            } else {
+                                var target = "shelf:" + item.name;
+                                bookManager.setCategoryFilter(bookManager.categoryFilter === target ? "all" : target);
+                            }
                         }
                     }
                 }
@@ -881,20 +972,21 @@ Page {
 
                                 Container {
                                     horizontalAlignment: HorizontalAlignment.Fill
-                                    topPadding: bookManager.dp(12)
-                                    bottomPadding: bookManager.dp(12)
+                                    minHeight: bookManager.dp(140)
+                                    topPadding: bookManager.dp(6)
+                                    bottomPadding: bookManager.dp(6)
                                     leftPadding: bookManager.dp(14)
                                     rightPadding: bookManager.dp(14)
                                     layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
 
-                                    // Cover Thumbnail
+                                    // Cover Thumbnail (near-full-height)
                                     Container {
-                                        preferredWidth: bookManager.dp(72)
-                                        preferredHeight: bookManager.dp(104)
-                                        minWidth: bookManager.dp(72)
-                                        maxWidth: bookManager.dp(72)
-                                        minHeight: bookManager.dp(104)
-                                        maxHeight: bookManager.dp(104)
+                                        preferredWidth: bookManager.dp(88)
+                                        preferredHeight: bookManager.dp(128)
+                                        minWidth: bookManager.dp(88)
+                                        maxWidth: bookManager.dp(88)
+                                        minHeight: bookManager.dp(128)
+                                        maxHeight: bookManager.dp(128)
                                         verticalAlignment: VerticalAlignment.Center
                                         background: Color.create(bookManager.uiSurface)
                                         layout: DockLayout {}
@@ -940,7 +1032,7 @@ Page {
                                                 layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
                                                 text: ListItemData.title
                                                 textStyle.base: SystemDefaults.TextStyles.TitleText
-                                                textStyle.fontWeight: FontWeight.Bold
+                                                textStyle.fontWeight: FontWeight.Normal
                                                 textStyle.color: Color.create(bookManager.uiInk)
                                                 multiline: true
                                                 autoSize.maxLineCount: 2
@@ -965,26 +1057,40 @@ Page {
                                             }
 
                                             Container {
-                                                leftMargin: bookManager.dp(6)
+                                                leftMargin: bookManager.dp(8)
                                                 verticalAlignment: VerticalAlignment.Top
-                                                background: Color.create(bookManager.uiSurface)
-                                                leftPadding: bookManager.dp(8)
-                                                rightPadding: bookManager.dp(8)
-                                                topPadding: bookManager.dp(2)
-                                                bottomPadding: bookManager.dp(2)
+                                                layout: StackLayout { orientation: LayoutOrientation.TopToBottom }
+
+                                                Container {
+                                                    horizontalAlignment: HorizontalAlignment.Right
+                                                    background: Color.create(bookManager.uiSurface)
+                                                    leftPadding: bookManager.dp(8)
+                                                    rightPadding: bookManager.dp(8)
+                                                    topPadding: bookManager.dp(2)
+                                                    bottomPadding: bookManager.dp(2)
+
+                                                    Label {
+                                                        text: ListItemData.formatBadge
+                                                        textStyle.base: SystemDefaults.TextStyles.SmallText
+                                                        textStyle.fontWeight: FontWeight.Bold
+                                                        textStyle.color: Color.create(bookManager.uiInk)
+                                                    }
+                                                }
 
                                                 Label {
-                                                    text: ListItemData.formatBadge
+                                                    visible: ListItemData.fileSize !== undefined && ListItemData.fileSize !== ""
+                                                    topMargin: bookManager.dp(4)
+                                                    horizontalAlignment: HorizontalAlignment.Right
+                                                    text: ListItemData.fileSize ? ListItemData.fileSize : ""
                                                     textStyle.base: SystemDefaults.TextStyles.SmallText
-                                                    textStyle.fontWeight: FontWeight.Bold
-                                                    textStyle.color: Color.create(bookManager.uiInk)
+                                                    textStyle.color: Color.create(bookManager.uiMuted)
                                                 }
                                             }
                                         }
 
                                         Label {
                                             topMargin: bookManager.dp(2)
-                                            text: (ListItemData.author !== "" ? ListItemData.author : (qsTr("Tác giả không rõ") + Retranslate.onLanguageChanged)) + (ListItemData.fileSize ? (" • " + ListItemData.fileSize) : "")
+                                            text: ListItemData.author !== "" ? ListItemData.author : (qsTr("Tác giả không rõ") + Retranslate.onLanguageChanged)
                                             textStyle.base: SystemDefaults.TextStyles.SmallText
                                             textStyle.color: Color.create(bookManager.uiMuted)
                                             multiline: true
@@ -1148,6 +1254,9 @@ Page {
         },
         ShelfManagerSheet {
             id: shelfManagerSheet
+        },
+        ArrayDataModel {
+            id: customShelvesChipModel
         }
     ]
 
@@ -1156,5 +1265,9 @@ Page {
         bookManager.pageRenderTimeout.connect(function() {
             bookManager.setIsLoadingBook(false);
         });
+        bookManager.customShelvesChanged.connect(libraryPage.refreshCustomShelvesBar);
+        bookManager.categoryFilterChanged.connect(libraryPage.refreshCustomShelvesBar);
+        bookManager.bookCountChanged.connect(libraryPage.refreshCustomShelvesBar);
+        libraryPage.refreshCustomShelvesBar();
     }
 }

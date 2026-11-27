@@ -227,6 +227,21 @@ Container {
                         }
                     }
                 }
+
+                Container {
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    bottomPadding: bookManager.dp(8)
+
+                    Button {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        text: qsTr("Báo lỗi / Góp ý (nhatlm0910@gmail.com)") + Retranslate.onLanguageChanged
+                        onClicked: {
+                            bookManager.sendBugReportEmail("Feedback", "", "", false);
+                        }
+                    }
+                }
             }
 
             // =========================================================
@@ -236,6 +251,23 @@ Container {
                 id: helpSectionContainer
                 visible: aboutSegmentedControl.selectedValue === "help"
                 horizontalAlignment: HorizontalAlignment.Fill
+
+                Container {
+                    horizontalAlignment: HorizontalAlignment.Fill
+                    leftPadding: bookManager.dp(16)
+                    rightPadding: bookManager.dp(16)
+                    topPadding: bookManager.dp(14)
+                    bottomPadding: bookManager.dp(6)
+
+                    Button {
+                        horizontalAlignment: HorizontalAlignment.Fill
+                        text: qsTr("Xem lại hướng dẫn từng bước") + Retranslate.onLanguageChanged
+                        appearance: ControlAppearance.Primary
+                        onClicked: {
+                            bookManager.requestOnboardingGuide();
+                        }
+                    }
+                }
 
                 Header {
                     topMargin: bookManager.dp(8)

@@ -205,20 +205,19 @@ Q_DECL_EXPORT int main(int argc, char **argv)
         qWarning() << "[NetworkSecurity] QSslSocket::supportsSsl() returned false!";
     }
 
-    qDebug() << "Creating bb::cascades::Application...";
-    Application app(argc, argv);
+    int ret = 0;
+    {
+        qDebug() << "Creating bb::cascades::Application...";
+        Application app(argc, argv);
 
-    qDebug() << "Initializing ApplicationUI...";
-    ApplicationUI ui;
+        qDebug() << "Initializing ApplicationUI...";
+        ApplicationUI ui;
 
-    qDebug() << "Entering Application::exec() main event loop...";
-    int ret = Application::exec();
-    qDebug() << "Application exited with code:" << ret;
+        qDebug() << "Entering Application::exec() main event loop...";
+        ret = Application::exec();
+        qDebug() << "Application exited with code:" << ret;
+    }
 
     closeLogger();
-
-    // In BlackBerry 10 / QNX Neutrino RTOS, calling _exit() ensures the kernel immediately
-    // reaps the process and notifies Navigator, preventing static destructor deadlocks
-    // and preventing the application icon from staying dimmed/ghosted on the home screen.
-    _exit(ret);
+    return ret;
 }

@@ -40,7 +40,7 @@ Page {
                     layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
                     textStyle.base: SystemDefaults.TextStyles.TitleText
                     textStyle.fontWeight: FontWeight.Bold
-                    textStyle.color: Color.create(bookManager.uiInk)
+                    textStyle.color: Color.create("#F5EFE6")
                 }
 
                 Container {
@@ -64,9 +64,7 @@ Page {
                         verticalAlignment: VerticalAlignment.Center
                         preferredWidth: bookManager.dp(26)
                         preferredHeight: bookManager.dp(26)
-                        imageSource: recentPage.isSearching ?
-                                     (bookManager.appTheme === "dark" ? "asset:///icons/ic_clear.png" : "asset:///icons/ic_clear_dark.png") :
-                                     (bookManager.appTheme === "dark" ? "asset:///icons/ic_search.png" : "asset:///icons/ic_search_dark.png")
+                        imageSource: recentPage.isSearching ? "asset:///icons/ic_clear.png" : "asset:///icons/ic_search.png"
                     }
                 }
             }
@@ -104,9 +102,17 @@ Page {
 
     actions: [
         ActionItem {
-            title: qsTr("Mở Tệp") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_open.png"
+            title: qsTr("Tủ Sách") + Retranslate.onLanguageChanged
+            imageSource: "asset:///icons/ic_library.png"
             ActionBar.placement: ActionBarPlacement.OnBar
+            onTriggered: {
+                app.switchToTab("shelf");
+            }
+        },
+        ActionItem {
+            title: qsTr("Mở Tệp") + Retranslate.onLanguageChanged
+            imageSource: "asset:///icons/ic_open_file.png"
+            ActionBar.placement: ActionBarPlacement.Signature
             shortcuts: [
                 Shortcut { key: "O" },
                 Shortcut { key: "E" }
@@ -116,16 +122,8 @@ Page {
             }
         },
         ActionItem {
-            title: qsTr("Tủ Sách") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_library.png"
-            ActionBar.placement: ActionBarPlacement.OnBar
-            onTriggered: {
-                app.switchToTab("shelf");
-            }
-        },
-        ActionItem {
             title: qsTr("Tiến Độ") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_chart.png"
+            imageSource: "asset:///icons/ic_calendar.png"
             ActionBar.placement: ActionBarPlacement.OnBar
             onTriggered: {
                 app.openReadingStats();
@@ -144,7 +142,7 @@ Page {
         },
         ActionItem {
             title: qsTr("Kho OPDS") + Retranslate.onLanguageChanged
-            imageSource: "asset:///icons/ic_download.png"
+            imageSource: "asset:///icons/ic_opds.png"
             ActionBar.placement: ActionBarPlacement.InOverflow
             shortcuts: [
                 Shortcut { key: "K" }
@@ -170,6 +168,12 @@ Page {
         horizontalAlignment: HorizontalAlignment.Fill
         verticalAlignment: VerticalAlignment.Fill
         background: Color.create(bookManager.uiBg)
+
+        Container {
+            horizontalAlignment: HorizontalAlignment.Fill
+            preferredHeight: 1
+            background: Color.create(bookManager.uiHairline)
+        }
 
         // Inline Live Search Bar
         Container {
@@ -295,7 +299,7 @@ Page {
 
                                 Container {
                                     verticalAlignment: VerticalAlignment.Center
-                                    background: Color.create(bookManager.uiActive)
+                                    background: Color.create(bookManager.uiAccent)
                                     leftPadding: bookManager.dp(10)
                                     rightPadding: bookManager.dp(10)
                                     topPadding: bookManager.dp(3)
@@ -305,7 +309,7 @@ Page {
                                         text: (bookManager.currentStreak + " " + (bookManager.language === "en" ? (bookManager.currentStreak === 1 ? "day" : "days") : qsTr("ngày"))) + Retranslate.onLanguageChanged
                                         textStyle.base: SystemDefaults.TextStyles.SmallText
                                         textStyle.fontWeight: FontWeight.Bold
-                                        textStyle.color: Color.create(bookManager.uiAccent)
+                                        textStyle.color: bookManager.appTheme === "dark" ? Color.create("#0E0C0A") : Color.White
                                     }
                                 }
                             }
@@ -589,7 +593,7 @@ Page {
 
                                 Button {
                                     topMargin: bookManager.dp(10)
-                                    horizontalAlignment: HorizontalAlignment.Left
+                                    horizontalAlignment: HorizontalAlignment.Fill
                                     appearance: ControlAppearance.Primary
                                     text: qsTr("Đọc tiếp") + Retranslate.onLanguageChanged
                                     onClicked: {

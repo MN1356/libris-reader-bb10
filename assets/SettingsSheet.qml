@@ -358,6 +358,69 @@ Sheet {
                             title: qsTr("ỨNG DỤNG") + Retranslate.onLanguageChanged
                         }
 
+                        // Row 5B: Báo lỗi & Góp ý
+                        Container {
+                            id: rowBugReport
+                            property bool pressed: false
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            background: pressed ? Color.create(bookManager.uiActive) : Color.Transparent
+                            leftPadding: bookManager.dp(16)
+                            rightPadding: bookManager.dp(16)
+                            topPadding: bookManager.dp(12)
+                            bottomPadding: bookManager.dp(12)
+                            layout: StackLayout { orientation: LayoutOrientation.LeftToRight }
+
+                            onTouch: {
+                                if (event.touchType === TouchType.Down) pressed = true;
+                                else if (event.touchType === TouchType.Up || event.touchType === TouchType.Cancel) pressed = false;
+                            }
+                            gestureHandlers: [
+                                TapHandler { onTapped: { settingsSheet.openCategory("bugreport"); } }
+                            ]
+
+                            ImageView {
+                                verticalAlignment: VerticalAlignment.Center
+                                preferredWidth: bookManager.dp(32)
+                                preferredHeight: bookManager.dp(32)
+                                rightMargin: bookManager.dp(14)
+                                scalingMethod: ScalingMethod.AspectFit
+                                imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_export.png" : "asset:///icons/ic_export_dark.png"
+                            }
+                            Container {
+                                verticalAlignment: VerticalAlignment.Center
+                                layoutProperties: StackLayoutProperties { spaceQuota: 1.0 }
+                                rightMargin: bookManager.dp(8)
+                                Label {
+                                    text: qsTr("Báo lỗi & Góp ý") + Retranslate.onLanguageChanged
+                                    textStyle.base: SystemDefaults.TextStyles.PrimaryText
+                                    textStyle.color: Color.create(bookManager.uiInk)
+                                    bottomMargin: 0
+                                }
+                                Label {
+                                    topMargin: bookManager.dp(2)
+                                    multiline: true
+                                    text: qsTr("Gửi email tới nhatlm0910@gmail.com (log tùy chọn)") + Retranslate.onLanguageChanged
+                                    textStyle.base: SystemDefaults.TextStyles.SubtitleText
+                                    textStyle.color: Color.create(bookManager.uiMuted)
+                                }
+                            }
+                            ImageView {
+                                verticalAlignment: VerticalAlignment.Center
+                                preferredWidth: bookManager.dp(20)
+                                preferredHeight: bookManager.dp(20)
+                                opacity: 0.45
+                                scalingMethod: ScalingMethod.AspectFit
+                                imageSource: bookManager.appTheme === "dark" ? "asset:///icons/ic_next.png" : "asset:///icons/ic_next_dark.png"
+                            }
+                        }
+
+                        Container {
+                            horizontalAlignment: HorizontalAlignment.Fill
+                            preferredHeight: 1
+                            leftMargin: bookManager.dp(62)
+                            background: Color.create(bookManager.uiHairline)
+                        }
+
                         // Row 6: Giới thiệu
                         Container {
                             id: rowAbout
@@ -449,6 +512,10 @@ Sheet {
         ComponentDefinition {
             id: aboutPageDef
             source: "asset:///settings/AboutSettingsPage.qml"
+        },
+        ComponentDefinition {
+            id: bugReportPageDef
+            source: "asset:///settings/BugReportSettingsPage.qml"
         }
     ]
 
@@ -465,6 +532,7 @@ Sheet {
         else if (cat === "tts") def = ttsPageDef;
         else if (cat === "library") def = libraryPageDef;
         else if (cat === "about") def = aboutPageDef;
+        else if (cat === "bugreport") def = bugReportPageDef;
 
         if (def) {
             var page = def.createObject();

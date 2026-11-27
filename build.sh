@@ -41,7 +41,7 @@ if [[ "$ACTION" == "package" || "$ACTION" == "all" ]]; then
         NEXT_BUILD=$((CURRENT_BUILD + 1))
         sed -i -E "s|<buildId>[0-9]+</buildId>|<buildId>$NEXT_BUILD</buildId>|" "$SCRIPT_DIR/bar-descriptor.xml"
         echo "--> Auto-incremented buildId: $CURRENT_BUILD -> $NEXT_BUILD"
-        python3 "$SCRIPT_DIR/scripts/update_build_metadata.py" --project-dir "$SCRIPT_DIR" --bumped
+        python3 "$SCRIPT_DIR/scripts/update_build_metadata.py" --project-dir "$SCRIPT_DIR" --bumped --bump-version "${BUMP_TYPE:-patch}"
     else
         CURRENT_BUILD=$(grep -oE "<buildId>[0-9]+</buildId>" "$SCRIPT_DIR/bar-descriptor.xml" | grep -oE "[0-9]+" || echo "1")
         echo "--> Preserved buildId: $CURRENT_BUILD (auto-bump disabled)"
